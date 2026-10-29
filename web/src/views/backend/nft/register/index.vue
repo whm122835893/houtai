@@ -46,6 +46,12 @@
                                 <option v-for="c in collections" :key="c.id" :value="c.id">{{ c.name }}（#{{ c.id }}）</option>
                             </select>
                         </div>
+                        <div class="form-row" v-if="form.inviter_type == 3"><label>优先购目标藏品（未发售可预配置）</label>
+                            <select v-model="form.inviter_pre_collection_id" class="select">
+                                <option :value="0">请选择目标藏品</option>
+                                <option v-for="c in collections" :key="c.id" :value="c.id">{{ c.name }}（{{ statusName(c.status) }}{{ c.status != 2 ? '，可预配置' : '' }}）</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div class="cell-sub" style="margin-bottom: 12px">新用户完成注册即自动发放礼包。抽奖次数绑定指定场次时，若该场次未开启，次数先入账为「待生效」，场次开启后自动可用；优先购资格可对未发售藏品预先配置，资格在藏品开售后的优先购期内生效。邀请人奖励 0 = 不发放。</div>
@@ -106,7 +112,7 @@ const logs = ref<any[]>([])
 const total = ref(0)
 const collections = ref<any[]>([])
 const lotteries = ref<any[]>([])
-const form = reactive<any>({ enabled: 1, chance: 1, lot_activity_id: 0, collection_id: 0, pre_collection_id: 0, pre_num: 0, inviter_type: 1, inviter_num: 1, inviter_collection_id: 0 })
+const form = reactive<any>({ enabled: 1, chance: 1, lot_activity_id: 0, collection_id: 0, pre_collection_id: 0, pre_num: 0, inviter_type: 1, inviter_num: 1, inviter_collection_id: 0, inviter_pre_collection_id: 0 })
 const query = reactive({ keyword: '', status: -1, page: 1, limit: 10 })
 const ST_NAME: Record<number, string> = { 0: '未发售', 1: '已排期', 2: '发售中', 3: '已下架', 4: '已售罄' }
 const statusName = (s: number) => ST_NAME[s] || '-'
@@ -128,6 +134,7 @@ const load = async (page = 1) => {
         form.inviter_type = Number(c.rg_inviter_type ?? 1)
         form.inviter_num = Number(c.rg_inviter_num ?? 0)
         form.inviter_collection_id = Number(c.rg_inviter_collection_id ?? 0)
+        form.inviter_pre_collection_id = Number(c.rg_inviter_pre_collection_id ?? 0)
         logs.value = res.data.logs || []
         total.value = res.data.total || 0
     } finally {
@@ -137,6 +144,7 @@ const load = async (page = 1) => {
 const resetQuery = () => { query.keyword = ''; query.status = -1; load(1) }
 const submit = async () => {
     if (form.inviter_type == 2 && !Number(form.inviter_collection_id)) return ElMessage.error('邀请人藏品奖励需选择藏品')
+    if (form.inviter_type == 3 && !Number(form.inviter_pre_collection_id)) return ElMessage.error('邀请人优先购奖励需选择目标藏品（未发售藏品可预配置）')
     if (Number(form.pre_num) > 0 && !Number(form.pre_collection_id)) return ElMessage.error('优先购资格需选择目标藏品（未发售藏品可预配置）')
     await nftApi(
         'nft.Register',
@@ -151,6 +159,7 @@ const submit = async () => {
             rg_inviter_type: form.inviter_type,
             rg_inviter_num: form.inviter_num,
             rg_inviter_collection_id: form.inviter_type == 2 ? form.inviter_collection_id : 0,
+            rg_inviter_pre_collection_id: form.inviter_type == 3 ? form.inviter_pre_collection_id : 0,
         },
         'post'
     )

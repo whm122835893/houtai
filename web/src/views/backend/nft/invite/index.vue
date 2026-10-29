@@ -131,6 +131,13 @@
                         <label>{{ ruleForm.reward_type == 3 ? '优先购可用次数' : '奖励抽奖次数' }}</label>
                         <input v-model="ruleForm.reward_num" class="input" type="number" min="1" :placeholder="ruleForm.reward_type == 3 ? '如：1（获得 1 次优先购资格）' : '如：3（获得 3 次抽奖机会）'" />
                     </div>
+                    <div class="form-row" v-if="ruleForm.reward_type == 3">
+                        <label>优先购目标藏品（未发售藏品可预配置）</label>
+                        <select v-model="ruleForm.pre_collection_id" class="select">
+                            <option :value="0">请选择目标藏品</option>
+                            <option v-for="c in collections" :key="c.id" :value="c.id">{{ c.name }}（{{ statusName(c.status) }}{{ c.status != 2 ? '，可预配置' : '' }}）</option>
+                        </select>
+                    </div>
                     <div class="form-row">
                         <label>状态</label>
                         <select v-model="ruleForm.status" class="select">
@@ -193,8 +200,9 @@ const rewardTypeClass = (t: number) => REWARD_TYPES[t]?.cls || 'tag-gray'
 const rewardContent = (row: any) => {
     if (row.reward_type == 1) return row.collection_name || '藏品#' + row.collection_id
     if (row.reward_type == 2) return `${row.reward_num} 次抽奖`
-    return `优先购 ${row.reward_num} 次`
+    return `优先购 ${row.reward_num} 次 · ${row.pre_collection_name || (row.pre_collection_id ? '藏品#' + row.pre_collection_id : '未绑定藏品')}`
 }
+const statusName = (s: number) => ['未发售', '已排期', '发售中', '已下架', '已售罄'][s] || '-'
 
 const load = async (page = 1) => {
     query.page = page
@@ -219,6 +227,7 @@ const openRule = (row?: any) => {
         invite_num: row?.invite_num ?? 1,
         reward_type: row?.reward_type ?? 1,
         collection_id: row?.collection_id || '',
+        pre_collection_id: row?.pre_collection_id || 0,
         reward_num: row?.reward_num ?? 1,
         status: row?.status ?? 1,
     })
@@ -237,11 +246,16 @@ const submitRule = async () => {
         ElMessage.warning(ruleForm.reward_type == 3 ? '请填写优先购可用次数' : '请填写奖励抽奖次数')
         return
     }
+    if (ruleForm.reward_type == 3 && !Number(ruleForm.pre_collection_id)) {
+        ElMessage.warning('优先购资格需选择目标藏品（未发售藏品可预配置）')
+        return
+    }
     await api.save({
         id: ruleForm.id || undefined,
         invite_num: Number(ruleForm.invite_num),
         reward_type: ruleForm.reward_type,
         collection_id: ruleForm.reward_type == 1 ? Number(ruleForm.collection_id) : 0,
+        pre_collection_id: ruleForm.reward_type == 3 ? Number(ruleForm.pre_collection_id) : 0,
         reward_num: ruleForm.reward_type == 1 ? 0 : Number(ruleForm.reward_num),
         status: ruleForm.status,
     })

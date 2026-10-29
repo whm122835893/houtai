@@ -27,7 +27,7 @@ class Checkin extends Backend
      */
     public function index(): void
     {
-        $configNames = ['ck_enabled', 'ck_daily_type', 'ck_daily_num', 'ck_daily_collection_id', 'ck_repair_limit'];
+        $configNames = ['ck_enabled', 'ck_daily_type', 'ck_daily_num', 'ck_daily_collection_id', 'ck_daily_pre_collection_id', 'ck_repair_limit'];
         $config      = Db::name('nft_setting')->whereIn('name', $configNames)->column('value', 'name');
 
         $keyword = $this->request->get('keyword/s', '');
@@ -48,12 +48,14 @@ class Checkin extends Backend
         }
         unset($log);
 
-        // 阶梯规则（附藏品名，奖励类型 1=抽奖次数 2=藏品 3=优先购资格）
+        // 阶梯规则（附藏品名 / 优先购目标藏品名，奖励类型 1=抽奖次数 2=藏品 3=优先购资格）
         $rules      = $this->model->order('day_num', 'asc')->select();
-        $ruleColIds = array_values(array_unique(array_column($rules->toArray(), 'collection_id')));
+        $ruleArr    = $rules->toArray();
+        $ruleColIds = array_values(array_unique(array_filter(array_merge(array_column($ruleArr, 'collection_id'), array_column($ruleArr, 'pre_collection_id')))));
         $ruleCols   = $ruleColIds ? Db::name('nft_collection')->whereIn('id', $ruleColIds)->column('name', 'id') : [];
         foreach ($rules as $rule) {
-            $rule->collection_name = $ruleCols[$rule->collection_id] ?? '';
+            $rule->collection_name     = $ruleCols[$rule->collection_id] ?? '';
+            $rule->pre_collection_name = $ruleCols[$rule->pre_collection_id] ?? '';
         }
 
         $this->success('', [
@@ -73,9 +75,14 @@ class Checkin extends Backend
         $rules = $data['rules'] ?? [];
         unset($data['rules']);
 
-        $allow = ['ck_enabled', 'ck_daily_type', 'ck_daily_num', 'ck_daily_collection_id', 'ck_repair_limit'];
+        $allow = ['ck_enabled', 'ck_daily_type', 'ck_daily_num', 'ck_daily_collection_id', 'ck_daily_pre_collection_id', 'ck_repair_limit'];
         Db::startTrans();
         try {
+            // 每日签到奖励类型校验：类型 3=优先购资格必须绑定目标藏品
+            if (isset($data['ck_daily_type']) && intval($data['ck_daily_type']) == 3
+                && intval($data['ck_daily_pre_collection_id'] ?? 0) <= 0) {
+                throw new \Exception('每日签到优先购奖励需选择目标藏品（未发售藏品可预配置）');
+            }
             foreach ($allow as $name) {
                 if (!isset($data[$name])) continue;
                 $val = (string) $data[$name];
@@ -85,7 +92,7 @@ class Checkin extends Backend
                 Db::name('nft_setting')->where('name', $name)->update(['value' => $val, 'updatetime' => time()]);
             }
             // 阶梯整体重建
-            // 奖励类型：1=抽奖次数 2=藏品(reward_num=份数+collection_id) 3=优先购资格(reward_num=可用次数)
+            // 奖励类型：1=抽奖次数 2=藏品(reward_num=份数+collection_id) 3=优先购资格(reward_num=可用次数+pre_collection_id=目标藏品，未发售可预配置)
             CheckinRule::where('id', '>', 0)->delete();
             $now = time();
             foreach ($rules as $rule) {
@@ -96,11 +103,20 @@ class Checkin extends Backend
                 if ($rewardType == 2 && $collectionId <= 0) {
                     throw new \Exception("连续签到 {$dayNum} 天的阶梯：藏品奖励需选择藏品");
                 }
+                // 优先购资格必须绑定目标藏品（未发售藏品可预配置）
+                $preCollectionId = intval($rule['pre_collection_id'] ?? 0);
+                if ($rewardType == 3 && $preCollectionId <= 0) {
+                    throw new \Exception("连续签到 {$dayNum} 天的阶梯：优先购资格需选择目标藏品（未发售藏品可预配置）");
+                }
+                if ($rewardType == 3 && !Db::name('nft_collection')->where('id', $preCollectionId)->find()) {
+                    throw new \Exception("连续签到 {$dayNum} 天的阶梯：优先购目标藏品不存在");
+                }
                 CheckinRule::create([
                     'day_num'       => $dayNum,
                     'reward_type'   => $rewardType,
                     'reward_num'    => max(1, intval($rule['reward_num'] ?? 1)),
                     'collection_id' => $rewardType == 2 ? $collectionId : 0,
+                    'pre_collection_id' => $rewardType == 3 ? $preCollectionId : 0,
                 ]);
             }
             Db::commit();

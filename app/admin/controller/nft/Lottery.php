@@ -91,6 +91,9 @@ class Lottery extends Backend
         }
         $data['start_time'] = !empty($data['start_time']) ? strtotime($data['start_time']) : null;
         $data['end_time']   = !empty($data['end_time']) ? strtotime($data['end_time']) : null;
+        if ($data['start_time'] && $data['end_time'] && $data['end_time'] <= $data['start_time']) {
+            $this->error('结束时间必须晚于开始时间');
+        }
 
         // 次数获取配置（JSON 入库，只允许已知键）
         $rules         = $this->request->post('chance_rules/a', []);
@@ -122,6 +125,14 @@ class Lottery extends Backend
             $clean[$key] = $item;
         }
         $data['chance_rules'] = json_encode($clean, JSON_UNESCAPED_UNICODE);
+
+        // 开启校验：奖池非空且概率合计 > 0（奖池在 prizes 端点维护，本表单不影响奖池）
+        if ((int) ($data['status'] ?? 0) === 1) {
+            $prizeQuery = Db::name('nft_lottery_prize')->where('activity_id', $id > 0 ? $id : 0);
+            if ($prizeQuery->count() <= 0 || (int) $prizeQuery->sum('probability') <= 0) {
+                $this->error('开启活动前请先在「奖池配置」中添加奖品并设置概率');
+            }
+        }
 
         if ($id) {
             $row = $this->model->find($id);
@@ -173,18 +184,27 @@ class Lottery extends Backend
 
         if ($this->request->isPost()) {
             $prizes = $this->request->post('prizes/a', []);
+            // 保留已发放数：按奖品名匹配旧奖池（重建奖池不重置 sent，避免库存凭空回补）
+            $oldSent = [];
+            foreach (Db::name('nft_lottery_prize')->where('activity_id', $activityId)->field('name, sent')->select() as $old) {
+                if (!isset($oldSent[$old['name']])) {
+                    $oldSent[$old['name']] = (int) $old['sent'];
+                }
+            }
             Db::startTrans();
             try {
                 Db::name('nft_lottery_prize')->where('activity_id', $activityId)->delete();
                 foreach ($prizes as $p) {
+                    $name = (string) ($p['name'] ?? '');
                     Db::name('nft_lottery_prize')->insert([
                         'activity_id'   => $activityId,
-                        'name'          => (string) ($p['name'] ?? ''),
+                        'name'          => $name,
                         'type'          => (int) ($p['type'] ?? 1),
                         'collection_id' => (int) ($p['collection_id'] ?? 0),
                         'num'           => (int) ($p['num'] ?? 0),
                         'probability'   => (int) ($p['probability'] ?? 0),
                         'stock'         => (int) ($p['stock'] ?? 0),
+                        'sent'          => $oldSent[$name] ?? 0,
                         'createtime'    => time(),
                         'updatetime'    => time(),
                     ]);

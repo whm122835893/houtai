@@ -19,7 +19,7 @@ class Register extends Backend
 
     public function index(): void
     {
-        $configNames = ['rg_enabled', 'rg_chance', 'rg_lot_activity_id', 'rg_collection_id', 'rg_pre_num', 'rg_pre_collection_id', 'rg_inviter_type', 'rg_inviter_num', 'rg_inviter_collection_id'];
+        $configNames = ['rg_enabled', 'rg_chance', 'rg_lot_activity_id', 'rg_collection_id', 'rg_pre_num', 'rg_pre_collection_id', 'rg_inviter_type', 'rg_inviter_num', 'rg_inviter_collection_id', 'rg_inviter_pre_collection_id'];
         $config      = Db::name('nft_setting')->whereIn('name', $configNames)->column('value', 'name');
 
         $keyword = $this->request->get('keyword/s', '');
@@ -53,12 +53,12 @@ class Register extends Backend
      * 保存配置
      * 新人礼包 = 抽奖次数(rg_chance，绑定抽奖活动 rg_lot_activity_id，0=通用；绑定场次未开启时次数待生效)
      *          + 藏品(rg_collection_id) + 优先购资格(rg_pre_num，目标藏品 rg_pre_collection_id，可预配置未发售藏品)
-     * 邀请人奖励 = 类型(rg_inviter_type: 1=抽奖次数 2=藏品 3=优先购资格) + 数量 + 藏品ID
+     * 邀请人奖励 = 类型(rg_inviter_type: 1=抽奖次数 2=藏品 3=优先购资格) + 数量 + 藏品ID + 优先购目标藏品ID(rg_inviter_pre_collection_id，类型=3 时必填，未发售可预配置)
      */
     public function save(): void
     {
         $data  = $this->request->post();
-        $allow = ['rg_enabled', 'rg_chance', 'rg_lot_activity_id', 'rg_collection_id', 'rg_pre_num', 'rg_pre_collection_id', 'rg_inviter_type', 'rg_inviter_num', 'rg_inviter_collection_id'];
+        $allow = ['rg_enabled', 'rg_chance', 'rg_lot_activity_id', 'rg_collection_id', 'rg_pre_num', 'rg_pre_collection_id', 'rg_inviter_type', 'rg_inviter_num', 'rg_inviter_collection_id', 'rg_inviter_pre_collection_id'];
         try {
             $inviterType = intval($data['rg_inviter_type'] ?? 1);
             if ($inviterType < 1 || $inviterType > 3) {
@@ -66,6 +66,9 @@ class Register extends Backend
             }
             if ($inviterType == 2 && intval($data['rg_inviter_collection_id'] ?? 0) <= 0) {
                 $this->error('邀请人藏品奖励需选择藏品');
+            }
+            if ($inviterType == 3 && intval($data['rg_inviter_pre_collection_id'] ?? 0) <= 0) {
+                $this->error('邀请人优先购奖励需选择目标藏品（未发售藏品可预配置）');
             }
             $preNum  = intval($data['rg_pre_num'] ?? 0);
             $preCol  = intval($data['rg_pre_collection_id'] ?? 0);

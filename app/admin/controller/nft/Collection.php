@@ -3,6 +3,7 @@
 namespace app\admin\controller\nft;
 
 use Throwable;
+use think\facade\Db;
 use app\common\controller\Backend;
 use app\admin\model\nft\Collection as CollectionModel;
 use app\admin\model\nft\Category as CategoryModel;
@@ -131,6 +132,9 @@ class Collection extends Backend
             } catch (Throwable $e) {
                 $this->error($e->getMessage());
             }
+            if ((int) ($data['stock'] ?? 0) <= 0) {
+                $this->error('发行量必须大于 0');
+            }
             $data['price']        = (int) bcmul(round((float) ($data['price'] ?? 0), 2), '100');
             $data['market_price'] = (int) bcmul(round((float) ($data['market_price'] ?? 0), 2), '100');
             $data['author']       = $data['author'] ?? '';
@@ -162,6 +166,14 @@ class Collection extends Backend
             } catch (Throwable $e) {
                 $this->error($e->getMessage());
             }
+            // 发行量校验：不能小于已售数量，否则出现 sold > stock 的矛盾数据
+            $stock = (int) ($data['stock'] ?? 0);
+            if ($stock <= 0) {
+                $this->error('发行量必须大于 0');
+            }
+            if ($stock < (int) $row->sold) {
+                $this->error("发行量（{$stock}）不能小于已售数量（{$row->sold}）");
+            }
             $data['price']        = (int) bcmul(round((float) ($data['price'] ?? 0), 2), '100');
             $data['market_price'] = (int) bcmul(round((float) ($data['market_price'] ?? 0), 2), '100');
             $data['author']       = $data['author'] ?? '';
@@ -177,13 +189,53 @@ class Collection extends Backend
     }
 
     /**
-     * 删除（支持批量）
+     * 删除（支持批量）——被业务数据引用的藏品禁止硬删，防脏数据
      */
     public function del(): void
     {
         $ids = $this->request->param('ids/a', []);
         if (!$ids) {
             $this->error(__('Parameter %s can not be empty', ['ids']));
+        }
+        foreach ($ids as $cid) {
+            $cid  = (int) $cid;
+            $name = $this->model->where('id', $cid)->value('name') ?: ('藏品#' . $cid);
+            $refs = [];
+            if (Db::name('nft_order')->where('collection_id', $cid)->count()) {
+                $refs[] = '订单';
+            }
+            if (Db::name('nft_hold')->where('collection_id', $cid)->count()) {
+                $refs[] = '持仓';
+            }
+            if (Db::name('nft_market_order')->where('collection_id', $cid)->count()) {
+                $refs[] = '市场挂单';
+            }
+            if (Db::name('nft_raffle')->where('collection_id', $cid)->count()) {
+                $refs[] = '抽签发售';
+            }
+            if (Db::name('nft_airdrop_task')->where('collection_id', $cid)->count()) {
+                $refs[] = '定向发放';
+            }
+            if (Db::name('nft_lottery_prize')->where('collection_id', $cid)->count()
+                || Db::name('nft_lottery_activity')->whereLike('chance_rules', '%"collection_id":' . $cid . '%')->count()) {
+                $refs[] = '抽奖活动';
+            }
+            if (Db::name('nft_synthesis')->where('target_collection_id', $cid)->count()
+                || Db::name('nft_synthesis')->whereLike('materials', '%"collection_id":' . $cid . '%')->count()) {
+                $refs[] = '合成活动';
+            }
+            if (Db::name('nft_setting')->where('name', 'in', ['rg_collection_id', 'rg_pre_collection_id'])->where('value', (string) $cid)->count()) {
+                $refs[] = '注册活动';
+            }
+            if (Db::name('nft_invite_rule')->where('collection_id|pre_collection_id', $cid)->count()) {
+                $refs[] = '邀请有礼';
+            }
+            if (Db::name('nft_checkin_rule')->where('collection_id|pre_collection_id', $cid)->count()) {
+                $refs[] = '签到活动';
+            }
+            if (count($refs)) {
+                $this->error("藏品「{$name}」被 " . implode('、', $refs) . " 引用，请先解除引用再删除");
+            }
         }
         $count = $this->model->where('id', 'in', $ids)->delete();
         OperLog::record('藏品管理', '删除', '藏品#' . implode(',', $ids), '共删除 ' . $count . ' 条');
@@ -209,6 +261,10 @@ class Collection extends Backend
         $endTs = $saleEndTime !== '' ? (int) strtotime($saleEndTime) : 0;
         if ($endTs && $endTs <= $ts) {
             $this->error('发售结束时间必须晚于开售时间');
+        }
+        // 优先购窗口必须早于开售时间，否则窗口永远不会生效
+        if ((int) $row->pre_rule_type > 0 && (int) $row->pre_sale_time > 0 && $row->pre_sale_time >= $ts) {
+            $this->error('优先购开始时间需早于开售时间，请先在编辑中调整优先购配置');
         }
         $row->save(['status' => 2, 'sale_time' => $ts, 'sale_end_time' => $endTs ?: null]);
         OperLog::record('藏品管理', '开售', '藏品#' . $id, $row->name . '，开售 ' . $saleTime . ($endTs ? '，截止 ' . $saleEndTime : ''));

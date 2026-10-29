@@ -191,7 +191,7 @@ function buildDB() {
     inviteRules: [
       { id: 1, invite_num: 3, reward_type: 2, collection_id: 0, reward_num: 3, status: 1, createtime: NOW - 40 * 86400 },
       { id: 2, invite_num: 10, reward_type: 1, collection_id: 4, collection_name: '非遗剪纸 · 锦鲤', reward_num: 0, status: 1, createtime: NOW - 40 * 86400 },
-      { id: 3, invite_num: 30, reward_type: 3, collection_id: 0, reward_num: 1, status: 0, createtime: NOW - 20 * 86400 },
+      { id: 3, invite_num: 30, reward_type: 3, collection_id: 0, pre_collection_id: 5, reward_num: 1, status: 0, createtime: NOW - 20 * 86400 },
     ],
     inviteRecords: Array.from({ length: 8 }, (_, i) => ({ id: 970 + i, inviter: mkUsers()[i].nickname, invitee: mkUsers()[(i + 5) % 12].nickname, reward_status: i % 3 === 0 ? 1 : 0, createtime: NOW - i * 6600 })),
     notices: [
@@ -227,7 +227,7 @@ function buildDB() {
       rules: [
         { day_num: 3, type: 1, num: 2, collection_id: 0 },
         { day_num: 7, type: 2, num: 1, collection_id: 4 },
-        { day_num: 15, type: 3, num: 2, collection_id: 0 },
+        { day_num: 15, type: 3, num: 2, collection_id: 0, pre_collection_id: 5 },
         { day_num: 30, type: 1, num: 10, collection_id: 0 },
       ],
     },

@@ -30,12 +30,14 @@ class Invite extends Backend
         $limit = $this->request->get('limit/d', 10);
         $page  = $this->request->get('page/d', 1);
 
-        // 规则全量（附奖励藏品名）
+        // 规则全量（附奖励藏品名 / 优先购目标藏品名）
         $rules = $this->model->order('invite_num', 'asc')->select();
-        $collectionIds = array_values(array_unique(array_column($rules->toArray(), 'collection_id')));
+        $ruleArr      = $rules->toArray();
+        $collectionIds = array_values(array_unique(array_filter(array_merge(array_column($ruleArr, 'collection_id'), array_column($ruleArr, 'pre_collection_id')))));
         $collections   = $collectionIds ? Db::name('nft_collection')->where('id', 'in', $collectionIds)->column('name', 'id') : [];
         foreach ($rules as $rule) {
-            $rule->collection_name = $collections[$rule->collection_id] ?? '';
+            $rule->collection_name       = $collections[$rule->collection_id] ?? '';
+            $rule->pre_collection_name   = $collections[$rule->pre_collection_id] ?? '';
         }
 
         // 邀请记录分页（附邀请人/被邀请人昵称）
@@ -61,7 +63,7 @@ class Invite extends Backend
 
     /**
      * 新增/编辑规则
-     * 奖励类型：1=藏品(collection_id) 2=抽奖次数(reward_num) 3=优先购资格(reward_num=可用次数)
+     * 奖励类型：1=藏品(collection_id) 2=抽奖次数(reward_num) 3=优先购资格(reward_num=可用次数 + pre_collection_id=目标藏品，未发售藏品可预配置)
      */
     public function save(): void
     {
@@ -69,7 +71,7 @@ class Invite extends Backend
             $this->error('请求方式错误');
         }
         $id   = $this->request->param('id/d', 0);
-        $data = $this->request->only(['invite_num', 'reward_type', 'collection_id', 'reward_num', 'status'], 'post');
+        $data = $this->request->only(['invite_num', 'reward_type', 'collection_id', 'pre_collection_id', 'reward_num', 'status'], 'post');
         try {
             validate(\app\admin\validate\nft\InviteRule::class)->scene($id ? 'edit' : 'add')->check($data);
         } catch (Throwable $e) {
@@ -84,6 +86,7 @@ class Invite extends Backend
                 $this->error('请选择奖励藏品');
             }
             $data['reward_num'] = 0;
+            $data['pre_collection_id'] = 0;
         } else {
             // 抽奖次数 / 优先购资格
             $data['reward_num'] = max(0, (int) ($data['reward_num'] ?? 0));
@@ -91,6 +94,19 @@ class Invite extends Backend
                 $this->error($data['reward_type'] == 2 ? '请填写奖励抽奖次数' : '请填写优先购可用次数');
             }
             $data['collection_id'] = 0;
+            if ($data['reward_type'] == 3) {
+                // 优先购资格必须绑定目标藏品（未发售藏品可预配置）
+                $preCollectionId = (int) ($data['pre_collection_id'] ?? 0);
+                if ($preCollectionId <= 0) {
+                    $this->error('优先购资格需选择目标藏品（未发售藏品可预配置）');
+                }
+                if (!Db::name('nft_collection')->where('id', $preCollectionId)->find()) {
+                    $this->error('优先购目标藏品不存在');
+                }
+                $data['pre_collection_id'] = $preCollectionId;
+            } else {
+                $data['pre_collection_id'] = 0;
+            }
         }
 
         if ($id) {

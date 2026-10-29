@@ -290,6 +290,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_invite_rule` (
   `invite_num` int unsigned NOT NULL DEFAULT 0 COMMENT '邀请人数门槛',
   `reward_type` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '奖励类型:1=藏品,2=抽奖次数,3=优先购资格',
   `collection_id` int unsigned NOT NULL DEFAULT 0 COMMENT '奖励藏品ID(类型=藏品)',
+  `pre_collection_id` int unsigned NOT NULL DEFAULT 0 COMMENT '优先购目标藏品ID(类型=优先购资格,未发售可预配置)',
   `reward_num` int unsigned NOT NULL DEFAULT 0 COMMENT '奖励数量(类型=2抽奖次数/3优先购可用次数)',
   `status` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '状态:0=停用,1=启用',
   `createtime` bigint NULL DEFAULT NULL COMMENT '创建时间',
@@ -518,6 +519,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_checkin_rule` (
   `reward_type` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '奖励类型:1=抽奖次数,2=藏品,3=优先购资格',
   `reward_num` int unsigned NOT NULL DEFAULT 1 COMMENT '奖励数量(次数/藏品份数/优先购次数)',
   `collection_id` int unsigned NOT NULL DEFAULT 0 COMMENT '奖励藏品ID(类型=藏品)',
+  `pre_collection_id` int unsigned NOT NULL DEFAULT 0 COMMENT '优先购目标藏品ID(类型=优先购资格,未发售可预配置)',
   `createtime` bigint NULL DEFAULT NULL COMMENT '创建时间',
   `updatetime` bigint NULL DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`id`),
@@ -570,6 +572,7 @@ INSERT INTO `ba_nft_setting` (`name`,`group`,`title`,`value`,`createtime`,`updat
 ('ck_daily_type','checkin','每日签到奖励类型:1=抽奖次数,2=藏品,3=优先购资格','1',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 ('ck_daily_num','checkin','每日签到奖励数量','1',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 ('ck_daily_collection_id','checkin','每日签到奖励藏品ID(类型=藏品)','0',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('ck_daily_pre_collection_id','checkin','每日签到优先购目标藏品ID(类型=优先购资格,未发售可预配置)','0',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 ('ck_repair_limit','checkin','每月补签次数上限','3',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 ('rg_enabled','register','注册活动开关','1',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 ('rg_chance','register','注册奖励抽奖次数','1',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
@@ -579,7 +582,8 @@ INSERT INTO `ba_nft_setting` (`name`,`group`,`title`,`value`,`createtime`,`updat
 ('rg_pre_collection_id','register','优先购资格目标藏品ID(可预配置未发售藏品,藏品开售后优先购期生效)','0',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 ('rg_inviter_type','register','邀请人奖励类型:1=抽奖次数,2=藏品,3=优先购资格','1',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 ('rg_inviter_num','register','邀请人奖励数量','1',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-('rg_inviter_collection_id','register','邀请人奖励藏品ID(类型=藏品)','0',UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+('rg_inviter_collection_id','register','邀请人奖励藏品ID(类型=藏品)','0',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('rg_inviter_pre_collection_id','register','邀请人优先购目标藏品ID(类型=优先购资格,未发售可预配置)','0',UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- ------------------------------------------------------------
 -- 五、抽签发售（v3 追加）

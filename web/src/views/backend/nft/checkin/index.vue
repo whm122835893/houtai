@@ -27,6 +27,12 @@
                                 <option v-for="c in collections" :key="c.id" :value="c.id">{{ c.name }}（#{{ c.id }}）</option>
                             </select>
                         </div>
+                        <div class="form-row" v-if="form.daily_type == 3"><label>优先购目标藏品（未发售可预配置）</label>
+                            <select v-model="form.daily_pre_collection_id" class="select">
+                                <option :value="0">请选择目标藏品</option>
+                                <option v-for="c in collections" :key="c.id" :value="c.id">{{ c.name }}（{{ statusName(c.status) }}{{ c.status != 2 ? '，可预配置' : '' }}）</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div class="form-row">
@@ -101,6 +107,12 @@
                             <option v-for="c in collections" :key="c.id" :value="c.id">{{ c.name }}（#{{ c.id }}）</option>
                         </select>
                     </div>
+                    <div class="form-row" v-if="ruleForm.reward_type == 3"><label>优先购目标藏品（未发售可预配置）</label>
+                        <select v-model="ruleForm.pre_collection_id" class="select">
+                            <option :value="0">请选择目标藏品</option>
+                            <option v-for="c in collections" :key="c.id" :value="c.id">{{ c.name }}（{{ statusName(c.status) }}{{ c.status != 2 ? '，可预配置' : '' }}）</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="modal-foot">
                     <button class="btn btn-ghost" @click="ruleVisible = false">取消</button>
@@ -130,15 +142,16 @@ const collections = ref<any[]>([])
 const ruleVisible = ref(false)
 const ruleIdx = ref(-1)
 const ruleForm = reactive<any>({})
-const form = reactive<any>({ enabled: 1, repair_limit: 3, daily_type: 1, daily_num: 1, daily_collection_id: 0, rules: [] })
+const form = reactive<any>({ enabled: 1, repair_limit: 3, daily_type: 1, daily_num: 1, daily_collection_id: 0, daily_pre_collection_id: 0, rules: [] })
 const query = reactive({ keyword: '', page: 1, limit: 10 })
 
 const dailyNumLabel = computed(() => (form.daily_type == 3 ? '优先购可用次数' : form.daily_type == 2 ? '藏品份数' : '抽奖次数'))
 const ruleNumLabel = computed(() => (ruleForm.reward_type == 3 ? '优先购可用次数' : ruleForm.reward_type == 2 ? '藏品份数' : '抽奖次数'))
+const statusName = (s: number) => ['未发售', '已排期', '发售中', '已下架', '已售罄'][s] || '-'
 
 const rewardText = (r: any) => {
     if (r.reward_type == 2) return `${r.collection_name || '藏品#' + r.collection_id} ×${r.reward_num}`
-    if (r.reward_type == 3) return `优先购 ${r.reward_num} 次`
+    if (r.reward_type == 3) return `优先购 ${r.reward_num} 次 · ${r.pre_collection_name || (r.pre_collection_id ? '藏品#' + r.pre_collection_id : '未绑定藏品')}`
     return `${r.reward_num} 次抽奖`
 }
 
@@ -152,7 +165,8 @@ const load = async () => {
         form.daily_type = Number(c.ck_daily_type ?? 1)
         form.daily_num = Number(c.ck_daily_num ?? 1)
         form.daily_collection_id = Number(c.ck_daily_collection_id ?? 0)
-        form.rules = (res.data.rules || []).map((r: any) => ({ day_num: r.day_num, reward_type: Number(r.reward_type), reward_num: Number(r.reward_num), collection_id: Number(r.collection_id), collection_name: r.collection_name || '' }))
+        form.daily_pre_collection_id = Number(c.ck_daily_pre_collection_id ?? 0)
+        form.rules = (res.data.rules || []).map((r: any) => ({ day_num: r.day_num, reward_type: Number(r.reward_type), reward_num: Number(r.reward_num), collection_id: Number(r.collection_id), collection_name: r.collection_name || '', pre_collection_id: Number(r.pre_collection_id || 0), pre_collection_name: r.pre_collection_name || '' }))
         records.value = res.data.records || []
         total.value = res.data.total || 0
     } finally {
@@ -172,13 +186,13 @@ const loadCollections = async () => {
 }
 
 const addRule = () => {
-    Object.assign(ruleForm, { day_num: '', reward_type: 1, reward_num: 1, collection_id: 0 })
+    Object.assign(ruleForm, { day_num: '', reward_type: 1, reward_num: 1, collection_id: 0, pre_collection_id: 0 })
     ruleIdx.value = -1
     ruleVisible.value = true
 }
 const editRule = (i: number) => {
     const r = form.rules[i]
-    Object.assign(ruleForm, { day_num: r.day_num, reward_type: r.reward_type, reward_num: r.reward_num, collection_id: r.collection_id })
+    Object.assign(ruleForm, { day_num: r.day_num, reward_type: r.reward_type, reward_num: r.reward_num, collection_id: r.collection_id, pre_collection_id: r.pre_collection_id || 0 })
     ruleIdx.value = i
     ruleVisible.value = true
 }
@@ -187,7 +201,8 @@ const saveRule = () => {
     if (!dayNum) return ElMessage.error('请输入连续天数')
     if (Number(ruleForm.reward_num) < 1) return ElMessage.error('奖励数量不能小于 1')
     if (ruleForm.reward_type == 2 && !Number(ruleForm.collection_id)) return ElMessage.error('请选择奖励藏品')
-    const rule = { day_num: dayNum, reward_type: Number(ruleForm.reward_type), reward_num: Number(ruleForm.reward_num), collection_id: ruleForm.reward_type == 2 ? Number(ruleForm.collection_id) : 0 }
+    if (ruleForm.reward_type == 3 && !Number(ruleForm.pre_collection_id)) return ElMessage.error('优先购资格需选择目标藏品（未发售藏品可预配置）')
+    const rule = { day_num: dayNum, reward_type: Number(ruleForm.reward_type), reward_num: Number(ruleForm.reward_num), collection_id: ruleForm.reward_type == 2 ? Number(ruleForm.collection_id) : 0, pre_collection_id: ruleForm.reward_type == 3 ? Number(ruleForm.pre_collection_id) : 0 }
     if (ruleIdx.value >= 0) form.rules[ruleIdx.value] = rule
     else form.rules.push(rule)
     form.rules.sort((a: any, b: any) => a.day_num - b.day_num)
@@ -198,6 +213,7 @@ const delRule = (i: number) => {
 }
 const submit = async () => {
     if (form.daily_type == 2 && !Number(form.daily_collection_id)) return ElMessage.error('每日签到藏品奖励需选择藏品')
+    if (form.daily_type == 3 && !Number(form.daily_pre_collection_id)) return ElMessage.error('每日签到优先购奖励需选择目标藏品（未发售藏品可预配置）')
     if (form.daily_num < 1) return ElMessage.error('每日签到奖励数量不能小于 1')
     await nftApi(
         'nft.Checkin',
@@ -208,7 +224,8 @@ const submit = async () => {
             ck_daily_type: form.daily_type,
             ck_daily_num: form.daily_num,
             ck_daily_collection_id: form.daily_type == 2 ? form.daily_collection_id : 0,
-            rules: form.rules.map((r: any) => ({ day_num: r.day_num, reward_type: r.reward_type, reward_num: r.reward_num, collection_id: r.collection_id })),
+            ck_daily_pre_collection_id: form.daily_type == 3 ? form.daily_pre_collection_id : 0,
+            rules: form.rules.map((r: any) => ({ day_num: r.day_num, reward_type: r.reward_type, reward_num: r.reward_num, collection_id: r.collection_id, pre_collection_id: r.pre_collection_id || 0 })),
         },
         'post'
     )

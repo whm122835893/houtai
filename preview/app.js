@@ -74,7 +74,7 @@ function pagerHtml(page, total, limit, act) {
   return `<div class="pager"><span>共 ${total} 条</span><button ${page <= 1 ? 'disabled' : ''} data-act="${act}" data-arg="${page - 1}">‹</button>${btns}<button ${page >= max ? 'disabled' : ''} data-act="${act}" data-arg="${page + 1}">›</button></div>`;
 }
 const pager = (act, page, total, limit = 10) => pagerHtml(page, total, limit, act);
-const emptyBox = (t = '暂无数据') => `<div class="empty"><span class="glyph">🫧</span>${t}</div>`;
+const emptyBox = (t = '暂无数据') => `<div class="empty"><span class="glyph"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="9" cy="10" r="5.2"/><circle cx="16.8" cy="15.8" r="3.4"/><circle cx="6.8" cy="6.4" r="1.2" fill="currentColor" stroke="none"/></svg></span>${t}</div>`;
 
 /* ---------- 页面：登录 ---------- */
 function renderLogin() {
@@ -481,19 +481,23 @@ PAGES.airdrop = () => {
 
 /* 9b. 活动中心 */
 const RW_TYPE = { 1: ['抽奖次数', 'tag-green'], 2: ['藏品', 'tag-blue'], 3: ['优先购资格', 'tag-orange'] };
-const rewardTxt = r => r.type === 2 ? `${COL_NAME(r.collection_id) || '藏品#' + r.collection_id} ×${r.num || 1}` : r.type === 3 ? `优先购 ${r.num || 1} 次` : `${r.num || 0} 次抽奖`;
+const rewardTxt = r => r.type === 2 ? `${COL_NAME(r.collection_id) || '藏品#' + r.collection_id} ×${r.num || 1}` : r.type === 3 ? `优先购 ${r.num || 1} 次 · ${r.pre_collection_id ? COL_NAME(r.pre_collection_id) : '未绑定藏品'}` : `${r.num || 0} 次抽奖`;
 const rewardTag = r => { const t = RW_TYPE[r.type] || RW_TYPE[1]; return `<span class="tag ${t[1]}">${t[0]}</span> ${rewardTxt(r)}`; };
-/* 奖励配置表单行（prefix 为元素 id 前缀，cfg 为 {type,num,collection_id}） */
-const rewardCfgHtml = (prefix, cfg = { type: 1, num: 1, collection_id: 0 }) => {
+/* 奖励配置表单行（prefix 为元素 id 前缀，cfg 为 {type,num,collection_id,pre_collection_id}）
+   类型 2=藏品 → 选藏品；类型 3=优先购资格 → 选目标藏品（未发售藏品可预配置） */
+const CFG_ST_NAME = ['未发售', '已排期', '发售中', '已下架', '已售罄'];
+const rewardCfgHtml = (prefix, cfg = { type: 1, num: 1, collection_id: 0, pre_collection_id: 0 }) => {
   const colOpts = S.db.collections.map(c => `<option value="${c.id}" ${+cfg.collection_id === c.id ? 'selected' : ''}>${c.name}</option>`).join('');
+  const preOpts = S.db.collections.map(c => `<option value="${c.id}" ${+cfg.pre_collection_id === c.id ? 'selected' : ''}>${c.name}（${CFG_ST_NAME[c.status]}${c.status !== 2 ? '，可预配置' : ''}）</option>`).join('');
   return `<div class="form-grid">
     <div class="form-row"><label>奖励类型</label><select class="select" id="${prefix}-type"><option value="1" ${+cfg.type === 1 ? 'selected' : ''}>抽奖次数</option><option value="2" ${+cfg.type === 2 ? 'selected' : ''}>藏品</option><option value="3" ${+cfg.type === 3 ? 'selected' : ''}>优先购资格</option></select></div>
     <div class="form-row"><label>数量（次数/份数）</label><input class="input" id="${prefix}-num" type="number" min="1" value="${cfg.num ?? 1}"></div>
-    <div class="form-row" id="${prefix}-col-row" style="display:${+cfg.type === 2 ? '' : 'none'}"><label>选择藏品</label><select class="select" id="${prefix}-col"><option value="0">请选择藏品</option>${colOpts}</select></div></div>`;
+    <div class="form-row" id="${prefix}-col-row" style="display:${+cfg.type === 2 ? '' : 'none'}"><label>选择藏品</label><select class="select" id="${prefix}-col"><option value="0">请选择藏品</option>${colOpts}</select></div>
+    <div class="form-row" id="${prefix}-pre-row" style="display:${+cfg.type === 3 ? '' : 'none'}"><label>优先购目标藏品</label><select class="select" id="${prefix}-pre-col"><option value="0">请选择目标藏品</option>${preOpts}</select></div></div>`;
 };
-const rewardCfgRead = prefix => ({ type: +$(`#${prefix}-type`).value, num: +$(`#${prefix}-num`).value || 1, collection_id: +($(`#${prefix}-col`)?.value || 0) });
-const rewardCfgCheck = cfg => !(cfg.type === 2 && !cfg.collection_id);
-const syncRewardCfg = prefix => { const t = $(`#${prefix}-type`); const row = $(`#${prefix}-col-row`); if (t && row) row.style.display = +t.value === 2 ? '' : 'none'; };
+const rewardCfgRead = prefix => ({ type: +$(`#${prefix}-type`).value, num: +$(`#${prefix}-num`).value || 1, collection_id: +($(`#${prefix}-col`)?.value || 0), pre_collection_id: +($(`#${prefix}-pre-col`)?.value || 0) });
+const rewardCfgCheck = cfg => !((cfg.type === 2 && !cfg.collection_id) || (cfg.type === 3 && !cfg.pre_collection_id));
+const syncRewardCfg = prefix => { const t = $(`#${prefix}-type`); const colRow = $(`#${prefix}-col-row`); const preRow = $(`#${prefix}-pre-row`); if (!t) return; if (colRow) colRow.style.display = +t.value === 2 ? '' : 'none'; if (preRow) preRow.style.display = +t.value === 3 ? '' : 'none'; };
 const settingVal = (name, dflt) => {
   for (const g of Object.values(S.db.settings)) {
     if (!Array.isArray(g)) continue;
@@ -599,7 +603,7 @@ PAGES.invite = () => {
   const INV_TYPE = { 1: ['藏品', 'tag-blue'], 2: ['抽奖次数', 'tag-green'], 3: ['优先购资格', 'tag-orange'] };
   const rules = S.db.inviteRules.map(r => {
     const t = INV_TYPE[r.reward_type] || ['未知', 'tag-gray'];
-    const content = r.reward_type === 1 ? r.collection_name : r.reward_type === 2 ? `<span class="serif-num">${r.reward_num} 次抽奖</span>` : `<span class="serif-num">优先购 ${r.reward_num} 次</span>`;
+    const content = r.reward_type === 1 ? r.collection_name : r.reward_type === 2 ? `<span class="serif-num">${r.reward_num} 次抽奖</span>` : `<span class="serif-num">优先购 ${r.reward_num} 次 · ${r.pre_collection_id ? COL_NAME(r.pre_collection_id) : '<span style="color:var(--danger)">未绑定藏品</span>'}</span>`;
     return `<tr>
     <td class="serif-num">${r.invite_num} 人</td>
     <td><span class="tag ${t[1]}">${t[0]}</span></td>
@@ -914,6 +918,7 @@ const ACT = {
     const start = new Date($('#sale-time').value).getTime() / 1000 || NOW;
     const end = $('#sale-end-time').value ? new Date($('#sale-end-time').value).getTime() / 1000 : 0;
     if (end && end <= start) return toast('发售结束时间必须晚于开始时间', 'err');
+    if (c.pre_rule_type && c.pre_sale_time && c.pre_sale_time >= start) return toast('优先购开始时间需早于发售开始时间，请先在「编辑」中调整优先购配置', 'err');
     c.status = 2; c.sale_time = start; c.sale_end_time = end;
     closeModal(); toast(`「${c.name}」已开售`, 'ok'); renderPage();
     logOp('藏品管理', '开售', '藏品#' + c.id, end ? '开售至 ' + fmtT(end) : '不限时');
@@ -928,7 +933,23 @@ const ACT = {
   },
   'col-add'() { openColForm(null); },
   'col-edit'(el) { openColForm(S.db.collections.find(x => x.id == el.dataset.arg)); },
-  'col-del'(el) { const c = S.db.collections.find(x => x.id == el.dataset.arg); confirmBox(`确认删除藏品「${c.name}」？`, 'col-del-ok', c.id); },
+  'col-del'(el) {
+    const c = S.db.collections.find(x => x.id == el.dataset.arg);
+    // 引用检查：被业务数据引用的藏品禁止硬删（与分类管理同一防脏数据策略）
+    const refs = [];
+    if (S.db.orders.some(o => o.collection_id == c.id)) refs.push('订单');
+    if (S.db.holds.some(h => h.collection_id == c.id)) refs.push('持仓');
+    if (S.db.market.some(m => m.collection_id == c.id)) refs.push('市场挂单');
+    if (S.db.raffles.some(r => r.collection_id == c.id)) refs.push('抽签发售');
+    if (S.db.airdrops.some(t => t.collection_id == c.id)) refs.push('定向发放');
+    if (S.db.lotteries.some(l => (l.prizes || []).some(p => +p.collection_id === c.id) || ['hold', 'consume'].some(k => l.chance_rules?.[k]?.items?.some(it => +it.collection_id === c.id)))) refs.push('抽奖活动');
+    if (S.db.syntheses.some(s => s.target_collection_id == c.id || (s.materials || []).some(m => m.collection_id == c.id))) refs.push('合成活动');
+    if (S.db.register.collection_id == c.id || S.db.register.pre_collection_id == c.id) refs.push('注册活动');
+    if (S.db.inviteRules.some(r => r.collection_id == c.id || r.pre_collection_id == c.id)) refs.push('邀请有礼');
+    if (S.db.checkin.daily?.collection_id == c.id || S.db.checkin.daily?.pre_collection_id == c.id || S.db.checkin.rules.some(r => r.collection_id == c.id || r.pre_collection_id == c.id)) refs.push('签到活动');
+    if (refs.length) return toast(`藏品「${c.name}」被 ${refs.join('、')} 引用，请先解除引用再删除`, 'err');
+    confirmBox(`确认删除藏品「${c.name}」？`, 'col-del-ok', c.id);
+  },
   'col-del-ok'(el) { S.db.collections = S.db.collections.filter(x => x.id != el.dataset.arg); closeModal(); toast('删除成功', 'ok'); renderPage(); },
 
   /* 分类 */
@@ -1052,12 +1073,21 @@ const ACT = {
     </tbody></table></div><div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">关闭</button></div>`, );
   },
   'lot-save'() {
+    const id = +$('#lot-id').value || 0;
+    const old = id ? S.db.lotteries.find(x => x.id === id) : null;
     if (!$('#lot-title').value.trim()) return toast('请输入活动名称', 'err');
     const cr = readChanceRules();
     if (cr.hold.enabled && !cr.hold.items.length) return toast('「持有指定藏品」请选择藏品', 'err');
     if (cr.consume.enabled && !cr.consume.items.length) return toast('「消耗指定藏品」请选择藏品', 'err');
-    const a = { id: $('#lot-id').value ? +$('#lot-id').value : 0, title: $('#lot-title').value.trim(), chance_rules: cr, status: +$('#lot-status').value, start_time: NOW - 86400, end_time: NOW + 10 * 86400, prizes: [] };
-    if (a.id) { const old = S.db.lotteries.find(x => x.id === a.id); Object.assign(old, a); } else { a.id = Date.now() % 10000; S.db.lotteries.push(a); }
+    const start = $('#lot-start').value ? Math.floor(new Date($('#lot-start').value).getTime() / 1000) : (old?.start_time || NOW);
+    const end = $('#lot-end').value ? Math.floor(new Date($('#lot-end').value).getTime() / 1000) : (old?.end_time || NOW + 10 * 86400);
+    if (end <= start) return toast('结束时间必须晚于开始时间', 'err');
+    const status = +$('#lot-status').value;
+    // 开启校验：奖池非空且概率合计 > 0（奖池在「奖池配置」中维护，编辑本表单不改动奖池）
+    const prizes = old ? old.prizes : [];
+    if (status === 1 && (!prizes.length || prizes.reduce((s, p) => s + (p.probability || 0), 0) <= 0)) return toast('开启活动前请先在「奖池配置」中添加奖品并设置概率', 'err');
+    const a = { id, title: $('#lot-title').value.trim(), chance_rules: cr, status, start_time: start, end_time: end, prizes };
+    if (old) Object.assign(old, a); else { a.id = Date.now() % 10000; S.db.lotteries.push(a); }
     closeModal(); toast('保存成功', 'ok'); renderPage(); logOp('抽奖活动', '保存活动', '活动#' + a.id, a.title);
   },
   'lot-chances'(el) {
@@ -1148,7 +1178,7 @@ const ACT = {
   },
   'inv-del-ok'(el) { S.db.inviteRules = S.db.inviteRules.filter(x => x.id != el.dataset.arg); closeModal(); toast('删除成功', 'ok'); renderPage(); },
   'inv-save'() {
-    const r = { id: $('#inv-id').value ? +$('#inv-id').value : 0, invite_num: +$('#inv-num').value || 0, reward_type: +$('#inv-type').value, collection_id: 0, reward_num: 0, status: 1 };
+    const r = { id: $('#inv-id').value ? +$('#inv-id').value : 0, invite_num: +$('#inv-num').value || 0, reward_type: +$('#inv-type').value, collection_id: 0, pre_collection_id: 0, reward_num: 0, status: 1 };
     if (!r.invite_num) return toast('请输入邀请人数门槛', 'err');
     if (r.reward_type === 1) {
       r.collection_id = +$('#inv-col').value || 0;
@@ -1156,6 +1186,10 @@ const ACT = {
     } else {
       r.reward_num = +$('#inv-num2').value || 0;
       if (!r.reward_num) return toast(r.reward_type === 3 ? '请输入优先购可用次数' : '请输入奖励抽奖次数', 'err');
+      if (r.reward_type === 3) {
+        r.pre_collection_id = +$('#inv-pre-col').value || 0;
+        if (!r.pre_collection_id) return toast('优先购资格需选择目标藏品（未发售藏品可预配置）', 'err');
+      }
     }
     r.collection_name = COL_NAME(r.collection_id);
     if (r.id) Object.assign(S.db.inviteRules.find(x => x.id === r.id), r); else S.db.inviteRules.push(r);
@@ -1214,7 +1248,7 @@ const ACT = {
     const c = S.db.checkin;
     c.enabled = +$('#ck-enabled').value; c.repair_limit = +$('#ck-repair').value || 0;
     c.daily = rewardCfgRead('ck-daily');
-    if (!rewardCfgCheck(c.daily)) return toast('每日签到藏品奖励需选择藏品', 'err');
+    if (!rewardCfgCheck(c.daily)) return toast(c.daily.type === 3 ? '每日签到优先购奖励需选择目标藏品' : '每日签到藏品奖励需选择藏品', 'err');
     toast('签到规则已保存，C 端即时生效', 'ok'); renderPage(); logOp('签到活动', '保存规则', 'checkin', `每日 ${rewardTxt(c.daily)}`);
   },
   'ck-search'() { S.q.checkin.keyword = $('#ck-kw').value; S.q.checkin.page = 1; renderPage(); },
@@ -1229,7 +1263,7 @@ const ACT = {
     const rule = { day_num: +$('#ckr-day').value || 0, ...rewardCfgRead('ckr') };
     if (!rule.day_num) return toast('请输入连续天数', 'err');
     if (rule.num < 1) return toast('奖励数量不能小于 1', 'err');
-    if (!rewardCfgCheck(rule)) return toast('藏品奖励需选择藏品', 'err');
+    if (!rewardCfgCheck(rule)) return toast(rule.type === 3 ? '优先购奖励需选择目标藏品' : '藏品奖励需选择藏品', 'err');
     if (idx === '') S.db.checkin.rules.push(rule); else S.db.checkin.rules[+idx] = rule;
     S.db.checkin.rules.sort((a, b) => a.day_num - b.day_num);
     closeModal(); toast('保存成功', 'ok'); renderPage(); logOp('签到活动', '阶梯配置', `连续${rule.day_num}天`, rewardTxt(rule));
@@ -1244,7 +1278,7 @@ const ACT = {
     c.pre_collection_id = +$('#rg-pre-col').value || 0;
     c.pre_num = +$('#rg-pre').value || 0;
     c.inviter = rewardCfgRead('rg-inv');
-    if (c.chance > 0 && !c.lot_activity_id && $('#rg-lot').value !== '0') return toast('请绑定抽奖活动', 'err');
+    /* 抽奖次数绑定说明：0 = 通用（所有开启中的场次均可用），绑定指定场次则次数在该场次内使用（场次未开启时待生效） */
     if (c.pre_num > 0 && !c.pre_collection_id) return toast('优先购资格需选择目标藏品（未发售藏品可预配置）', 'err');
     if (c.pre_num > 0 && c.pre_collection_id && ![0, 1, 2].includes(S.db.collections.find(x => x.id === c.pre_collection_id).status)) return toast('该藏品已下架或售罄，不能再配置优先购资格', 'err');
     if (!rewardCfgCheck(c.inviter)) return toast('邀请人藏品奖励需选择藏品', 'err');
@@ -1262,15 +1296,23 @@ const ACT = {
   'lot-save-prizes'() {
     const id = +$('#pz-act-id').value;
     const a = S.db.lotteries.find(x => x.id === id);
-    const prizes = [...document.querySelectorAll('.prize-row')].map((r, i) => ({
-      id: i + 1, name: r.querySelector('.pz-name').value, type: +r.querySelector('.pz-type').value,
-      collection_id: r.querySelector('.pz-col') ? (+r.querySelector('.pz-col').value || 0) : 0,
-      num: r.querySelector('.pz-num') ? (+r.querySelector('.pz-num').value || 0) : 0,
-      probability: +r.querySelector('.pz-prob').value || 0, stock: +r.querySelector('.pz-stock').value || 0, sent: 0,
-    })).filter(p => p.name);
+    // 保留已发放数：按奖品名匹配旧奖池（重存奖池不清空已抽出发放记录）
+    const oldSent = {};
+    (a.prizes || []).forEach(p => { if (!(p.name in oldSent)) oldSent[p.name] = p.sent || 0; });
+    const prizes = [...document.querySelectorAll('.prize-row')].map((r, i) => {
+      const name = r.querySelector('.pz-name').value;
+      const p = {
+        id: i + 1, name, type: +r.querySelector('.pz-type').value,
+        collection_id: r.querySelector('.pz-col') ? (+r.querySelector('.pz-col').value || 0) : 0,
+        num: r.querySelector('.pz-num') ? (+r.querySelector('.pz-num').value || 0) : 0,
+        probability: +r.querySelector('.pz-prob').value || 0, stock: +r.querySelector('.pz-stock').value || 0,
+        sent: oldSent[name] ?? 0,
+      };
+      return p;
+    }).filter(p => p.name);
     const totalP = prizes.reduce((s, p) => s + p.probability, 0);
     if (totalP > 10000) return toast('概率合计超过 10000（100%），请调整', 'err');
-    a.prizes = prizes; closeModal(); toast(`奖池已保存（概率合计 ${(totalP / 100).toFixed(1)}%）`, 'ok'); logOp('抽奖活动', '奖池配置', '活动#' + id, '');
+    a.prizes = prizes; closeModal(); toast(`奖池已保存（概率合计 ${(totalP / 100).toFixed(1)}%，已发放数已保留）`, 'ok'); logOp('抽奖活动', '奖池配置', '活动#' + id, '');
   },
   'mat-row-add'() {
     const rows = document.getElementById('mat-rows');
@@ -1453,6 +1495,7 @@ ACT['col-form-ok'] = el => {
   const rpl = Math.round((+$('#cf-rpl').value || 0) * 100);
   if (resale === 1 && rpl <= 0) return toast('开启二级市场必须设置寄售限价', 'err');
   const data = { name, author: $('#cf-author').value, category_id: +$('#cf-cat').value, price, market_price: Math.round((+$('#cf-mkt').value || 0) * 100), stock: +$('#cf-stock').value || 0, resale, resale_price_limit: resale === 1 ? rpl : 0, detail: editorVal('col') };
+  if (data.stock <= 0) return toast('发行量必须大于 0', 'err');
   // 优先购配置
   const preType = +$('#cf-pre-type').value;
   if (preType > 0) {
@@ -1465,7 +1508,11 @@ ACT['col-form-ok'] = el => {
   } else {
     Object.assign(data, { pre_rule_type: 0, pre_rule_value: '', pre_sale_time: 0, pre_limit: 1 });
   }
-  if (id) { Object.assign(S.db.collections.find(x => x.id === id), data); } else { data.id = Date.now() % 10000; data.sold = 0; data.status = 0; data.sale_time = 0; data.sale_end_time = 0; data.createtime = NOW; S.db.collections.unshift(data); }
+  if (id) {
+    const old = S.db.collections.find(x => x.id === id);
+    if (data.stock < old.sold) return toast(`发行量（${data.stock.toLocaleString()}）不能小于已售数量（${old.sold.toLocaleString()}）`, 'err');
+    Object.assign(old, data);
+  } else { data.id = Date.now() % 10000; data.sold = 0; data.status = 0; data.sale_time = 0; data.sale_end_time = 0; data.createtime = NOW; S.db.collections.unshift(data); }
   closeModal(); toast('保存成功', 'ok'); renderPage(); logOp('藏品管理', id ? '编辑' : '添加', name, id ? (preType ? '含优先购配置' : '') : '');
 };
 
@@ -1559,8 +1606,8 @@ function openLotForm(a) {
     <div class="form-grid">
     <div class="form-row"><label>活动名称 *</label><input class="input" id="lot-title" value="${esc(a?.title || '')}"></div>
     <div class="form-row"><label>状态</label><select class="select" id="lot-status"><option value="1">开启</option><option value="0">关闭</option></select></div>
-    <div class="form-row"><label>开始时间</label><input class="input" type="datetime-local" value="2026-10-20T00:00"></div>
-    <div class="form-row"><label>结束时间</label><input class="input" type="datetime-local" value="2026-11-11T23:59"></div></div>
+    <div class="form-row"><label>开始时间</label><input class="input" id="lot-start" type="datetime-local" value="${a?.start_time ? toLocalInput(a.start_time) : ''}"></div>
+    <div class="form-row"><label>结束时间</label><input class="input" id="lot-end" type="datetime-local" value="${a?.end_time ? toLocalInput(a.end_time) : ''}"></div></div>
     <div class="form-row"><label>抽奖次数获取方式（每次抽奖消耗 1 次）</label>
       <div class="chance-box">
         ${ck('c-df', '每日签到赠送', cr.daily_free?.enabled, `+ <input class="input" id="c-df-num" type="number" min="0" style="width:70px" value="${cr.daily_free?.num ?? 1}"> 次/天`)}
@@ -1694,7 +1741,9 @@ function openPrizeModal(a) {
 
 function openInvForm(r) {
   const isEdit = !!r;
+  const ST_NAME = CFG_ST_NAME;
   const colOpts = S.db.collections.map(c => `<option value="${c.id}" ${r?.collection_id === c.id ? 'selected' : ''}>${c.name}</option>`).join('');
+  const preOpts = S.db.collections.map(c => `<option value="${c.id}" ${+r?.pre_collection_id === c.id ? 'selected' : ''}>${c.name}（${ST_NAME[c.status]}${c.status !== 2 ? '，可预配置' : ''}）</option>`).join('');
   openModal(`<div class="modal-head"><h3>${isEdit ? '编辑奖励规则' : '添加奖励规则'}</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
   <div class="modal-body">
     <input type="hidden" id="inv-id" value="${r?.id || 0}">
@@ -1702,12 +1751,14 @@ function openInvForm(r) {
     <div class="form-row"><label>邀请人数门槛 *</label><input class="input" id="inv-num" type="number" value="${r?.invite_num || ''}"></div>
     <div class="form-row"><label>奖励类型</label><select class="select" id="inv-type"><option value="1">藏品</option><option value="2">抽奖次数</option><option value="3">优先购资格</option></select></div></div>
     <div class="form-row" id="inv-col-row"><label>奖励藏品</label><select class="select" id="inv-col">${colOpts}</select></div>
+    <div class="form-row" id="inv-pre-row" style="display:none"><label>优先购目标藏品（未发售藏品可预配置）</label><select class="select" id="inv-pre-col"><option value="0">请选择目标藏品</option>${preOpts}</select></div>
     <div class="form-row" id="inv-num-row" style="display:none"><label id="inv-num-label">奖励抽奖次数</label><input class="input" id="inv-num2" type="number" min="1" value="${r && r.reward_type !== 1 ? r.reward_num : 1}"></div>
   </div>
   <div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">取消</button><button class="btn btn-primary" data-act="inv-save">保存</button></div>`);
   const sync = () => {
     const t = +$('#inv-type').value;
     $('#inv-col-row').style.display = t === 1 ? '' : 'none';
+    $('#inv-pre-row').style.display = t === 3 ? '' : 'none';
     $('#inv-num-row').style.display = t === 1 ? 'none' : '';
     $('#inv-num-label').textContent = t === 3 ? '优先购可用次数' : '奖励抽奖次数';
   };
