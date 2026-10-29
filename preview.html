@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数字藏品后台 · 液态玻璃主题预览</title>
+<style>
+:root{--blue:#4a8ff7;--blue-deep:#2f6fe0;--blue-grad:linear-gradient(135deg,#56a3fc 0%,#3d7ff0 100%);--ink:#0e1838;--ink-2:#333;--ink-3:#666;--ink-muted:#7e8b9b;--ok:#34c759;--warn:#ff9f1c;--danger:#ff4d4f;--glass-bg:linear-gradient(145deg,rgba(255,255,255,.74),rgba(255,255,255,.52));--glass-border:1px solid rgba(255,255,255,.72);--glass-shadow:0 8px 28px rgba(31,59,104,.07),inset 0 1px 0 rgba(255,255,255,.9);--r-lg:16px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;color:var(--ink);background:radial-gradient(1100px 620px at 88% -10%,rgba(86,163,252,.28),transparent 60%),radial-gradient(900px 560px at -12% 28%,rgba(125,200,255,.3),transparent 55%),radial-gradient(760px 480px at 55% 115%,rgba(151,219,255,.32),transparent 60%),linear-gradient(#dcecfb 0%,#eef5fc 45%,#f5f7fa 100%) fixed;min-height:100vh}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;opacity:.5;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.7 0 0 0 0 0.95 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.serif-num{font-family:'Source Serif Pro',Georgia,serif;font-style:italic;font-weight:600;font-variant-numeric:tabular-nums}
+.glass{position:relative;background:var(--glass-bg);backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);border:var(--glass-border);border-radius:var(--r-lg);box-shadow:var(--glass-shadow);overflow:hidden}
+.glass::before{content:'';position:absolute;top:0;left:0;right:0;height:42%;background:linear-gradient(rgba(255,255,255,.5),transparent);pointer-events:none}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.rise{animation:rise .55s ease both;animation-delay:calc(var(--i,0)*70ms)}
+.layout{display:flex;min-height:100vh;position:relative;z-index:1}
+aside{width:232px;flex-shrink:0;margin:16px 0 16px 16px;padding:18px 12px;display:flex;flex-direction:column;gap:4px}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 8px 16px;border-bottom:1px solid rgba(126,139,155,.15);margin-bottom:12px}
+.logo{width:38px;height:38px;border-radius:12px;background:var(--blue-grad);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;box-shadow:0 6px 16px rgba(61,127,240,.4)}
+.brand b{font-size:15px;display:block}
+.brand span{font-size:9px;letter-spacing:.2em;color:var(--ink-muted)}
+.group-label{font-size:10px;letter-spacing:.15em;color:var(--ink-muted);padding:12px 10px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;font-size:13px;color:var(--ink-2);cursor:pointer;transition:.2s}
+.nav-item:hover{background:rgba(74,143,247,.1)}
+.nav-item.active{background:var(--blue-grad);color:#fff;box-shadow:0 6px 16px rgba(61,127,240,.35)}
+.nav-item svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;flex-shrink:0}
+.user-chip{margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:rgba(255,255,255,.5)}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--blue-grad);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.user-chip b{font-size:13px;display:block}
+.user-chip span{font-size:11px;color:var(--ink-muted)}
+main{flex:1;padding:0 24px 24px;display:flex;flex-direction:column;min-width:0}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 4px 14px}
+.topbar h1{font-size:20px;display:inline}
+.topbar .en{font-size:10px;letter-spacing:.2em;color:var(--ink-muted);margin-left:10px;text-transform:uppercase}
+.writetag{font-size:12px;padding:4px 12px;border-radius:999px;background:rgba(74,143,247,.14);color:var(--blue-deep);border:1px solid rgba(74,143,247,.3)}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-bottom:14px}
+.stat-card{padding:18px 20px}
+.stat-card .label{font-size:12px;color:var(--ink-muted)}
+.stat-card .num{font-size:30px;margin:6px 0 2px}
+.stat-card .sub{font-size:12px;color:var(--ink-3)}
+.orb{position:absolute;border-radius:50%;filter:blur(28px);opacity:.55;pointer-events:none}
+.orb-blue{background:radial-gradient(circle,rgba(86,163,252,.55),transparent 70%)}
+.orb-green{background:radial-gradient(circle,rgba(52,199,89,.4),transparent 70%)}
+.orb-orange{background:radial-gradient(circle,rgba(255,159,28,.4),transparent 70%)}
+.row2{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:14px}
+.card-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 0}
+.card-head h3{font-size:15px}
+.card-head .en{font-size:10px;letter-spacing:.16em;color:var(--ink-muted)}
+.bars{display:flex;align-items:flex-end;gap:12px;height:170px;padding:24px 20px 14px}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+.bar{width:60%;max-width:34px;border-radius:8px 8px 4px 4px;background:var(--blue-grad);box-shadow:0 4px 12px rgba(61,127,240,.3);position:relative;transition:.2s}
+.bar:hover{transform:scaleY(1.04)}
+.bar .tip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;white-space:nowrap;opacity:0;transition:.15s;pointer-events:none}
+.bar:hover .tip{opacity:1}
+.bar-x{font-size:11px;color:var(--ink-muted)}
+.gmv{padding:0 20px 20px;display:flex;flex-direction:column;justify-content:center}
+.gmv .label{font-size:12px;color:var(--ink-muted);margin-bottom:6px}
+.gmv .big{font-size:40px}
+.tbl-wrap{overflow-x:auto;padding:8px 8px 4px}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;padding:10px 12px;color:var(--ink-muted);font-weight:500;font-size:12px;border-bottom:1px solid rgba(126,139,155,.18);white-space:nowrap}
+.tbl td{padding:12px;color:var(--ink-2);border-bottom:1px solid rgba(126,139,155,.1);white-space:nowrap}
+.tbl tbody tr:hover{background:rgba(74,143,247,.06)}
+.cell-main{color:var(--ink);font-weight:600}
+.cell-sub{font-size:12px;color:var(--ink-muted)}
+.tag{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;line-height:20px}
+.tag-blue{background:rgba(74,143,247,.14);color:var(--blue-deep)}
+.tag-green{background:rgba(52,199,89,.14);color:#1d9c40}
+.tag-orange{background:rgba(255,159,28,.16);color:#d67c00}
+.note{padding:14px 20px;font-size:12px;color:var(--ink-muted);text-align:center}
+@media(max-width:768px){aside{position:fixed;left:-260px;z-index:9;transition:.3s}.row2{grid-template-columns:1fr}.stat-card .num{font-size:24px}main{padding:0 12px 12px}}
+</style>
+</head>
+<body>
+<div class="layout">
+    <aside class="glass rise" style="--i:0">
+        <div class="brand">
+            <div class="logo">灵</div>
+            <div><b>灵境数藏</b><span>ADMIN CONSOLE</span></div>
+        </div>
+        <div class="group-label">概览</div>
+        <div class="nav-item active"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>数据仪表盘</div>
+        <div class="group-label">业务管理</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>用户管理</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg>钱包流水</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9z"/></svg>藏品管理</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M20 12l-8 8-9-9 9-8h8z"/></svg>分类管理</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M14 2H6v20h12V6z"/><path d="M14 2v4h4"/></svg>订单管理</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M4 7h13m0 0-3-3m3 3-3 3M20 17H7m0 0 3 3m-3-3 3-3"/></svg>市场寄售</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5zM2 12l10 5 10-5M2 17l10 5 10-5"/></svg>持仓查询</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>定向发放</div>
+        <div class="group-label">活动运营</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 8c0-2 2-3 4-3 3 0 5 3 5 3s2-3 5-3c2 0 4 1 4 3"/></svg>抽奖活动</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M9 3h6v6l4 9a2 2 0 0 1-2 3H7a2 2 0 0 1-2-3l4-9z"/></svg>合成活动</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M3 9l9-6 9 6-9 6zM6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg>邀请有礼</div>
+        <div class="group-label">内容运营</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-7 18-2.5-7z"/></svg>公告管理</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>轮播管理</div>
+        <div class="group-label">系统</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.06-.4.1-.8.1-1.2z"/></svg>运营参数</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>数据清理</div>
+        <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5z"/></svg>日志审计</div>
+        <div class="user-chip">
+            <div class="avatar">管</div>
+            <div><b>管理员</b><span>超级管理员</span></div>
+        </div>
+    </aside>
+    <main>
+        <div class="topbar rise" style="--i:1">
+            <div><h1>数据仪表盘</h1><span class="en">Dashboard</span></div>
+            <span class="writetag">写操作已开启</span>
+        </div>
+        <div class="stat-grid">
+            <div class="glass stat-card rise" style="--i:2"><span class="orb orb-blue" style="width:70px;height:70px;right:-10px;top:-16px"></span><div class="label">注册用户</div><div class="num serif-num">128,462</div><div class="sub">今日新增 <b class="serif-num">+326</b></div></div>
+            <div class="glass stat-card rise" style="--i:3"><span class="orb orb-green" style="width:70px;height:70px;right:-10px;top:-16px"></span><div class="label">藏品</div><div class="num serif-num">86</div><div class="sub">在售 <b class="serif-num">12</b> 个系列</div></div>
+            <div class="glass stat-card rise" style="--i:4"><span class="orb orb-orange" style="width:70px;height:70px;right:-10px;top:-16px"></span><div class="label">NFT 持仓</div><div class="num serif-num">1,336,057</div><div class="sub">寄售中 <b class="serif-num">4,321</b></div></div>
+            <div class="glass stat-card rise" style="--i:5"><span class="orb orb-blue" style="width:70px;height:70px;right:-10px;top:-16px"></span><div class="label">订单总数</div><div class="num serif-num">486,102</div><div class="sub">今日 <b class="serif-num">1,208</b> 单</div></div>
+        </div>
+        <div class="row2">
+            <div class="glass rise" style="--i:6">
+                <div class="card-head"><h3>近 7 日订单趋势</h3><span class="en">7-DAY TREND</span></div>
+                <div class="bars">
+                    <div class="bar-col"><div class="bar" style="height:52%"><span class="tip">964 单 · ￥82,140</span></div><span class="bar-x">10-22</span></div>
+                    <div class="bar-col"><div class="bar" style="height:70%"><span class="tip">1,298 单 · ￥110,330</span></div><span class="bar-x">10-23</span></div>
+                    <div class="bar-col"><div class="bar" style="height:44%"><span class="tip">815 单 · ￥69,275</span></div><span class="bar-x">10-24</span></div>
+                    <div class="bar-col"><div class="bar" style="height:88%"><span class="tip">1,632 单 · ￥138,720</span></div><span class="bar-x">10-25</span></div>
+                    <div class="bar-col"><div class="bar" style="height:61%"><span class="tip">1,131 单 · ￥96,135</span></div><span class="bar-x">10-26</span></div>
+                    <div class="bar-col"><div class="bar" style="height:76%"><span class="tip">1,410 单 · ￥119,850</span></div><span class="bar-x">10-27</span></div>
+                    <div class="bar-col"><div class="bar" style="height:58%"><span class="tip">1,208 单 · ￥102,680</span></div><span class="bar-x">10-28</span></div>
+                </div>
+            </div>
+            <div class="glass rise" style="--i:7">
+                <div class="card-head"><h3>市场累计成交额</h3><span class="en">TOTAL GMV</span></div>
+                <div class="gmv">
+                    <div class="label">含一级发行与二级寄售</div>
+                    <div class="big serif-num">￥86,429,017</div>
+                    <div class="sub" style="margin-top:8px;font-size:12px;color:var(--ink-muted)">本周环比 <span class="tag tag-green">+12.4%</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="glass rise" style="--i:8">
+            <div class="card-head"><h3>最新订单</h3><span class="en">LATEST ORDERS</span></div>
+            <div class="tbl-wrap">
+                <table class="tbl">
+                    <thead><tr><th>订单号</th><th>用户</th><th>藏品</th><th>类型</th><th>金额</th><th>状态</th><th>时间</th></tr></thead>
+                    <tbody>
+                        <tr><td class="cell-sub">NFT20261028120845</td><td>星河旅人</td><td class="cell-main">敦煌飞天 · 壹</td><td><span class="tag tag-blue">一级购</span></td><td class="serif-num">￥39.00</td><td><span class="tag tag-green">已支付</span></td><td class="cell-sub">2026-10-28 02:11</td></tr>
+                        <tr><td class="cell-sub">MKT20261028120801</td><td>青瓷不语</td><td class="cell-main">山海经 · 白泽</td><td><span class="tag tag-orange">市场购</span></td><td class="serif-num">￥520.00</td><td><span class="tag tag-green">已支付</span></td><td class="cell-sub">2026-10-28 02:06</td></tr>
+                        <tr><td class="cell-sub">NFT20261028120736</td><td>北屿</td><td class="cell-main">敦煌飞天 · 贰</td><td><span class="tag tag-blue">一级购</span></td><td class="serif-num">￥39.00</td><td><span class="tag tag-green">已支付</span></td><td class="cell-sub">2026-10-28 01:58</td></tr>
+                        <tr><td class="cell-sub">MKT20261028120712</td><td>雾里看花</td><td class="cell-main">非遗剪纸 · 锦鲤</td><td><span class="tag tag-orange">市场购</span></td><td class="serif-num">￥128.00</td><td><span class="tag tag-orange">待支付</span></td><td class="cell-sub">2026-10-28 01:49</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="note rise" style="--i:9">▲ 液态玻璃主题静态预览 · 实际系统为 BuildAdmin + Vue3 动态渲染，17 个页面完整功能见 README</div>
+    </main>
+</div>
+</body>
+</html>
