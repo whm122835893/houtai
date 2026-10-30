@@ -33,15 +33,16 @@ function mkCollections() {
   const rows = [
     ['敦煌飞天 · 壹', 2, '李慕白', 3900, 69900, 10000, 8632, 0, 2, NOW - 3 * 86400],
     ['敦煌飞天 · 贰', 2, '李慕白', 3900, 69900, 10000, 5210, 1, 2, NOW - 3 * 86400],
-    ['山海经 · 白泽', 3, '顾云舟', 9900, 199900, 5000, 5000, 1, 2, NOW - 10 * 86400],
-    ['非遗剪纸 · 锦鲤', 1, '陈锦绣', 2900, 49900, 20000, 19888, 1, 2, NOW - 1 * 86400],
+    ['山海经 · 白泽', 3, '顾云舟', 9900, 199900, 5000, 3800, 1, 2, NOW - 10 * 86400],
+    ['非遗剪纸 · 锦鲤', 1, '陈锦绣', 2900, 49900, 29000, 19888, 1, 2, NOW - 1 * 86400],
     ['千里江山 · 数字卷', 4, '宋青绿', 19900, 399900, 3000, 0, 1, 1, NOW + 5 * 86400],
     ['敦煌九色鹿', 2, '李慕白', 6900, 129900, 8000, 0, 0, 0, 0],
-    ['山海经 · 穷奇', 3, '顾云舟', 9900, 199900, 5000, 4980, 1, 3, NOW - 20 * 86400],
+    ['山海经 · 穷奇', 3, '顾云舟', 9900, 199900, 6000, 4980, 1, 3, NOW - 20 * 86400],
     ['城市记忆 · 老街', 4, '王小满', 1900, 29900, 50000, 12304, 0, 0, 0],
   ];
+  const publishers = ['灵境数字科技', '灵境数字科技', '云舟文化传媒', '锦绣非遗文化', '青绿数字艺术', '灵境数字科技', '云舟文化传媒', '满仓数字艺术'];
   const list = rows.map((r, i) => ({
-    id: i + 1, name: r[0], category_id: r[1], author: r[2], cover: '',
+    id: i + 1, name: r[0], category_id: r[1], author: r[2], publisher: publishers[i], cover: '',
     price: r[3], market_price: r[4], stock: r[5], sold: r[6], resale: r[7],
     status: r[8], sale_time: r[9],
     detail: '<p>「' + r[0] + '」以' + r[2] + '先生原作为蓝本，经 3D 建模与程序化生成铸造而成，每一枚均对应链上唯一凭证。</p><p>· 唯一编号，不可复制<br/>· 支持二级市场寄售流转<br/>· 持有人享有线下展优先购权益</p>',
@@ -52,6 +53,8 @@ function mkCollections() {
   Object.assign(list[4], { pre_rule_type: 2, pre_rule_value: '10001,10002,10007', pre_sale_time: NOW + 4 * 86400, pre_limit: 1 });
   // 发售结束时间 + 寄售限价（开启二级市场的藏品必填限价）
   list.forEach(c => { c.sale_end_time = 0; c.resale_price_limit = 0; });
+  // 单品转赠开关（与寄售开关互相独立）
+  list.forEach((c, i) => { c.transfer_enabled = [1, 1, 0, 1, 1, 1, 0, 1][i]; });
   Object.assign(list[1], { sale_end_time: NOW - 3600, resale_price_limit: 99900 }); // 已到期未售完 → 演示自动售罄（仍展示）
   Object.assign(list[2], { resale_price_limit: 45900 }); // 存在 52000 挂单 → 演示「超限」标记
   Object.assign(list[3], { resale_price_limit: 79900 });
@@ -157,6 +160,38 @@ function buildDB() {
       { id: 2, title: '元旦新岁抽', chance_rules: { daily_free: { enabled: false, num: 1 }, register: { enabled: false, num: 1 }, hold: { enabled: false, items: [] }, invite: { enabled: false, num: 1, daily_cap: 5 }, consume: { enabled: false, items: [] } }, status: 0, start_time: NOW + 15 * 86400, end_time: NOW + 25 * 86400, createtime: NOW - 2 * 86400, prizes: [] },
     ],
     lotteryRecords: Array.from({ length: 8 }, (_, i) => ({ id: 900 + i, activity_id: 1, user_id: 10001 + i, user: mkUsers()[i].nickname, prize_name: ['再抽 1 次', '谢谢参与', '锦鲤剪纸', '谢谢参与', '再抽 1 次', '谢谢参与', '再抽 1 次', '敦煌九色鹿'][i], createtime: NOW - i * 5400 })),
+    blindboxes: [
+      { id: 1, name: '国风幸运福袋', price: 6900, total_supply: 10000, sold_count: 3210, status: 1, createtime: NOW - 12 * 86400,
+        prizes: [
+          { collection_id: 5, name: '千里江山 · 数字卷', probability: 40, quantity: 60, sent: 19 },
+          { collection_id: 3, name: '山海经 · 白泽', probability: 25, quantity: 800, sent: 262 },
+          { collection_id: 7, name: '山海经 · 穷奇', probability: 10, quantity: 320, sent: 98 },
+          { collection_id: 4, name: '非遗剪纸 · 锦鲤', probability: 15, quantity: 1500, sent: 503 },
+          { collection_id: 6, name: '敦煌九色鹿', probability: 5, quantity: 100, sent: 31 },
+          { collection_id: 1, name: '敦煌飞天 · 壹', probability: 3, quantity: 60, sent: 18 },
+          { collection_id: 2, name: '敦煌飞天 · 贰', probability: 2, quantity: 40, sent: 11 },
+        ] },
+      { id: 2, name: '元旦新岁盒', price: 19900, total_supply: 5000, sold_count: 0, status: 0, createtime: NOW - 2 * 86400, prizes: [] },
+      { id: 3, name: '城市记忆 · 快闪盒', price: 3900, total_supply: 2000, sold_count: 1866, status: 1, createtime: NOW - 20 * 86400,
+        prizes: [
+          { collection_id: 8, name: '城市记忆 · 老街', probability: 70, quantity: 1400, sent: 1306 },
+          { collection_id: 4, name: '非遗剪纸 · 锦鲤', probability: 30, quantity: 600, sent: 560 },
+        ] },
+    ],
+    blindboxRecords: Array.from({ length: 8 }, (_, i) => ({
+      id: 1300 + i, box_id: i < 5 ? 1 : 3, box_name: i < 5 ? '国风幸运福袋' : '城市记忆 · 快闪盒',
+      user_id: 10001 + i, user: mkUsers()[i].nickname,
+      prize_name: ['山海经 · 白泽', '非遗剪纸 · 锦鲤', '空盒（库存降级）', '敦煌九色鹿', '千里江山 · 数字卷', '城市记忆 · 老街', '城市记忆 · 老街', '非遗剪纸 · 锦鲤'][i],
+      createtime: NOW - i * 4300,
+    })),
+    transfers: [
+      { id: 1, transfer_no: 'TRF20261028001', collection_name: '敦煌飞天 · 壹', from_user: '星河旅人', to_user: '青瓷不语', status: 1, createtime: NOW - 6 * 86400, done_time: NOW - 6 * 86400 + 7200 },
+      { id: 2, transfer_no: 'TRF20261027002', collection_name: '山海经 · 白泽', from_user: '北屿', to_user: '雾里看花', status: 1, createtime: NOW - 4 * 86400, done_time: NOW - 4 * 86400 + 5400 },
+      { id: 3, transfer_no: 'TRF20261028003', collection_name: '非遗剪纸 · 锦鲤', from_user: '拾光者', to_user: '南栀', status: 0, createtime: NOW - 3600 * 3, done_time: 0 },
+      { id: 4, transfer_no: 'TRF20261026004', collection_name: '敦煌九色鹿', from_user: '长安客', to_user: '柚子茶', status: 2, createtime: NOW - 2 * 86400, done_time: NOW - 2 * 86400 + 3600, revoke_reason: '误转给陌生账号，风控核实后撤销回收' },
+      { id: 5, transfer_no: 'TRF20261025005', collection_name: '山海经 · 穷奇', from_user: '南山南', to_user: '半夏微凉', status: 3, createtime: NOW - 3 * 86400, done_time: 0 },
+      { id: 6, transfer_no: 'TRF20261028006', collection_name: '城市记忆 · 老街', from_user: '云深不知处', to_user: '橘颂', status: 1, createtime: NOW - 86400, done_time: NOW - 86400 + 4000 },
+    ],
     chanceLogs: [
       { id: 1, user_id: 10001, user: mkUsers()[0].nickname, num: 1, source: 1, ref: '连续签到 3 天 · 11月28日', createtime: NOW - 3600 * 2 },
       { id: 2, user_id: 10002, user: mkUsers()[1].nickname, num: 2, source: 5, ref: '消耗「星际漫游者」1 件', createtime: NOW - 3600 * 5 },
@@ -169,7 +204,7 @@ function buildDB() {
     ],
     raffles: [
       // 报名中
-      { id: 1, collection_id: 5, total: 3000, per_limit: 1, apply_start: NOW - 2 * 86400, apply_end: NOW + 2 * 86400, buy_deadline: NOW + 6 * 86400, apply_count: 18652, win_count: 0, status: 1, createtime: NOW - 3 * 86400 },
+      { id: 1, collection_id: 5, total: 3000, per_limit: 1, apply_start: NOW - 2 * 86400, apply_end: NOW + 2 * 86400, buy_deadline: NOW + 6 * 86400, apply_count: 18652, win_count: 0, status: 1, whitelist: '13871000000,13871413739', createtime: NOW - 3 * 86400 },
       // 已截止待抽签
       { id: 2, collection_id: 4, total: 500, per_limit: 2, apply_start: NOW - 5 * 86400, apply_end: NOW - 3600, buy_deadline: NOW + 2 * 86400, apply_count: 9240, win_count: 0, status: 2, createtime: NOW - 6 * 86400 },
       // 已抽签（购买期）
@@ -204,6 +239,54 @@ function buildDB() {
       { id: 1, title: '敦煌飞天主推', image: '', link: '/collection/1', weigh: 100, status: 1 },
       { id: 2, title: '双十一抽奖活动', image: '', link: '/lottery', weigh: 90, status: 1 },
       { id: 3, title: '邀请有礼', image: '', link: '/invite', weigh: 80, status: 0 },
+    ],
+    thirdparty: {
+      huifu: {
+        enabled: 1,
+        items: [
+          { name: 'sys_id', title: '汇聚系统号（Sys ID）', value: '6666000108881234' },
+          { name: 'merchant_id', title: '汇付商户号', value: 'HF202610280001' },
+          { name: 'store_id', title: '门店编号', value: 'ST0001' },
+          { name: 'private_key', title: '商户 RSA 私钥', value: 'MIIEvQIBADANBgkqhkiG9w0BAQ********' },
+          { name: 'cert_sn', title: '证书序列号', value: '6A8F3D2C1107BEE4' },
+          { name: 'gateway', title: '网关地址', value: 'https://api.huifu.com' },
+          { name: 'notify_url', title: '异步通知地址', value: 'https://api.lingjing.cn/pay/huifu/notify' },
+        ],
+      },
+      sms: {
+        enabled: 1,
+        items: [
+          { name: 'provider', title: '服务商', value: '腾讯云' },
+          { name: 'access_key', title: 'AccessKey ID', value: 'AKIDjq7B2xNf9ZtX' },
+          { name: 'secret_key', title: 'AccessKey Secret', value: 'wX3kKp8vQ2mR7sYd********' },
+          { name: 'sign_name', title: '短信签名', value: '灵境数藏' },
+          { name: 'tpl_code', title: '验证码模板 ID', value: 'SMS_2026102801' },
+          { name: 'daily_limit', title: '单用户每日发送上限（条）', value: '10' },
+          { name: 'code_ttl', title: '验证码有效期（分钟）', value: '5' },
+        ],
+      },
+    },
+    agreements: [
+      {
+        id: 1, name: '用户服务协议', version: 'v2.1', status: 1,
+        effective_time: NOW - 15 * 86400, updatetime: NOW - 15 * 86400,
+        content: '<p>欢迎您使用本平台数字藏品相关服务。本协议是您与平台之间就数字藏品的购买、持有、转赠、寄售等事宜所订立的有效合约。</p><p><b>一、账号注册</b></p><p>您承诺以真实身份注册账号，并完成实名认证后方可参与藏品发售与二级市场交易。</p><p><b>二、藏品性质</b></p><p>数字藏品为虚拟商品，经链上铸造后对应唯一凭证，不可复制、不可篡改。您理解并同意藏品不具有类似货币的支付属性。</p><p><b>三、交易规则</b></p><p>二级市场寄售需遵守平台限价规则与手续费标准；抽签发售以抽签结果为准，中签后请在限定期限内完成支付，逾期视为放弃。</p><p><b>四、违规处理</b></p><p>利用外挂、脚本等手段抢购或恶意炒作藏品的，平台有权封禁账号并限制相关资产流转。</p>',
+        history: [
+          { version: 'v2.1', editor: '管理员', note: '新增抽签发售与限价条款', time: NOW - 15 * 86400 },
+          { version: 'v2.0', editor: '法务-陈律师', note: '二级市场规则全面改版', time: NOW - 90 * 86400 },
+          { version: 'v1.0', editor: '管理员', note: '初始版本', time: NOW - 300 * 86400 },
+        ],
+      },
+      {
+        id: 2, name: '隐私政策', version: 'v1.3', status: 0,
+        effective_time: NOW + 3 * 86400, updatetime: NOW - 3600 * 20,
+        content: '<p>本平台深知个人信息对您的重要性，将按照法律法规要求，采取安全保护措施保护您的个人信息。</p><p><b>一、我们收集的信息</b></p><p>为实现实名认证与交易安全，我们收集您的手机号、姓名、身份证号；为优化服务，收集您的设备信息与操作日志。</p><p><b>二、信息的使用</b></p><p>您的信息仅用于身份核验、风险防控、订单履约与客服支持，不用于任何与藏品业务无关的用途。</p><p><b>三、信息的存储与保护</b></p><p>身份证号等敏感信息加密存储，访问需二次授权并记录审计日志。</p><p><b>四、您的权利</b></p><p>您可随时在「我的-设置」中查询、更正个人信息，或申请注销账号，注销后信息将在 15 个工作日内删除。</p>',
+        history: [
+          { version: 'v1.3（草稿）', editor: '法务-陈律师', note: '补充注销与信息删除时限', time: NOW - 3600 * 20 },
+          { version: 'v1.2', editor: '管理员', note: '实名认证信息收集范围更新', time: NOW - 60 * 86400 },
+          { version: 'v1.0', editor: '管理员', note: '初始版本', time: NOW - 300 * 86400 },
+        ],
+      },
     ],
     settings: {
       brand: { site_logo: '', site_name: '灵境数藏' },

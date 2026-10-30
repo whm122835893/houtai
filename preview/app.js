@@ -6,6 +6,40 @@ const fmtT = ts => { if (!ts) return '-'; const d = new Date(ts * 1000); const p
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const CAT_NAME = id => (DB.categories.find(c => c.id === id) || {}).name || '-';
 const COL_NAME = id => (DB.collections.find(c => c.id === id) || {}).name || '-';
+/* 图片上传：格式白名单 JPG/PNG/WebP/GIF + 大小限制，本地预览（dataURL），真实系统替换为 OSS 直传 */
+const IMG_ACCEPT = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+function pickImage(cb, maxMB = 5) {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = IMG_ACCEPT.join(',');
+  inp.onchange = () => {
+    const f = inp.files[0];
+    if (!f) return;
+    if (!IMG_ACCEPT.includes(f.type)) return toast('仅支持 JPG / PNG / WebP / GIF 格式图片', 'err');
+    if (f.size > maxMB * 1024 * 1024) return toast(`图片不能超过 ${maxMB}MB（当前 ${(f.size / 1048576).toFixed(1)}MB）`, 'err');
+    const r = new FileReader();
+    r.onload = () => cb(r.result, f);
+    r.readAsDataURL(f);
+  };
+  inp.click();
+}
+const boxImg = d => d ? '<img src="' + d + '">' : '';
+
+/* 手机号白名单解析：每行一个，校验 11 位（1 开头）；bad = 首个不合法的行号（0 = 全部合法） */
+const parsePhoneWL = txt => {
+  const lines = txt.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  const bad = lines.findIndex(s => !/^1\d{10}$/.test(s));
+  return { lines, bad: bad + 1 };
+};
+/* 库存池：库存池 = 发行量 − 已售 − 空投已发放(成功−撤销) − 盲盒奖池占用 − 已销毁；负值按 0 显示 */
+const POOL = c => {
+  const cid = c.id;
+  const airdropped = S.db.airdrops.reduce((s, t) => t.collection_id === cid ? s + (t.success_num - (t.revoke_num || 0)) : s, 0);
+  const bbin = S.db.blindboxes.reduce((s, b) => s + (b.prizes || []).reduce((x, p) => p.collection_id === cid ? x + (p.quantity || p.qty || 0) : x, 0), 0);
+  const destroyed = c.destroyed || 0;
+  return { sold: c.sold, airdropped, bbin, destroyed, remain: Math.max(0, c.stock - c.sold - airdropped - bbin - destroyed), occupied: c.sold + airdropped + bbin + destroyed };
+};
+const cleanBakNo = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return `BAK${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${Math.floor(Math.random() * 9000 + 1000)}`; };
 
 const NAV = [
   { group: '概览', items: [['dashboard', '数据仪表盘', '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>']] },
@@ -13,9 +47,11 @@ const NAV = [
     ['user', '用户管理', '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/>'],
     ['wallet', '钱包流水', '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>'],
     ['collection', '藏品管理', '<path d="M6 3h12l4 6-10 12L2 9z"/>'],
+    ['blindbox', '盲盒管理', '<polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5" rx="1"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>'],
     ['category', '分类管理', '<path d="M20 12l-8 8-9-9 9-8h8z"/>'],
     ['order', '订单管理', '<path d="M14 2H6v20h12V6z"/><path d="M14 2v4h4"/>'],
     ['market', '市场寄售', '<path d="M4 7h13m0 0-3-3m3 3-3 3M20 17H7m0 0 3 3m-3-3 3-3"/>'],
+    ['transfer', '转赠管理', '<path d="M17 3l4 4-4 4M21 7H9M7 21l-4-4 4-4M3 17h12"/>'],
     ['hold', '持仓查询', '<path d="M12 2 2 7l10 5 10-5zM2 12l10 5 10-5M2 17l10 5 10-5"/>'],
     ['raffle', '抽签发售', '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/><path d="M12 3a9 9 0 0 1 9 9"/>'],
     ['airdrop', '定向发放', '<path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/>'],
@@ -31,9 +67,11 @@ const NAV = [
   { group: '内容运营', items: [
     ['notice', '公告管理', '<path d="M3 11l18-8-7 18-2.5-7z"/>'],
     ['banner', '轮播管理', '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>'],
+    ['agreement', '协议管理', '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m8.5 15.5 2 2 5-5"/>'],
   ] },
   { group: '系统', items: [
     ['setting', '运营参数', '<circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.06-.4.1-.8.1-1.2z"/>'],
+    ['thirdparty', '第三方配置', '<path d="M5 12a7 7 0 0 1 14 0M2.5 8.5v7h4v-7zM17.5 8.5v7h4v-7z"/><path d="M19 15.5a4 4 0 0 1-4 4h-2"/>'],
     ['cleanup', '数据清理', '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>'],
     ['operlog', '日志审计', '<path d="M12 2 4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5z"/>'],
   ] },
@@ -43,7 +81,7 @@ const S = {
   page: 'dashboard', collapsed: localStorage.getItem('nft_sidebar') === '1',
   readonly: false, db: buildDB(),
   expandedWallet: 0,
-  q: { user: { keyword: '', status: -1, page: 1 }, wallet: { keyword: '', page: 1 }, collection: { keyword: '', status: -1, category_id: 0 }, category: {}, order: { keyword: '', type: 0, status: -1, page: 1 }, market: { tab: 0, status: -1 }, hold: { keyword: '', status: -1, collection_id: 0 }, airdrop: {}, lottery: {}, synthesis: {}, invite: {}, checkin: { keyword: '', page: 1 }, register: { keyword: '', status: -1, page: 1 }, notice: { keyword: '', status: -1 }, banner: {}, operlog: { keyword: '', page: 1 } },
+  q: { user: { keyword: '', status: -1, page: 1 }, wallet: { keyword: '', page: 1 }, collection: { keyword: '', status: -1, category_id: 0 }, category: {}, order: { keyword: '', type: 0, status: -1, page: 1 }, market: { tab: 0, status: -1 }, hold: { keyword: '', status: -1, collection_id: 0 }, airdrop: {}, lottery: {}, synthesis: {}, invite: {}, checkin: { keyword: '', page: 1 }, register: { keyword: '', status: -1, page: 1 }, notice: { keyword: '', status: -1 }, banner: {}, operlog: { keyword: '', page: 1 }, blindbox: {}, transfer: { status: -1 } },
 };
 const canWrite = () => !S.readonly;
 const W = html => canWrite() ? html : '';
@@ -209,24 +247,26 @@ PAGES.user = () => {
     <td>${u.mobile}</td><td>${u.real_name || '<span class="cell-sub">未实名</span>'}</td>
     <td class="cell-sub">${u.invite_code}</td><td class="serif-num">￥${fmtY(u.balance)}</td>
     <td class="cell-sub">${u.hold_count} / ${u.order_count}</td>
-    <td><span class="tag ${u.status ? 'tag-green' : 'tag-red'}">${u.status ? '正常' : '已禁用'}</span></td>
+    <td><span class="tag ${u.status ? 'tag-green' : 'tag-red'}">${u.status ? '正常' : '已冻结'}</span></td>
     <td class="cell-sub">${fmtT(u.last_login_time)}</td><td class="cell-sub">${fmtT(u.createtime)}</td>
     <td style="white-space:nowrap">
       <button class="btn btn-ghost btn-sm" data-act="user-detail" data-arg="${u.id}">详情</button>
-      ${W(`<button class="btn btn-ghost btn-sm" data-act="user-edit" data-arg="${u.id}">编辑</button>
-      <button class="btn btn-ghost btn-sm" data-act="user-status" data-arg="${u.id}">${u.status ? '禁用' : '启用'}</button>
+      ${W(`      <button class="btn btn-ghost btn-sm" data-act="user-edit" data-arg="${u.id}">编辑</button>
+      <button class="btn btn-ghost btn-sm" data-act="user-resetpwd" data-arg="${u.id}">重置密码</button>
+      <button class="btn btn-ghost btn-sm" data-act="user-status" data-arg="${u.id}">${u.status ? '冻结' : '解冻'}</button>
+      <button class="btn btn-ghost btn-sm" data-act="user-kick" data-arg="${u.id}">强制下线</button>
       <button class="btn btn-danger btn-sm" data-act="user-del" data-arg="${u.id}">删除</button>`)}</td></tr>`).join('');
   return `
   <div class="page-head rise" style="--i:0"><h2>用户管理</h2><span class="en">Users</span></div>
   <div class="glass filter-bar rise" style="--i:1">
     <input class="input" id="u-kw" placeholder="昵称 / 账号 / 手机号" value="${esc(q.keyword)}">
-    <select class="select" id="u-status"><option value="-1">全部状态</option><option value="1" ${q.status === 1 ? 'selected' : ''}>启用</option><option value="0" ${q.status === 0 ? 'selected' : ''}>禁用</option></select>
+    <select class="select" id="u-status"><option value="-1">全部状态</option><option value="1" ${q.status === 1 ? 'selected' : ''}>正常</option><option value="0" ${q.status === 0 ? 'selected' : ''}>已冻结</option></select>
     <button class="btn btn-primary" data-act="user-search">查询</button>
     <button class="btn btn-ghost" data-act="user-reset">重置</button><span style="flex:1"></span>
     ${W(`<button class="btn btn-ghost" data-act="user-add">新增会员</button><button class="btn btn-danger btn-sm" data-act="user-batchdel">批量删除</button>`)}
   </div>
   <div class="glass rise" style="--i:2"><div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th style="width:36px"></th><th>ID</th><th>昵称 / 账号</th><th>手机号</th><th>实名</th><th>邀请码</th><th>钱包余额</th><th>持仓/订单</th><th>状态</th><th>最近登录</th><th>注册时间</th><th style="width:210px">操作</th></tr></thead>
+    <thead><tr><th style="width:36px"></th><th>ID</th><th>昵称 / 账号</th><th>手机号</th><th>实名</th><th>邀请码</th><th>钱包余额</th><th>持仓/订单</th><th>状态</th><th>最近登录</th><th>注册时间</th><th style="width:290px">操作</th></tr></thead>
     <tbody>${rows || ''}</tbody></table>${list.length ? '' : emptyBox()}</div>
     ${pager('user-page', q.page, total)}</div>`;
 };
@@ -282,11 +322,12 @@ PAGES.collection = () => {
   const rows = list.map(c => {
     const [st, cls] = stTag(c.status);
     return `<tr>
-    <td class="serif-num">${c.id}</td><td><div class="thumb" style="display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#56a3fc33,#7dd8ff55)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M7 3h10l4 6-9 12L3 9z"/><path d="M3 9h18M12 21 8 9l4-6 4 6z"/></svg></div></td>
-    <td><div class="cell-main">${c.name}</div><div class="cell-sub">${c.author}</div></td>
+    <td class="serif-num">${c.id}</td><td>${c.cover ? `<div class="thumb" style="padding:0"><img src="${c.cover}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"></div>` : `<div class="thumb" style="display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#56a3fc33,#7dd8ff55)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M7 3h10l4 6-9 12L3 9z"/><path d="M3 9h18M12 21 8 9l4-6 4 6z"/></svg></div>`}</td>
+    <td><div class="cell-main">${c.name}</div><div class="cell-sub">${c.author}</div><div class="cell-sub">发行方：${esc(c.publisher || '-')}</div></td>
     <td>${CAT_NAME(c.category_id)}</td>
     <td><span class="serif-num">￥${fmtY(c.price)}</span><div class="cell-sub">市场价 ￥${fmtY(c.market_price)}</div></td>
     <td class="cell-sub">${c.sold.toLocaleString()} / ${c.stock.toLocaleString()}</td>
+    <td><span class="serif-num" title="库存池 = 发行量 − 已售 − 空投已发放 − 盲盒投放 − 已销毁">${POOL(c).remain.toLocaleString()}</span><div class="cell-sub">空投 ${POOL(c).airdropped.toLocaleString()} · 盲盒 ${POOL(c).bbin.toLocaleString()}${POOL(c).destroyed ? ' · 销毁 ' + POOL(c).destroyed.toLocaleString() : ''}</div></td>
     <td><span class="tag ${c.resale ? 'tag-green' : 'tag-gray'}">${c.resale ? '开启' : '关闭'}</span>${c.resale ? `<div class="cell-sub">限价 ￥${fmtY(c.resale_price_limit || 0)}</div>` : ''}</td>
     <td><span class="tag ${cls}">${st}</span></td><td class="cell-sub">${preTag(c)}${fmtT(c.sale_time) || '未排期'}${c.sale_end_time ? '<br/>至 ' + fmtT(c.sale_end_time) : ''}</td>
     <td style="white-space:nowrap">${c.status === 2
@@ -303,9 +344,10 @@ PAGES.collection = () => {
     <select class="select" id="c-status"><option value="-1">全部状态</option><option value="0" ${q.status === 0 ? 'selected' : ''}>未发售</option><option value="1" ${q.status === 1 ? 'selected' : ''}>已排期</option><option value="2" ${q.status === 2 ? 'selected' : ''}>发售中</option><option value="3" ${q.status === 3 ? 'selected' : ''}>已下架</option><option value="4" ${q.status === 4 ? 'selected' : ''}>已售罄</option></select>
     <button class="btn btn-primary" data-act="col-search">查询</button><span style="flex:1"></span>
     ${W('<button class="btn btn-primary" data-act="col-add">新增藏品</button>')}
+    <div class="cell-sub" style="width:100%">库存池 = 发行量 − 已售 − 空投已发放 − 盲盒投放 − 已销毁；空投、盲盒配置从库存池扣减，超发在保存时拦截</div>
   </div>
   <div class="glass rise" style="--i:2"><div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>ID</th><th>封面</th><th>名称 / 作者</th><th>分类</th><th>售价 / 市场价</th><th>已售 / 发行量</th><th>二级市场</th><th>状态</th><th>优先购 / 开售时间</th><th style="width:200px">操作</th></tr></thead>
+    <thead><tr><th>ID</th><th>封面</th><th>名称 / 作者</th><th>分类</th><th>售价 / 市场价</th><th>已售 / 发行量</th><th>库存池</th><th>二级市场</th><th>状态</th><th>优先购 / 开售时间</th><th style="width:200px">操作</th></tr></thead>
     <tbody>${rows}</tbody></table>${list.length ? '' : emptyBox()}</div></div>`;
 };
 
@@ -741,7 +783,7 @@ PAGES.notice = () => {
 /* 14. 轮播管理 */
 PAGES.banner = () => {
   const rows = S.db.banners.map(b => `<tr>
-    <td><div class="thumb" style="width:80px;height:44px;background:linear-gradient(135deg,#56a3fc33,#7dd8ff44)"></div></td>
+    <td>${b.image ? `<div class="thumb" style="width:80px;height:44px;padding:0"><img src="${b.image}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit"></div>` : '<div class="thumb" style="width:80px;height:44px;background:linear-gradient(135deg,#56a3fc33,#7dd8ff44)"></div>'}</td>
     <td class="cell-main">${b.title}</td><td class="cell-sub">${b.link}</td><td class="serif-num">${b.weigh}</td>
     <td><span class="tag ${b.status ? 'tag-green' : 'tag-gray'}">${b.status ? '启用' : '停用'}</span></td>
     <td style="white-space:nowrap">${W(`<button class="btn btn-ghost btn-sm" data-act="ban-edit" data-arg="${b.id}">编辑</button>
@@ -753,6 +795,98 @@ PAGES.banner = () => {
   <div class="glass rise" style="--i:2"><div class="tbl-wrap"><table class="tbl">
     <thead><tr><th>图片</th><th>标题</th><th>跳转链接</th><th>排序</th><th>状态</th><th style="width:210px">操作</th></tr></thead>
     <tbody>${rows}</tbody></table></div></div>`;
+};
+
+/* 14.5 协议管理 */
+PAGES.agreement = () => {
+  const card = a => {
+    const excerpt = a.content.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').slice(0, 88);
+    return `<div class="glass rise">
+    <div class="card-head"><h3>${a.name}</h3><span class="tag ${a.status ? 'tag-green' : 'tag-orange'}">${a.status ? '已发布' : '草稿'}</span></div>
+    <div class="card-pad">
+      <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:14px">
+        <div><div class="cell-sub">当前版本</div><div class="serif-num" style="font-size:20px">${a.version}</div></div>
+        <div><div class="cell-sub">生效时间</div><div class="cell-main">${a.status ? fmtT(a.effective_time) : '未发布（预览 ' + fmtT(a.effective_time) + '）'}</div></div>
+        <div><div class="cell-sub">最近更新</div><div class="cell-main">${fmtT(a.updatetime)}</div></div>
+        <div><div class="cell-sub">历史版本</div><div class="cell-main">${a.history.length} 次</div></div>
+      </div>
+      <div class="cell-sub" style="line-height:1.8;margin-bottom:14px">${excerpt}…</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${W(`<button class="btn btn-primary" data-act="agr-edit" data-arg="${a.id}">编辑协议</button>`)}
+        <button class="btn btn-ghost" data-act="agr-preview" data-arg="${a.id}">预览全文</button>
+        <button class="btn btn-ghost" data-act="agr-history" data-arg="${a.id}">版本记录</button>
+        <button class="btn btn-ghost" data-act="agr-status" data-arg="${a.id}">${a.status ? '转为草稿' : '直接发布'}</button>
+      </div>
+    </div></div>`;
+  };
+  return `
+  <div class="page-head rise" style="--i:0"><h2>协议管理</h2><span class="en">Agreements</span></div>
+  <div class="glass filter-bar rise" style="--i:1"><span class="cell-sub">协议在 C 端注册页与「我的-设置」展示，用户勾选同意后方可继续；发布新版本即时生效</span></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-top:16px">
+    ${S.db.agreements.map(card).join('')}
+  </div>`;
+};
+
+/* 14.6 盲盒管理 */
+const bbProbTxt = p => String(p).includes('.') ? p + '%' : p + '%';
+PAGES.blindbox = () => {
+  const rows = S.db.blindboxes.map(b => `<tr>
+    <td><div class="cell-main">${b.name}</div><div class="cell-sub">#${b.id}</div></td>
+    <td class="serif-num">${fmtY(b.price)}</td>
+    <td class="serif-num">${b.total_supply.toLocaleString()}</td>
+    <td class="serif-num">${b.sold_count.toLocaleString()}</td>
+    <td>${b.prizes.length ? b.prizes.map(p => `<span class="tag tag-blue" style="margin:2px">${p.name} ${bbProbTxt(p.probability)}</span>`).join('') : '<span class="tag tag-orange">奖池未配置</span>'}</td>
+    <td><span class="tag ${b.status ? 'tag-green' : 'tag-gray'}">${b.status ? '在售' : '停售'}</span></td>
+    <td style="white-space:nowrap">${W(`<button class="btn btn-ghost btn-sm" data-act="bb-edit" data-arg="${b.id}">配置</button>
+    <button class="btn btn-ghost btn-sm" data-act="bb-status" data-arg="${b.id}">${b.status ? '停售' : '上架'}</button>`)}
+    <button class="btn btn-ghost btn-sm" data-act="bb-records" data-arg="${b.id}">开盒记录</button></td></tr>`).join('');
+  return `
+  <div class="page-head rise" style="--i:0"><h2>盲盒管理</h2><span class="en">Blindbox</span></div>
+  <div class="glass filter-bar rise" style="--i:1"><span class="cell-sub">按份销售，开启后按概率随机产出藏品；概率 0.0001~100（4 位小数），总和必须等于 100%，超出拦截；开盒时校验奖品库存，不足自动降级为空盒并记录异常</span><span style="flex:1"></span>${W('<button class="btn btn-primary" data-act="bb-add">创建盲盒</button>')}</div>
+  <div class="glass rise" style="--i:2"><div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>盲盒</th><th>售价(元)</th><th>发行总量</th><th>已售</th><th>奖品池</th><th>状态</th><th style="width:220px">操作</th></tr></thead>
+    <tbody>${rows}</tbody></table></div></div>`;
+};
+
+/* 14.7 转赠管理 */
+const TF_ST = { 0: ['待确认', 'tag-orange'], 1: ['已完成', 'tag-green'], 2: ['已撤销', 'tag-gray'], 3: ['已取消', 'tag-gray'] };
+PAGES.transfer = () => {
+  const q = S.q.transfer;
+  const list = S.db.transfers.filter(t => q.status < 0 || t.status === q.status);
+  const cnt = s => S.db.transfers.filter(t => t.status === s).length;
+  const stat = [['转赠总数', S.db.transfers.length], ['已完成', cnt(1)], ['待确认', cnt(0)], ['已撤销', cnt(2)]];
+  const rows = list.map(t => { const [st, cls] = TF_ST[t.status]; return `<tr>
+    <td class="cell-sub">${t.transfer_no}</td>
+    <td><div class="cell-main">${t.collection_name}</div></td>
+    <td>${t.from_user}</td><td>${t.to_user}</td>
+    <td><span class="tag ${cls}">${st}</span></td>
+    <td class="cell-sub">${fmtT(t.createtime)}</td>
+    <td class="cell-sub">${t.done_time ? fmtT(t.done_time) : '-'}</td>
+    <td style="white-space:nowrap">${t.status === 1 ? W(`<button class="btn btn-danger btn-sm" data-act="tf-revoke" data-arg="${t.id}">撤销转赠</button>`) : t.status === 2 ? `<span class="cell-sub" title="${esc(t.revoke_reason || '')}">${esc((t.revoke_reason || '').slice(0, 10))}…</span>` : '-'}</td></tr>`; }).join('');
+  const swRows = S.db.collections.map(c => `<tr>
+    <td><div class="cell-main">${c.name}</div></td>
+    <td class="serif-num">${c.sold.toLocaleString()}</td>
+    <td><span class="tag ${c.resale ? 'tag-green' : 'tag-gray'}">${c.resale ? '开启' : '关闭'}</span></td>
+    <td>${W(`<button class="btn btn-ghost btn-sm" data-act="tf-toggle" data-arg="${c.id}">${c.transfer_enabled ? '关闭' : '开启'}</button>`)}<span class="tag ${c.transfer_enabled ? 'tag-green' : 'tag-gray'}" style="margin-left:6px">${c.transfer_enabled ? '转赠开' : '转赠关'}</span></td></tr>`).join('');
+  return `
+  <div class="page-head rise" style="--i:0"><h2>转赠管理</h2><span class="en">Transfers</span></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:12px">
+    ${stat.map(([t, v], i) => `<div class="glass rise" style="--i:${i + 1};padding:16px 20px"><div class="serif-num" style="font-size:24px">${v}</div><div class="cell-sub">${t}</div></div>`).join('')}
+  </div>
+  <div class="glass rise" style="--i:5;margin-top:16px"><div class="card-head"><h3>转赠记录</h3><span class="en">Records</span></div>
+    <div class="card-pad" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-bottom:0">
+      <select class="select" id="tf-status"><option value="-1">全部状态</option><option value="0">待确认</option><option value="1">已完成</option><option value="2">已撤销</option><option value="3">已取消</option></select>
+      <button class="btn btn-primary" data-act="tf-search">查询</button>
+      <span class="cell-sub" style="flex:1;text-align:right">仅「已完成」转赠可撤销；撤销前校验接收方仍持有该藏品，已再次转赠/寄售/合成的将被拦截</span>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>转赠单号</th><th>藏品</th><th>转出方</th><th>接收方</th><th>状态</th><th>发起时间</th><th>完成时间</th><th style="width:110px">操作</th></tr></thead>
+      <tbody>${rows}</tbody></table>${list.length ? '' : emptyBox()}</div></div>
+  <div class="glass rise" style="--i:6;margin-top:16px"><div class="card-head"><h3>单品转赠开关</h3><span class="en">Per-item Switch</span></div>
+    <div class="card-pad" style="padding-bottom:0"><span class="cell-sub">每个藏品独立转赠开关，与寄售开关互不干扰；关闭后 C 端该藏品转赠按钮隐藏/置灰，已发起待确认的转赠不受影响</span></div>
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>藏品</th><th>流通量（持有人数）</th><th>寄售开关</th><th style="width:140px">转赠开关</th></tr></thead>
+      <tbody>${swRows}</tbody></table></div></div>`;
 };
 
 /* 15. 运营参数 */
@@ -775,6 +909,29 @@ PAGES.setting = () => {
   ${groupCard('reward', '奖励参数', 'Reward')}`;
 };
 
+/* 15.5 第三方配置 */
+PAGES.thirdparty = () => {
+  const card = (key, title, en, note) => {
+    const t = S.db.thirdparty[key];
+    return `<div class="glass rise"><div class="card-head"><h3>${title}</h3>
+      <span style="display:inline-flex;align-items:center;gap:8px"><span class="tag ${t.enabled ? 'tag-green' : 'tag-gray'}">${t.enabled ? '已启用' : '未启用'}</span><span class="en">${en}</span></span></div>
+    <div class="card-pad">${t.items.map((it, i) => `<div class="form-row"><label>${it.title}</label>
+      <input class="input tp-input" data-group="${key}" data-idx="${i}" value="${esc(it.value)}"></div>`).join('')}
+    ${W(`<div style="display:flex;gap:10px;align-items:center;margin-top:6px">
+      <label style="font-size:13px;display:inline-flex;align-items:center;gap:6px">启用通道
+        <select class="select" id="tp-${key}-enabled" style="width:100px"><option value="1">启用</option><option value="0">停用</option></select></label>
+      <button class="btn btn-primary" data-act="tp-save" data-arg="${key}">保存本组</button></div>`)}</div>
+    <div class="card-pad" style="padding-top:0"><span class="cell-sub">${note}</span></div></div>`;
+  };
+  return `
+  <div class="page-head rise" style="--i:0"><h2>第三方配置</h2><span class="en">Third-party · 超级管理员</span></div>
+  <div class="glass filter-bar rise" style="--i:1"><span class="cell-sub">支付与短信等第三方通道配置；密钥类字段保存后仅展示脱敏值，停用通道后 C 端对应功能立即不可用</span></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px;margin-top:16px">
+    ${card('huifu', '汇付天下钱包', 'Huifu Pay', '用于 C 端充值与藏品购买的支付通道；修改网关地址或密钥后请先在沙箱环境验证，再切换正式环境。')}
+    ${card('sms', '短信配置', 'SMS', '用于注册/登录验证码、高危操作二次校验与业务通知；单用户每日上限防止短信轰炸。')}
+  </div>`;
+};
+
 /* 16. 数据清理 */
 PAGES.cleanup = () => {
   const db = S.db;
@@ -782,13 +939,14 @@ PAGES.cleanup = () => {
     ['notice', '公告', [['公告', db.notices.length]]],
     ['content', '内容', [['公告', db.notices.length], ['轮播', db.banners.length]]],
     ['trade', '交易资产', [['订单', db.orders.length], ['挂单', db.market.length], ['流水', db.walletLogs.length], ['持仓', db.holds.length]]],
-    ['activity', '活动记录', [['抽奖记录', db.lotteryRecords.length], ['合成记录', db.synthesisRecords.length], ['邀请记录', db.inviteRecords.length], ['发放任务', db.airdrops.length]]],
+    ['transfer', '转赠数据', [['转赠记录', db.transfers.length]]],
+    ['activity', '活动记录', [['抽奖记录', db.lotteryRecords.length], ['合成记录', db.synthesisRecords.length], ['邀请记录', db.inviteRecords.length], ['发放任务', db.airdrops.length], ['开盒记录', db.blindboxRecords.length]]],
   ];
   return `
   <div class="page-head rise" style="--i:0"><h2>数据清理</h2><span class="en">Cleanup · 超级管理员</span></div>
   <div class="glass rise" style="--i:1"><div class="card-pad" style="border-left:3px solid var(--danger)">
     <b style="color:var(--danger);display:inline-flex;align-items:center;gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19z"/><path d="M12 10v4.5"/><circle cx="12" cy="17.2" r="0.6" fill="currentColor"/></svg>硬删除，不可恢复</b>
-    <div class="cell-sub" style="margin-top:6px">勾选要清理的数据组 → 在底部输入「清空」确认 → 执行后回显删除结果。所有操作将记入日志审计。</div></div></div>
+    <div class="cell-sub" style="margin-top:6px">四步确认：输入「清空」→ 管理员密码 → 短信验证码 → 二次确认；执行前自动生成备份编号。所有操作将记入日志审计。</div></div></div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
     ${groups.map((g, i) => `<div class="glass rise" style="--i:${i + 2}"><div class="card-head"><h3>${g[1]}</h3><span class="en">${g[0]}</span></div>
       <div class="card-pad">${g[2].map(t => `<label style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;cursor:pointer;font-size:13px">
@@ -799,9 +957,14 @@ PAGES.cleanup = () => {
         <span><input type="checkbox" class="clean-ck" value="user"> 平台用户（连带资产）</span><span class="serif-num">${db.users.length} 人</span></label></div></div>
   </div>
   <div class="glass rise" style="--i:7"><div class="card-pad" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-    <span>请输入「<b style="color:var(--danger)">清空</b>」以确认：</span>
-    <input class="input" id="clean-confirm" style="width:120px" placeholder="清空">
-    ${W('<button class="btn btn-danger" id="clean-btn" data-act="clean-run" disabled>执行清理</button>')}
+    <span>① 输入「<b style="color:var(--danger)">清空</b>」：</span>
+    <input class="input" id="clean-confirm" style="width:110px" placeholder="清空">
+    <span>② 管理员密码：</span>
+    <input class="input" id="clean-pwd" type="password" style="width:130px" placeholder="管理员密码">
+    <span>③ 短信验证码：</span>
+    <input class="input" id="clean-sms" style="width:110px" placeholder="6 位验证码">
+    ${W('<button class="btn btn-ghost btn-sm" data-act="clean-sms-send">发送验证码</button>')}
+    ${W('<button class="btn btn-danger" id="clean-btn" data-act="clean-run" disabled>④ 执行清理</button>')}
     <span id="clean-result" class="cell-sub"></span></div></div>`;
 };
 
@@ -869,8 +1032,31 @@ const ACT = {
   'user-add'() { openUserForm(null); },
   'user-status'(el) {
     const u = S.db.users.find(x => x.id == el.dataset.arg); u.status = u.status ? 0 : 1;
-    toast(`用户「${u.nickname}」已${u.status ? '启用' : '禁用'}`, 'ok'); renderPage();
-    S.db.operlogs.unshift({ id: 400, admin: '管理员', module: '用户管理', action: u.status ? '启用' : '禁用', target: '用户#' + u.id, detail: '', ip: '113.88.20.66', createtime: NOW });
+    toast(`用户「${u.nickname}」已${u.status ? '解冻' : '冻结'}${u.status ? '' : '，冻结期间禁止登录与交易'}`, 'ok'); renderPage();
+    S.db.operlogs.unshift({ id: 400, admin: '管理员', module: '用户管理', action: u.status ? '解冻' : '冻结', target: '用户#' + u.id, detail: u.status ? '' : '冻结账号，禁止登录与交易', ip: '113.88.20.66', createtime: NOW });
+  },
+  'user-kick'(el) {
+    const u = S.db.users.find(x => x.id == el.dataset.arg);
+    confirmBox(`确认将用户「${u.nickname}」强制下线？<br/><span style="color:var(--ink-2)">该用户当前所有登录会话将立即失效，需重新登录；不影响其账号状态与资产。</span>`, 'user-kick-ok', u.id);
+  },
+  'user-kick-ok'(el) {
+    const u = S.db.users.find(x => x.id == el.dataset.arg);
+    closeModal(); toast(`用户「${u.nickname}」已强制下线，会话已全部失效`, 'ok');
+    S.db.operlogs.unshift({ id: 400, admin: '管理员', module: '用户管理', action: '强制下线', target: '用户#' + u.id, detail: '清除全部登录会话', ip: '113.88.20.66', createtime: NOW });
+  },
+  'user-resetpwd'(el) {
+    const u = S.db.users.find(x => x.id == el.dataset.arg);
+    openModal(`<div class="modal-head"><h3>重置密码 · ${esc(u.nickname)}</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
+    <div class="modal-body"><div class="form-row"><label>新密码（6-20 位）</label><input class="input" id="up-pwd" type="text" value="123456"></div>
+    <div class="cell-sub">重置后请通知用户尽快修改密码；操作将写入日志审计。</div></div>
+    <div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">取消</button><button class="btn btn-primary" data-act="user-resetpwd-ok" data-arg="${u.id}">确认重置</button></div>`);
+  },
+  'user-resetpwd-ok'(el) {
+    const u = S.db.users.find(x => x.id == el.dataset.arg);
+    const pwd = $('#up-pwd').value;
+    if (!/^.{6,20}$/.test(pwd)) return toast('密码长度需 6-20 位', 'err');
+    closeModal(); toast(`用户「${u.nickname}」密码已重置，请通知用户修改`, 'ok');
+    S.db.operlogs.unshift({ id: 400, admin: '管理员', module: '用户管理', action: '重置密码', target: '用户#' + u.id, detail: `新密码 ${pwd.length} 位`, ip: '113.88.20.66', createtime: NOW });
   },
   'user-del'(el) { const u = S.db.users.find(x => x.id == el.dataset.arg); confirmBox(`确认删除用户「${u.nickname}」？删除后不可恢复。`, 'user-del-ok', u.id); },
   'user-del-ok'(el) { S.db.users = S.db.users.filter(x => x.id != el.dataset.arg); closeModal(); toast('删除成功', 'ok'); renderPage(); },
@@ -1121,27 +1307,35 @@ const ACT = {
   'raf-draw'(el) {
     const r = S.db.raffles.find(x => x.id == el.dataset.arg);
     const quota = rafQuota(r);
-    confirmBox(`确认对「${COL_NAME(r.collection_id)}」执行抽签？共 ${r.apply_count.toLocaleString()} 人报名，中签名额 ${quota.toLocaleString()} 个，结果不可撤销`, 'raf-draw-ok', r.id);
+    const wlCount = (r.whitelist || '').split(',').filter(Boolean).length;
+    confirmBox(`确认对「${COL_NAME(r.collection_id)}」执行抽签？共 ${r.apply_count.toLocaleString()} 人报名，中签名额 ${quota.toLocaleString()} 个${wlCount ? `，白名单必中 ${wlCount} 人（占用名额）` : ''}，结果不可撤销`, 'raf-draw-ok', r.id);
   },
   'raf-draw-ok'(el) {
     const r = S.db.raffles.find(x => x.id == el.dataset.arg);
     const applies = S.db.raffleApplys.filter(a => a.raffle_id == r.id);
-    // 随机中签：名额 = floor(total/per_limit)，报名不足全中
-    const quota = Math.min(rafQuota(r), applies.length);
-    const shuffled = [...applies].sort(() => Math.random() - 0.5);
-    const winIds = new Set(shuffled.slice(0, quota).map(a => a.id));
+    const quota = rafQuota(r);
+    // 白名单必中签：按用户手机号匹配，占用中签名额；剩余名额随机
+    const phoneSet = new Set((r.whitelist || '').split(',').filter(Boolean));
+    const umobile = uid => (S.db.users.find(u => u.id === uid) || {}).mobile || '';
+    const wlWins = phoneSet.size ? applies.filter(a => phoneSet.has(umobile(a.user_id))) : [];
+    const rest = applies.filter(a => !wlWins.includes(a));
+    const quotaLeft = Math.max(0, quota - wlWins.length);
+    const shuffled = [...rest].sort(() => Math.random() - 0.5);
+    const winIds = new Set([...wlWins, ...shuffled.slice(0, quotaLeft)].map(a => a.id));
     applies.forEach(a => { a.status = winIds.has(a.id) ? 1 : 2; a.win_num = winIds.has(a.id) ? r.per_limit : 0; });
-    r.status = 3; r.win_count = quota;
-    closeModal(); toast(`抽签完成：${applies.length} 人报名，${quota} 人中签`, 'ok'); renderPage();
-    logOp('抽签发售', '执行抽签', '活动#' + r.id, `报名 ${applies.length} 人，中签 ${quota} 人`);
+    r.status = 3; r.win_count = winIds.size;
+    closeModal(); toast(`抽签完成：${applies.length} 人报名，${winIds.size} 人中签${wlWins.length ? `（含白名单必中 ${wlWins.length} 人）` : ''}`, 'ok'); renderPage();
+    logOp('抽签发售', '执行抽签', '活动#' + r.id, `报名 ${applies.length} 人，中签 ${winIds.size} 人${wlWins.length ? `（白名单必中 ${wlWins.length}）` : ''}`);
   },
   'raf-applys'(el) {
     const r = S.db.raffles.find(x => x.id == el.dataset.arg);
     const list = S.db.raffleApplys.filter(a => a.raffle_id == r.id);
     const stTag = s => [['待抽签', 'tag-gray'], ['已中签', 'tag-green'], ['未中签', 'tag-red']][s];
+    const wlSet = new Set((r.whitelist || '').split(',').filter(Boolean));
+    const umobile = uid => (S.db.users.find(u => u.id === uid) || {}).mobile || '';
     openModal(`<div class="modal-head"><h3>报名记录 · ${COL_NAME(r.collection_id)}</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
     <div class="modal-body"><table class="tbl"><thead><tr><th>ID</th><th>用户</th><th>抽签状态</th><th>可购数量</th><th>已购买</th><th>报名时间</th></tr></thead><tbody>
-    ${list.map(a => { const [t, cls] = a.status ? stTag(a.status) : stTag(0); return `<tr><td class="serif-num">${a.id}</td><td>${a.user}</td>
+    ${list.map(a => { const [t, cls] = a.status ? stTag(a.status) : stTag(0); return `<tr><td class="serif-num">${a.id}</td><td>${a.user}${wlSet.has(umobile(a.user_id)) ? '<span class="tag tag-orange" style="margin-left:4px">白名单</span>' : ''}</td>
       <td><span class="tag ${cls}">${t}</span></td><td class="serif-num">${a.win_num || '-'}</td>
       <td><span class="tag ${a.paid ? 'tag-green' : 'tag-gray'}">${a.paid ? '已购' : '未购'}</span></td><td class="cell-sub">${fmtT(a.createtime)}</td></tr>`; }).join('')}
     </tbody></table></div><div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">关闭</button></div>`);
@@ -1208,10 +1402,158 @@ const ACT = {
   'ban-edit'(el) { openBanForm(S.db.banners.find(x => x.id == el.dataset.arg)); },
   'ban-status'(el) { const b = S.db.banners.find(x => x.id == el.dataset.arg); b.status = b.status ? 0 : 1; toast('已' + (b.status ? '启用' : '停用'), 'ok'); renderPage(); },
   'ban-del'(el) { confirmBox('确认删除该轮播？', 'ban-del-ok', el.dataset.arg); },
+  'ban-img-pick'() {
+    pickImage(d => { $('#ban-img').value = d; $('#ban-img-box').innerHTML = boxImg(d); toast('图片已选择，保存后生效', 'ok'); });
+  },
   'ban-del-ok'(el) { S.db.banners = S.db.banners.filter(x => x.id != el.dataset.arg); closeModal(); toast('删除成功', 'ok'); renderPage(); },
 
+  /* 协议管理 */
+  'agr-edit'(el) { openAgrForm(S.db.agreements.find(x => x.id == el.dataset.arg)); },
+  'agr-save'() {
+    const a = S.db.agreements.find(x => x.id === +$('#agr-id').value);
+    const version = $('#agr-version').value.trim();
+    if (!version) return toast('请输入版本号（如 v2.2）', 'err');
+    const content = editorVal('agr');
+    if (content.replace(/<[^>]+>/g, '').trim().length < 20) return toast('协议正文太短，请完善条款内容', 'err');
+    const status = +$('#agr-status').value;
+    const isPublish = status === 1 && a.status !== 1;
+    Object.assign(a, { version, status, content, effective_time: status ? (new Date($('#agr-effective').value).getTime() / 1000 || NOW) : a.effective_time, updatetime: NOW });
+    if (isPublish) {
+      a.history.unshift({ version, editor: '管理员', note: '发布新版本', time: NOW });
+      toast(`已发布 ${a.name} ${version}，C 端即时生效`, 'ok');
+    } else toast(status ? '保存成功' : '已保存为草稿', 'ok');
+    closeModal(); renderPage(); logOp('协议管理', isPublish ? '发布新版本' : '编辑', a.name, version);
+  },
+  'agr-status'(el) {
+    const a = S.db.agreements.find(x => x.id == el.dataset.arg);
+    if (a.status) { a.status = 0; toast('已转为草稿，C 端继续沿用上一生效版本', 'ok'); }
+    else {
+      a.status = 1; a.effective_time = NOW; a.updatetime = NOW;
+      if (!a.history.length || a.history[0].version !== a.version) a.history.unshift({ version: a.version, editor: '管理员', note: '直接发布', time: NOW });
+      toast(`${a.name} ${a.version} 已发布，C 端即时生效`, 'ok');
+    }
+    renderPage(); logOp('协议管理', a.status ? '发布' : '转草稿', a.name, a.version);
+  },
+  'agr-preview'(el) {
+    const a = S.db.agreements.find(x => x.id == el.dataset.arg);
+    openModal(`<div class="modal-head"><h3>${a.name} · ${a.version}${a.status ? '' : '（草稿预览）'}</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
+    <div class="modal-body" style="max-height:65vh;line-height:1.9;color:var(--ink-2)">${a.content}</div>
+    <div class="modal-foot"><button class="btn btn-primary" data-act="modal-close">关闭</button></div>`);
+  },
+  'agr-history'(el) {
+    const a = S.db.agreements.find(x => x.id == el.dataset.arg);
+    const rows = a.history.map(h => `<tr><td class="serif-num">${h.version}</td><td>${h.editor}</td><td class="cell-sub">${h.note}</td><td class="cell-sub">${fmtT(h.time)}</td></tr>`).join('');
+    openModal(`<div class="modal-head"><h3>${a.name} · 版本记录</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
+    <div class="modal-body" style="max-height:65vh"><div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>版本</th><th>操作人</th><th>变更说明</th><th>时间</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>${a.history.length ? '' : emptyBox()}</div>
+    <div class="modal-foot"><button class="btn btn-primary" data-act="modal-close">关闭</button></div>`);
+  },
+
+  /* 盲盒管理 */
+  'bb-add'() { openBbForm(null); },
+  'bb-edit'(el) { openBbForm(S.db.blindboxes.find(x => x.id == el.dataset.arg)); },
+  'bb-status'(el) {
+    const b = S.db.blindboxes.find(x => x.id == el.dataset.arg);
+    if (b.status && !b.prizes.length) return toast('奖池未配置，不能上架', 'err');
+    b.status = b.status ? 0 : 1;
+    toast(b.status ? '盲盒已上架，C 端即时开售' : '已停售，C 端立即下架', 'ok'); renderPage();
+    logOp('盲盒管理', b.status ? '上架' : '停售', b.name, '');
+  },
+  'bb-prize-row-add'() {
+    const wrap = $('#bb-prizes');
+    const opts = S.db.collections.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    wrap.insertAdjacentHTML('beforeend', `<div class="prize-row" style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+      <select class="select bb-col" style="flex:2"><option value="0">请选择藏品</option>${opts}</select>
+      <input class="input bb-prob" type="number" step="0.0001" min="0.0001" max="100" placeholder="概率%" style="flex:1">
+      <input class="input bb-qty" type="number" min="1" placeholder="投放量" style="flex:1">
+      <button class="btn btn-danger btn-sm" data-act="bb-prize-row-del">移除</button></div>`);
+    wrap.lastElementChild.querySelector('.bb-prob').oninput = () => {
+      const sum = [...document.querySelectorAll('#bb-prizes .bb-prob')].reduce((s, i) => s + (+i.value || 0), 0);
+      $('#bb-sum').textContent = '当前合计：' + bbProbTxt(+sum.toFixed(4)) + (Math.abs(sum - 100) < 1e-9 ? '（合规）' : '（须等于 100%）');
+    };
+  },
+  'bb-prize-row-del'(el) { el.closest('.prize-row').remove(); },
+  'bb-save'() {
+    const id = +$('#bb-id').value;
+    const name = $('#bb-name').value.trim();
+    if (!name) return toast('请输入盲盒名称', 'err');
+    const price = Math.round(+$('#bb-price').value * 100);
+    if (!(price > 0)) return toast('请输入有效售价', 'err');
+    const total_supply = +$('#bb-total').value;
+    if (!(total_supply >= 1)) return toast('请输入发行总量', 'err');
+    const prizes = [];
+    for (const row of document.querySelectorAll('#bb-prizes .prize-row')) {
+      const p = { collection_id: +row.querySelector('.bb-col').value, probability: +row.querySelector('.bb-prob').value || 0, quantity: +row.querySelector('.bb-qty').value || 0 };
+      if (!p.collection_id) return toast('奖池中有行未选择藏品', 'err');
+      if (!(p.probability >= 0.0001 && p.probability <= 100)) return toast('概率需在 0.0001 ~ 100（4 位小数）', 'err');
+      if (p.quantity < 1) return toast('投放数量不能小于 1', 'err');
+      p.name = COL_NAME(p.collection_id); p.sent = 0;
+      prizes.push(p);
+    }
+    if (!prizes.length) return toast('请至少配置一个奖品', 'err');
+    const sum = prizes.reduce((s, p) => s + p.probability, 0);
+    if (sum > 100 + 1e-9) return toast(`概率总和 ${bbProbTxt(+sum.toFixed(4))} 超过 100%，拦截保存`, 'err');
+    if (sum < 100 - 1e-9) return toast(`概率总和 ${bbProbTxt(+sum.toFixed(4))} 不足 100%，请补充奖池或加满概率`, 'err');
+    // 库存池硬约束：各藏品投放量合计不得超过其库存池（编辑时其他盒占用不变、扣除后校验）
+    const bbNeed = {};
+    prizes.forEach(p => { bbNeed[p.collection_id] = (bbNeed[p.collection_id] || 0) + p.quantity; });
+    for (const cidStr of Object.keys(bbNeed)) {
+      const col = S.db.collections.find(x => x.id === +cidStr);
+      if (!col) continue;
+      const pool = POOL(col);
+      const other = S.db.blindboxes.filter(b => b.id !== id).reduce((s, b) => s + (b.prizes || []).reduce((x, p) => p.collection_id === col.id ? x + (p.quantity || p.qty || 0) : x, 0), 0);
+      const available = col.stock - pool.sold - pool.airdropped - pool.destroyed - other;
+      if (bbNeed[cidStr] > available) return toast(`库存池不足：${col.name} 可投放 ${Math.max(0, available).toLocaleString()} 份（发行量 − 已售 − 空投 − 其他盲盒占用），本盒需 ${bbNeed[cidStr].toLocaleString()} 份`, 'err');
+    }
+    // 保留已发放数：按藏品+概率匹配旧奖池
+    const old = S.db.blindboxes.find(x => x.id === id);
+    if (old) (old.prizes || []).forEach(op => { const m = prizes.find(p => p.collection_id === op.collection_id && p.probability === op.probability); if (m) m.sent = op.sent || 0; });
+    const data = { name, price, total_supply, prizes, status: +$('#bb-status').value };
+    if (id) Object.assign(old, data);
+    else S.db.blindboxes.push({ id: Date.now() % 10000, sold_count: 0, createtime: NOW, ...data });
+    closeModal(); toast('盲盒配置已保存', 'ok'); renderPage(); logOp('盲盒管理', id ? '配置' : '创建', name, `奖池 ${prizes.length} 项 · 概率合计 100%`);
+  },
+  'bb-records'(el) {
+    const b = S.db.blindboxes.find(x => x.id == el.dataset.arg);
+    const list = S.db.blindboxRecords.filter(r => r.box_id == b.id);
+    const rows = list.map(r => `<tr>
+      <td class="cell-main">${r.user}</td>
+      <td>${r.prize_name.includes('空盒') ? `<span class="tag tag-orange">${r.prize_name}</span>` : r.prize_name}</td>
+      <td class="cell-sub">${fmtT(r.createtime)}</td></tr>`).join('');
+    openModal(`<div class="modal-head"><h3>${b.name} · 开盒记录</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
+    <div class="modal-body" style="max-height:65vh"><div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>用户</th><th>开出藏品</th><th>开盒时间</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>${list.length ? '' : emptyBox('暂无开盒记录')}</div>
+    <div class="modal-foot"><button class="btn btn-primary" data-act="modal-close">关闭</button></div>`);
+  },
+
+  /* 转赠管理 */
+  'tf-search'() { S.q.transfer.status = +$('#tf-status').value; renderPage(); },
+  'tf-revoke'(el) {
+    const t = S.db.transfers.find(x => x.id == el.dataset.arg);
+    if (t.status !== 1) return toast('仅「已完成」转赠可撤销', 'err');
+    confirmBox(`确认撤销转赠 <b>${t.transfer_no}</b>？<br/><span style="color:var(--ink-2)">系统将校验接收方当前是否仍持有该藏品；若已再次转赠 / 寄售 / 合成 / 消耗将被拦截。撤销成功后持仓回收至转出方，需填写撤销原因并写入审计日志。</span>`, 'tf-revoke-ok', t.id);
+  },
+  'tf-revoke-ok'(el) {
+    const t = S.db.transfers.find(x => x.id == el.dataset.arg);
+    t.status = 2; t.revoke_reason = '管理员撤销：风险核实后回收持仓';
+    closeModal(); toast('转赠已撤销，持仓已回收至转出方', 'ok'); renderPage();
+    logOp('转赠管理', '撤销转赠', t.transfer_no, `${t.collection_name} ${t.from_user} → ${t.to_user}`);
+  },
+  'tf-toggle'(el) {
+    const c = S.db.collections.find(x => x.id == el.dataset.arg);
+    c.transfer_enabled = c.transfer_enabled ? 0 : 1;
+    toast(c.transfer_enabled ? `「${c.name}」转赠已开启` : `「${c.name}」转赠已关闭，C 端转赠按钮已隐藏/置灰（已发起的待确认转赠不受影响）`, 'ok');
+    renderPage(); logOp('转赠管理', c.transfer_enabled ? '开启开关' : '关闭开关', c.name, '');
+  },
+
   /* 运营参数 */
-  'set-logo'() { toast('原型演示：真实系统此处为图片上传组件（BaInput image）'); },
+  'set-logo'() { pickImage(d => { S.db.settings.brand.site_logo = d; renderPage(); toast('Logo 已上传并生效', 'ok'); logOp('运营参数', '上传Logo', 'brand', ''); }); },
+  /* 藏品封面 */
+  'cf-cover-pick'() {
+    pickImage(d => { $('#cf-cover').value = d; $('#cf-cover-box').innerHTML = boxImg(d); toast('封面已选择，保存后生效', 'ok'); });
+  },
   'set-brand'() {
     S.db.settings.brand.site_name = $('#brand-name').value || S.db.settings.brand.site_name;
     document.title = S.db.settings.brand.site_name + ' · 管理后台';
@@ -1223,24 +1565,41 @@ const ACT = {
     toast('参数已保存', 'ok'); logOp('运营参数', '保存参数', key + ' 组', '');
   },
 
-  /* 数据清理 */
+  /* 第三方配置 */
+  'tp-save'(el) {
+    const key = el.dataset.arg;
+    const t = S.db.thirdparty[key];
+    document.querySelectorAll(`.tp-input[data-group="${key}"]`).forEach(inp => { t.items[+inp.dataset.idx].value = inp.value; });
+    t.enabled = +$(`#tp-${key}-enabled`).value;
+    const name = key === 'huifu' ? '汇付天下钱包' : '短信配置';
+    toast(`${name}配置已保存，通道${t.enabled ? '已启用' : '已停用'}`, 'ok');
+    logOp('第三方配置', '保存配置', name, t.enabled ? '启用' : '停用');
+  },
+
+  /* 数据清理（四步确认：清空文字 → 管理员密码 → 短信验证码 → 二次确认） */
+  'clean-sms-send'() { toast('验证码已发送至管理员绑定手机（演示固定为 123456）', 'ok'); },
   'clean-run'(el) {
     const groups = [...new Set([...document.querySelectorAll('.clean-ck:checked')].map(c => c.value))];
     if (!groups.length) return toast('请先勾选要清理的数据', 'err');
     if ($('#clean-confirm').value !== '清空') return toast('请输入「清空」确认', 'err');
-    confirmBox(`确认清空所选 ${groups.length} 组数据？<b style="color:var(--danger)">硬删除不可恢复！</b>`, 'clean-run-ok', groups.join(','));
+    if (!$('#clean-pwd').value) return toast('请输入管理员密码', 'err');
+    if ($('#clean-pwd').value !== '123456') return toast('管理员密码错误，校验失败拒绝执行', 'err');
+    if ($('#clean-sms').value !== '123456') return toast('短信验证码错误或已过期（演示固定为 123456）', 'err');
+    confirmBox(`确认清空所选 ${groups.length} 组数据？<b style="color:var(--danger)">硬删除不可恢复！</b>执行前将自动生成备份（编号 ${cleanBakNo()}）`, 'clean-run-ok', groups.join(','));
   },
   'clean-run-ok'(el) {
     const groups = el.dataset.arg.split(',');
+    const bakNo = cleanBakNo();
     let msg = [];
     if (groups.includes('notice')) { msg.push('公告 ' + S.db.notices.length + ' 条'); S.db.notices = []; }
     if (groups.includes('content')) { msg.push('轮播 ' + S.db.banners.length + ' 条'); S.db.banners = []; }
     if (groups.includes('trade')) { msg.push('订单 ' + S.db.orders.length + ' / 挂单 ' + S.db.market.length + ' / 流水 ' + S.db.walletLogs.length + ' / 持仓 ' + S.db.holds.length); S.db.orders = []; S.db.market = []; S.db.walletLogs = []; S.db.holds = []; }
-    if (groups.includes('activity')) { msg.push('活动记录已清空'); S.db.lotteryRecords = []; S.db.synthesisRecords = []; S.db.inviteRecords = []; S.db.airdrops = []; }
+    if (groups.includes('transfer')) { msg.push('转赠记录 ' + S.db.transfers.length + ' 条'); S.db.transfers = []; }
+    if (groups.includes('activity')) { msg.push('活动记录已清空'); S.db.lotteryRecords = []; S.db.synthesisRecords = []; S.db.inviteRecords = []; S.db.airdrops = []; S.db.blindboxRecords = []; }
     if (groups.includes('user')) { msg.push('用户 ' + S.db.users.length + ' 人'); S.db.users = []; }
     closeModal(); toast('清理完成', 'ok');
-    const r = $('#clean-result'); if (r) r.innerHTML = `<span class="tag tag-green">已清理：${msg.join('，')}</span>`;
-    logOp('数据清理', '清空', groups.join(','), '硬删除');
+    const r = $('#clean-result'); if (r) r.innerHTML = `<span class="tag tag-green">已清理：${msg.join('，')}（备份编号 ${bakNo}）</span>`;
+    logOp('数据清理', '清空', groups.join(','), '硬删除 · 备份 ' + bakNo);
   },
 
   /* 签到活动 */
@@ -1336,7 +1695,7 @@ function openUserForm(u) {
     <div class="form-row"><label>手机号</label><input class="input" id="uf-mobile" value="${esc(u?.mobile || '')}"></div>
     <div class="form-row"><label>邮箱</label><input class="input" id="uf-email" value="${esc(u?.email || '')}"></div>
     <div class="form-row"><label>实名姓名</label><input class="input" id="uf-real" value="${esc(u?.real_name || '')}"></div>
-    <div class="form-row"><label>状态</label><select class="select" id="uf-status"><option value="1">启用</option><option value="0">禁用</option></select></div>
+    <div class="form-row"><label>状态</label><select class="select" id="uf-status"><option value="1">正常</option><option value="0">冻结</option></select></div>
     </div></div>
   <div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">取消</button><button class="btn btn-primary" data-act="user-form-ok" data-arg="${u?.id || 0}">保存</button></div>`);
   if (u) $('#uf-status').value = u.status;
@@ -1444,13 +1803,16 @@ function openColForm(c) {
     <div class="form-grid">
       <div class="form-row"><label>藏品名称 *</label><input class="input" id="cf-name" value="${esc(c?.name || '')}"></div>
       <div class="form-row"><label>作者</label><input class="input" id="cf-author" value="${esc(c?.author || '')}"></div>
+      <div class="form-row"><label>发行方 *（直接输入即可，输入时自动联想已有发行方）</label>
+        <input class="input" id="cf-pub" list="pub-list" value="${esc(c?.publisher || '')}" placeholder="发行主体全称，如：灵境数字科技有限公司">
+        <datalist id="pub-list">${[...new Set(S.db.collections.map(x => x.publisher).filter(Boolean))].map(p => `<option value="${esc(p)}">`).join('')}</datalist></div>
       <div class="form-row"><label>分类 *</label><select class="select" id="cf-cat">${catOpts}</select></div>
       <div class="form-row"><label>发行量 *</label><input class="input" id="cf-stock" type="number" value="${c?.stock || ''}"></div>
       <div class="form-row"><label>售价（元）*</label><input class="input" id="cf-price" type="number" step="0.01" value="${c ? fmtY(c.price) : ''}"></div>
       <div class="form-row"><label>市场参考价（元）</label><input class="input" id="cf-mkt" type="number" step="0.01" value="${c ? fmtY(c.market_price) : ''}"></div>
       <div class="form-row"><label>二级市场</label><select class="select" id="cf-resale"><option value="1">开启</option><option value="0">关闭</option></select></div>
       <div class="form-row" id="cf-rpl-row"><label>寄售限价（元）*</label><input class="input" id="cf-rpl" type="number" step="0.01" min="0" placeholder="用户挂单价格不得超过此价" value="${c && c.resale ? fmtY(c.resale_price_limit || 0) : ''}"></div>
-      <div class="form-row"><label>封面图（上传组件演示）</label><div class="upload-box" data-act="set-logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span>上传封面</span></div></div>
+      <div class="form-row"><label>封面图（JPG/PNG/WebP/GIF，≤5MB）</label><input type="hidden" id="cf-cover" value="${c?.cover || ''}"><div class="upload-box" id="cf-cover-box" data-act="cf-cover-pick">${c?.cover ? boxImg(c.cover) : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span>上传封面</span>'}</div></div>
     </div>
     <div class="form-row"><label>图文详情（富文本）</label>
       ${editorHtml('col', c?.detail || '<p>请输入藏品介绍…</p>')}</div>
@@ -1461,8 +1823,8 @@ function openColForm(c) {
         <div class="chance-item"><label class="ck">优先购开始时间</label><input class="input" id="cf-pre-time" type="datetime-local" style="width:220px"></div>
         <div class="chance-item" id="cf-pre-col-row" style="display:none"><label class="ck">凭证藏品</label>
           <select class="select" id="cf-pre-col" style="width:200px"><option value="">请选择藏品</option>${colOptsPre}</select></div>
-        <div class="chance-item" id="cf-pre-list-row" style="display:none"><label class="ck">白名单用户ID</label>
-          <input class="input" id="cf-pre-list" placeholder="10001,10002,10003" style="flex:1" value="${c?.pre_rule_type === 2 ? esc(c.pre_rule_value) : ''}"></div>
+        <div class="chance-item" id="cf-pre-list-row" style="display:none"><label class="ck">白名单手机号</label>
+          <textarea class="input" id="cf-pre-list" rows="3" placeholder="13800000001&#10;13800000002（每行一个手机号，白名单用户可在优先购期购买）" style="flex:1">${c?.pre_rule_type === 2 ? esc((c.pre_rule_value || '').split(',').join('\n')) : ''}</textarea></div>
         <div class="chance-item" id="cf-pre-limit-row" style="display:none"><label class="ck">优先购每人限购</label>
           <input class="input" id="cf-pre-limit" type="number" min="1" value="${c?.pre_limit || 1}" style="width:90px"></div>
       </div></div>
@@ -1491,29 +1853,45 @@ ACT['col-form-ok'] = el => {
   const price = Math.round((+$('#cf-price').value || 0) * 100);
   if (!name) return toast('请输入藏品名称', 'err');
   if (!price) return toast('请输入售价', 'err');
+  const publisher = $('#cf-pub').value.trim();
+  if (!publisher) return toast('请输入发行方', 'err');
   const resale = +$('#cf-resale').value;
   const rpl = Math.round((+$('#cf-rpl').value || 0) * 100);
   if (resale === 1 && rpl <= 0) return toast('开启二级市场必须设置寄售限价', 'err');
-  const data = { name, author: $('#cf-author').value, category_id: +$('#cf-cat').value, price, market_price: Math.round((+$('#cf-mkt').value || 0) * 100), stock: +$('#cf-stock').value || 0, resale, resale_price_limit: resale === 1 ? rpl : 0, detail: editorVal('col') };
+  const data = { name, publisher, author: $('#cf-author').value, category_id: +$('#cf-cat').value, price, market_price: Math.round((+$('#cf-mkt').value || 0) * 100), stock: +$('#cf-stock').value || 0, resale, resale_price_limit: resale === 1 ? rpl : 0, cover: $('#cf-cover').value, detail: editorVal('col') };
   if (data.stock <= 0) return toast('发行量必须大于 0', 'err');
   // 优先购配置
   const preType = +$('#cf-pre-type').value;
   if (preType > 0) {
     const tstr = $('#cf-pre-time').value;
     if (!tstr) return toast('请选择优先购开始时间', 'err');
-    const val = preType === 1 ? $('#cf-pre-col').value : $('#cf-pre-list').value.trim();
-    if (!val) return toast(preType === 1 ? '请选择优先购凭证藏品' : '请填写白名单用户ID', 'err');
-    if (preType === 1 && id && +val === id) return toast('凭证藏品不能选择本品自身', 'err');
+    let val;
+    if (preType === 1) {
+      val = $('#cf-pre-col').value;
+      if (!val) return toast('请选择优先购凭证藏品', 'err');
+      if (id && +val === id) return toast('凭证藏品不能选择本品自身', 'err');
+    } else {
+      const wl = parsePhoneWL($('#cf-pre-list').value);
+      if (!wl.lines.length) return toast('请填写白名单手机号（每行一个）', 'err');
+      if (wl.bad) return toast(`第 ${wl.bad} 行手机号格式不正确（需 11 位、1 开头）`, 'err');
+      val = wl.lines.join(',');
+    }
     Object.assign(data, { pre_rule_type: preType, pre_rule_value: val, pre_sale_time: Math.floor(new Date(tstr).getTime() / 1000), pre_limit: +$('#cf-pre-limit').value || 1 });
   } else {
     Object.assign(data, { pre_rule_type: 0, pre_rule_value: '', pre_sale_time: 0, pre_limit: 1 });
   }
+  let autoOff = 0;
   if (id) {
     const old = S.db.collections.find(x => x.id === id);
-    if (data.stock < old.sold) return toast(`发行量（${data.stock.toLocaleString()}）不能小于已售数量（${old.sold.toLocaleString()}）`, 'err');
+    const pool = POOL(old);
+    if (data.stock < pool.occupied) return toast(`发行量（${data.stock.toLocaleString()}）不能小于已占用量（${pool.occupied.toLocaleString()} = 已售 ${pool.sold.toLocaleString()} + 空投 ${pool.airdropped.toLocaleString()} + 盲盒 ${pool.bbin.toLocaleString()}${pool.destroyed ? ' + 销毁 ' + pool.destroyed.toLocaleString() : ''}）`, 'err');
+    // 关闭寄售（二级市场）→ 自动下架该藏品全部在售挂单
+    if (old.resale === 1 && data.resale === 0) {
+      S.db.market.forEach(m => { if (m.collection_id === id && m.status === 0) { m.status = 2; autoOff++; } });
+    }
     Object.assign(old, data);
   } else { data.id = Date.now() % 10000; data.sold = 0; data.status = 0; data.sale_time = 0; data.sale_end_time = 0; data.createtime = NOW; S.db.collections.unshift(data); }
-  closeModal(); toast('保存成功', 'ok'); renderPage(); logOp('藏品管理', id ? '编辑' : '添加', name, id ? (preType ? '含优先购配置' : '') : '');
+  closeModal(); toast(autoOff > 0 ? `已保存；寄售已关闭，自动下架 ${autoOff} 个在售挂单，持仓已退回卖家账户` : '保存成功', 'ok'); renderPage(); logOp('藏品管理', id ? '编辑' : '添加', name, autoOff > 0 ? `关闭寄售，自动下架 ${autoOff} 个挂单` : (id && preType ? '含优先购配置' : ''));
 };
 
 function openCatForm(c) {
@@ -1588,6 +1966,12 @@ ACT['air-form-ok'] = () => {
   else if (ruleType === 8) ruleValue = $('#air-val-date').value;
   else if (ruleType === 10) ruleValue = $('#air-val-tag').value.trim();
   if ([1, 3, 4, 5, 6, 7, 8, 10, 11].includes(ruleType) && !ruleValue) return toast('请填写规则参数', 'err');
+  // 库存池硬约束：发放份数不得超过该藏品库存池
+  const airCol = S.db.collections.find(x => x.id === +$('#air-col').value);
+  if (airCol) {
+    const pool = POOL(airCol);
+    if (num > pool.remain) return toast(`库存池不足：${airCol.name} 库存池仅剩 ${pool.remain.toLocaleString()} 份（发行量 ${airCol.stock.toLocaleString()} − 已售 ${pool.sold.toLocaleString()} − 空投 ${pool.airdropped.toLocaleString()} − 盲盒 ${pool.bbin.toLocaleString()}）`, 'err');
+  }
   const dup = +$('#air-dup').value;
   const reward = +$('#air-reward').value || 0;
   if (dup === 2 && !reward) return toast('换发抽奖次数策略需填写换发次数', 'err');
@@ -1639,7 +2023,8 @@ function openRafForm(r) {
     <div class="form-row"><label>报名开始时间 *</label><input class="input" id="raf-as" type="datetime-local"></div>
     <div class="form-row"><label>报名截止时间 *</label><input class="input" id="raf-ae" type="datetime-local"></div>
     <div class="form-row"><label>中签购买截止时间 *</label><input class="input" id="raf-bd" type="datetime-local"></div>
-    <div class="form-row"><span class="cell-sub">中签名额 = 发售数量 ÷ 每人限购（向下取整）；报名人数不足名额时全部中签。</span></div>
+    <div class="form-row"><label>白名单手机号（每行一个，白名单必中签，可选）</label><textarea class="input" id="raf-wl" rows="3" placeholder="13800000001&#10;13800000002">${r?.whitelist ? esc(r.whitelist.split(',').join('\n')) : ''}</textarea></div>
+    <div class="form-row"><span class="cell-sub">中签名额 = 发售数量 ÷ 每人限购（向下取整）；报名人数不足名额时全部中签；白名单用户（按手机号匹配）必中签，占用中签名额。</span></div>
   </div>
   <div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">取消</button><button class="btn btn-primary" data-act="raf-form-ok" data-arg="${r?.id || 0}">保存</button></div>`);
   if (r) {
@@ -1657,8 +2042,14 @@ ACT['raf-form-ok'] = el => {
   if (!as || !ae || !bd) return toast('请填写完整的报名与购买时间', 'err');
   if (new Date(as) >= new Date(ae)) return toast('报名开始必须早于报名截止', 'err');
   if (new Date(ae) >= new Date(bd)) return toast('报名截止必须早于购买截止', 'err');
+  let whitelist = [];
+  if ($('#raf-wl').value.trim()) {
+    const wl = parsePhoneWL($('#raf-wl').value);
+    if (wl.bad) return toast(`第 ${wl.bad} 行手机号格式不正确（需 11 位、1 开头）`, 'err');
+    whitelist = wl.lines;
+  }
   const now = NOW, aS = new Date(as).getTime() / 1000 | 0, aE = new Date(ae).getTime() / 1000 | 0;
-  const data = { collection_id: cid, total, per_limit: +$('#raf-limit').value || 1, apply_start: aS, apply_end: aE, buy_deadline: new Date(bd).getTime() / 1000 | 0, status: now < aS ? 0 : (now <= aE ? 1 : 2) };
+  const data = { collection_id: cid, total, per_limit: +$('#raf-limit').value || 1, apply_start: aS, apply_end: aE, buy_deadline: new Date(bd).getTime() / 1000 | 0, status: now < aS ? 0 : (now <= aE ? 1 : 2), whitelist: whitelist.join(',') };
   if (id) {
     const old = S.db.raffles.find(x => x.id === id);
     if (old.status >= 3) return toast('已抽签的活动不可修改', 'err');
@@ -1798,7 +2189,7 @@ function openBanForm(b) {
   openModal(`<div class="modal-head"><h3>${isEdit ? '编辑轮播' : '添加轮播'}</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
   <div class="modal-body">
     <input type="hidden" id="ban-id" value="${b?.id || 0}">
-    <div class="form-row"><label>图片（上传组件演示）</label><div class="upload-box" data-act="set-logo"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m5 19 5.5-5.5L14 17l3-3 4 4"/></svg><span>上传图片</span></div></div>
+    <div class="form-row"><label>图片（JPG/PNG/WebP/GIF，≤5MB）</label><input type="hidden" id="ban-img" value="${esc(b?.image || '')}"><div class="upload-box" id="ban-img-box" data-act="ban-img-pick">${b?.image ? boxImg(b.image) : '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m5 19 5.5-5.5L14 17l3-3 4 4"/></svg><span>上传图片</span>'}</div></div>
     <div class="form-grid">
     <div class="form-row"><label>标题</label><input class="input" id="ban-title" value="${esc(b?.title || '')}"></div>
     <div class="form-row"><label>跳转链接</label><input class="input" id="ban-link" value="${esc(b?.link || '')}"></div>
@@ -1811,11 +2202,66 @@ function openBanForm(b) {
 ACT['ban-form-ok'] = () => {
   const id = +$('#ban-id').value; const title = $('#ban-title').value.trim();
   if (!title) return toast('请输入标题', 'err');
-  const data = { title, link: $('#ban-link').value, weigh: +$('#ban-weigh').value || 0, status: +$('#ban-status').value };
+  const data = { title, link: $('#ban-link').value, weigh: +$('#ban-weigh').value || 0, status: +$('#ban-status').value, image: $('#ban-img').value };
   if (id) Object.assign(S.db.banners.find(x => x.id === id), data);
   else S.db.banners.push({ id: Date.now() % 10000, ...data });
   closeModal(); toast('保存成功', 'ok'); renderPage(); logOp('轮播管理', id ? '编辑' : '添加', title, '');
 };
+
+function openAgrForm(a) {
+  openModal(`<div class="modal-head"><h3>编辑${a.name}</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
+  <div class="modal-body" style="max-height:60vh">
+    <input type="hidden" id="agr-id" value="${a.id}">
+    <div class="form-grid">
+      <div class="form-row"><label>版本号 *</label><input class="input" id="agr-version" value="${esc(a.version)}" placeholder="如 v2.2"></div>
+      <div class="form-row"><label>状态</label><select class="select" id="agr-status"><option value="1">发布（C 端即时生效）</option><option value="0">保存为草稿</option></select></div></div>
+    <div class="form-row"><label>生效时间</label><input class="input" id="agr-effective" type="datetime-local" value="${new Date((a.effective_time || NOW) * 1000).toISOString().slice(0, 16)}"></div>
+    <div class="form-row"><label>协议正文（富文本）</label>
+      ${editorHtml('agr', a.content)}</div>
+  </div>
+  <div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">取消</button><button class="btn btn-primary" data-act="agr-save">保存</button></div>`);
+  $('#agr-status').value = a.status;
+  bindEditor('agr');
+}
+
+function openBbForm(b) {
+  const isNew = !b;
+  const opts = S.db.collections.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  const prizeRows = isNew ? '' : (b.prizes || []).map(p => `<div class="prize-row" style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+    <select class="select bb-col" style="flex:2"><option value="0">请选择藏品</option>${opts}</select>
+    <input class="input bb-prob" type="number" step="0.0001" min="0.0001" max="100" placeholder="概率%" style="flex:1" value="${p.probability}">
+    <input class="input bb-qty" type="number" min="1" placeholder="投放量" style="flex:1" value="${p.quantity}">
+    <button class="btn btn-danger btn-sm" data-act="bb-prize-row-del">移除</button></div>`).join('');
+  openModal(`<div class="modal-head"><h3>${isNew ? '创建盲盒' : '配置盲盒'}</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
+  <div class="modal-body" style="max-height:62vh">
+    <input type="hidden" id="bb-id" value="${b?.id || 0}">
+    <div class="form-row"><label>盲盒名称 *</label><input class="input" id="bb-name" value="${esc(b?.name || '')}" placeholder="如：国风幸运福袋"></div>
+    <div class="form-grid">
+      <div class="form-row"><label>售价（元）*</label><input class="input" id="bb-price" type="number" step="0.01" min="0.01" value="${b ? fmtY(b.price) : ''}"></div>
+      <div class="form-row"><label>发行总量 *</label><input class="input" id="bb-total" type="number" min="1" value="${b?.total_supply ?? ''}"></div></div>
+    <div class="form-row"><label>状态</label><select class="select" id="bb-status"><option value="1">在售</option><option value="0">停售</option></select></div>
+    <div class="form-row"><label>奖品池（概率 4 位小数，总和必须等于 100%）</label>
+      <div id="bb-prizes">${prizeRows}</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+        <button class="btn btn-ghost btn-sm" data-act="bb-prize-row-add">添加奖品</button>
+        <span class="cell-sub" id="bb-sum">当前合计：${b && b.prizes.length ? bbProbTxt(+(b.prizes.reduce((s, p) => s + p.probability, 0)).toFixed(4)) : '0%'}</span>
+      </div></div>
+  </div>
+  <div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">取消</button><button class="btn btn-primary" data-act="bb-save">保存</button></div>`);
+  if (!isNew) {
+    $('#bb-status').value = b.status;
+    // 藏品下拉按 prize 顺序回填
+    const sels = document.querySelectorAll('#bb-prizes .prize-row .bb-col');
+    (b.prizes || []).forEach((p, i) => { if (sels[i]) sels[i].value = p.collection_id; });
+  }
+  const bindSum = () => {
+    document.querySelectorAll('#bb-prizes .bb-prob').forEach(inp => inp.oninput = () => {
+      const sum = [...document.querySelectorAll('#bb-prizes .bb-prob')].reduce((s, i) => s + (+i.value || 0), 0);
+      $('#bb-sum').textContent = '当前合计：' + bbProbTxt(+sum.toFixed(4)) + (Math.abs(sum - 100) < 1e-9 ? '（合规）' : '（须等于 100%）');
+    });
+  };
+  bindSum();
+}
 
 function openCkRuleForm(rule, idx) {
   const isEdit = rule !== null;
