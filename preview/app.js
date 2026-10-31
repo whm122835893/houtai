@@ -48,6 +48,7 @@ const NAV = [
     ['wallet', '钱包流水', '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>'],
     ['collection', '藏品管理', '<path d="M6 3h12l4 6-10 12L2 9z"/>'],
     ['blindbox', '盲盒管理', '<polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5" rx="1"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>'],
+    ['whitelist', '白名单管理', '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="m8 12 3 3 5-6"/>'],
     ['category', '分类管理', '<path d="M20 12l-8 8-9-9 9-8h8z"/>'],
     ['order', '订单管理', '<path d="M14 2H6v20h12V6z"/><path d="M14 2v4h4"/>'],
     ['market', '市场寄售', '<path d="M4 7h13m0 0-3-3m3 3-3 3M20 17H7m0 0 3 3m-3-3 3-3"/>'],
@@ -55,6 +56,7 @@ const NAV = [
     ['hold', '持仓查询', '<path d="M12 2 2 7l10 5 10-5zM2 12l10 5 10-5M2 17l10 5 10-5"/>'],
     ['raffle', '抽签发售', '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 3.5"/><path d="M12 3a9 9 0 0 1 9 9"/>'],
     ['airdrop', '定向发放', '<path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/>'],
+    ['roster', '名单管理', '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 10h8M8 14h5"/>'],
   ] },
   { group: '活动运营', items: [
     ['activity', '活动中心', '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>'],
@@ -81,7 +83,7 @@ const S = {
   page: 'dashboard', collapsed: localStorage.getItem('nft_sidebar') === '1',
   readonly: false, db: buildDB(),
   expandedWallet: 0,
-  q: { user: { keyword: '', status: -1, page: 1 }, wallet: { keyword: '', page: 1 }, collection: { keyword: '', status: -1, category_id: 0 }, category: {}, order: { keyword: '', type: 0, status: -1, page: 1 }, market: { tab: 0, status: -1 }, hold: { keyword: '', status: -1, collection_id: 0 }, airdrop: {}, lottery: {}, synthesis: {}, invite: {}, checkin: { keyword: '', page: 1 }, register: { keyword: '', status: -1, page: 1 }, notice: { keyword: '', status: -1 }, banner: {}, operlog: { keyword: '', page: 1 }, blindbox: {}, transfer: { status: -1 } },
+  q: { user: { keyword: '', status: -1, page: 1 }, wallet: { keyword: '', page: 1 }, collection: { keyword: '', status: -1, category_id: 0 }, category: {}, order: { keyword: '', type: 0, status: -1, page: 1 }, market: { tab: 0, status: -1 }, hold: { keyword: '', status: -1, collection_id: 0 }, airdrop: {}, lottery: {}, synthesis: {}, invite: {}, checkin: { keyword: '', page: 1 }, register: { keyword: '', status: -1, page: 1 }, notice: { keyword: '', status: -1 }, banner: {}, operlog: { keyword: '', page: 1 }, blindbox: {}, transfer: { status: -1 }, whitelist: { keyword: '' } },
 };
 const canWrite = () => !S.readonly;
 const W = html => canWrite() ? html : '';
@@ -310,7 +312,7 @@ const toLocalInput = ts => { const d = new Date(ts * 1000); const p = n => Strin
 const preTag = c => {
   if (!c.pre_rule_type) return '';
   const on = c.status === 2 && c.pre_sale_time && c.sale_time && NOW >= c.pre_sale_time && NOW < c.sale_time;
-  const cn = c.pre_rule_type === 1 ? `持有「${COL_NAME(+c.pre_rule_value)}」` : '白名单用户';
+  const cn = c.pre_rule_type === 1 ? `持有「${COL_NAME(+c.pre_rule_value)}」` : c.pre_rule_type === 3 ? `持有「${COL_NAME(+c.pre_rule_value)}」或白名单用户` : '白名单用户';
   return `<span class="tag ${on ? 'tag-orange' : 'tag-blue'}" title="优先购：${cn} · 每人限购 ${c.pre_limit || 1} 份 · ${fmtT(c.pre_sale_time)} 起">优先购${on ? '中' : ''}</span> `;
 };
 PAGES.collection = () => {
@@ -328,7 +330,7 @@ PAGES.collection = () => {
     <td><span class="serif-num">￥${fmtY(c.price)}</span><div class="cell-sub">市场价 ￥${fmtY(c.market_price)}</div></td>
     <td class="cell-sub">${c.sold.toLocaleString()} / ${c.stock.toLocaleString()}</td>
     <td><span class="serif-num" title="库存池 = 发行量 − 已售 − 空投已发放 − 盲盒投放 − 已销毁">${POOL(c).remain.toLocaleString()}</span><div class="cell-sub">空投 ${POOL(c).airdropped.toLocaleString()} · 盲盒 ${POOL(c).bbin.toLocaleString()}${POOL(c).destroyed ? ' · 销毁 ' + POOL(c).destroyed.toLocaleString() : ''}</div></td>
-    <td><span class="tag ${c.resale ? 'tag-green' : 'tag-gray'}">${c.resale ? '开启' : '关闭'}</span>${c.resale ? `<div class="cell-sub">限价 ￥${fmtY(c.resale_price_limit || 0)}</div>` : ''}</td>
+    <td><span class="tag ${c.resale ? 'tag-green' : 'tag-gray'}">${c.resale ? '开启' : '关闭'}</span>${c.resale ? `<div class="cell-sub">${(c.resale_price_min || 0) > 0 ? '限价 ￥' + fmtY(c.resale_price_min) + ' ~ ￥' + fmtY(c.resale_price_limit || 0) : '限价 ≤ ￥' + fmtY(c.resale_price_limit || 0)}</div>` : ''}</td>
     <td><span class="tag ${cls}">${st}</span></td><td class="cell-sub">${preTag(c)}${fmtT(c.sale_time) || '未排期'}${c.sale_end_time ? '<br/>至 ' + fmtT(c.sale_end_time) : ''}</td>
     <td style="white-space:nowrap">${c.status === 2
       ? W(`<button class="btn btn-ghost btn-sm" data-act="col-soldout" data-arg="${c.id}">停止发售</button><button class="btn btn-ghost btn-sm" data-act="col-off" data-arg="${c.id}">下架</button>`)
@@ -361,6 +363,31 @@ const phaseOf = r => {
   return 2;
 };
 const rafQuota = r => Math.floor(r.total / r.per_limit);
+PAGES.whitelist = () => {
+  const q = S.q.whitelist;
+  const list = S.db.whitelists.filter(w => !q.keyword || w.mobile.includes(q.keyword) || (w.remark || '').includes(q.keyword));
+  const rows = list.map(w => `<tr>
+    <td class="serif-num">${w.id}</td><td class="cell-main">${w.mobile}</td>
+    <td>${w.collection_id === 0 ? '<span class="tag tag-blue">全部藏品</span>' : COL_NAME(w.collection_id)}</td>
+    <td class="cell-sub">${esc(w.remark || '-')}</td>
+    <td><span class="tag ${w.status ? 'tag-green' : 'tag-gray'}">${w.status ? '启用' : '停用'}</span></td>
+    <td class="cell-sub">${fmtT(w.createtime)}</td>
+    <td style="white-space:nowrap">${W(`<button class="btn btn-ghost btn-sm" data-act="wl-edit" data-arg="${w.id}">编辑</button>
+    <button class="btn btn-ghost btn-sm" data-act="wl-status" data-arg="${w.id}">${w.status ? '停用' : '启用'}</button>
+    <button class="btn btn-danger btn-sm" data-act="wl-del" data-arg="${w.id}">删除</button>`)}</td></tr>`).join('');
+  return `
+  <div class="page-head rise" style="--i:0"><h2>白名单管理</h2><span class="en">Whitelist</span></div>
+  <div class="glass filter-bar rise" style="--i:1"><span class="cell-sub">优先购资格名单库：藏品/抽签通过「从白名单库导入」生成<b>快照</b>，导入后库内变更不影响已导入的活动</span><span style="flex:1"></span>
+    <input class="input" id="wl-kw" placeholder="搜索手机号/备注" style="width:170px" value="${esc(q.keyword)}">
+    ${W('<button class="btn btn-ghost" data-act="wl-search">搜索</button>')}
+    ${W('<button class="btn btn-ghost" data-act="wl-batch">批量导入</button>')}
+    ${S.db.rosters.length ? W('<button class="btn btn-ghost" data-act="wl-from-ros">从名单导入</button>') : ''}
+    ${W('<button class="btn btn-primary" data-act="wl-add">添加名单</button>')}</div>
+  <div class="glass rise" style="--i:2"><div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>ID</th><th>手机号</th><th>适用藏品</th><th>备注</th><th>状态</th><th>添加时间</th><th style="width:200px">操作</th></tr></thead>
+    <tbody>${rows}</tbody></table></div></div>`;
+};
+
 PAGES.raffle = () => {
   const rows = S.db.raffles.map(r => {
     const ph = phaseOf(r);
@@ -440,10 +467,10 @@ PAGES.market = () => {
     let list = q.status < 0 ? S.db.market : S.db.market.filter(m => m.status === q.status);
     const stTag = [['在售', 'tag-green'], ['已售', 'tag-blue'], ['已下架', 'tag-gray']];
     body = `<table class="tbl"><thead><tr><th>挂单号</th><th>卖家</th><th>藏品 / 编号</th><th>单价 / 限价</th><th>状态</th><th>挂单时间</th><th>售出时间</th><th>操作</th></tr></thead><tbody>
-      ${list.map(m => { const [st, cls] = stTag[m.status]; const lim = (S.db.collections.find(c => c.id === m.collection_id) || {}).resale_price_limit || 0; const over = lim > 0 && m.price > lim; return `<tr>
+      ${list.map(m => { const [st, cls] = stTag[m.status]; const col = S.db.collections.find(c => c.id === m.collection_id) || {}; const lim = col.resale_price_limit || 0, lmin = col.resale_price_min || 0; const over = lim > 0 && m.price > lim; const under = lmin > 0 && m.price < lmin; const limTxt = (lmin > 0 ? '￥' + fmtY(lmin) + ' ~ ' : '≤ ') + (lim > 0 ? '￥' + fmtY(lim) : '不限'); return `<tr>
       <td class="cell-sub">${m.order_no}</td><td>${m.seller}</td>
       <td><div class="cell-main">${m.collection_name}</div><div class="cell-sub">${m.sn}</div></td>
-      <td><span class="serif-num" ${over ? 'style="color:var(--danger)"' : ''}>￥${fmtY(m.price)}</span><div class="cell-sub">${lim > 0 ? '限价 ￥' + fmtY(lim) : '不限价'}${over ? ' <span class="tag tag-red">超限</span>' : ''}</div></td><td><span class="tag ${cls}">${st}</span></td>
+      <td><span class="serif-num" ${over || under ? 'style="color:var(--danger)"' : ''}>￥${fmtY(m.price)}</span><div class="cell-sub">限价 ${lim > 0 ? limTxt : '不限价'}${over ? ' <span class="tag tag-red">超上限</span>' : ''}${under ? ' <span class="tag tag-red">低于下限</span>' : ''}</div></td><td><span class="tag ${cls}">${st}</span></td>
       <td class="cell-sub">${fmtT(m.createtime)}</td><td class="cell-sub">${fmtT(m.soldtime)}</td>
       <td>${m.status === 0 ? W(`<button class="btn btn-ghost btn-sm" data-act="market-off" data-arg="${m.id}">下架</button>`) : '-'}</td></tr>`; }).join('')}
       </tbody></table>${list.length ? '' : emptyBox()}`;
@@ -488,9 +515,10 @@ PAGES.hold = () => {
 
 /* 9. 定向发放 */
 PAGES.airdrop = () => {
-  const RULES = { 1: ['指定用户', 'tag-blue'], 2: ['全部用户', 'tag-green'], 3: ['按邀请数', 'tag-orange'], 4: ['持有藏品', 'tag-orange'], 5: ['持仓门槛', 'tag-blue'], 6: ['白名单', 'tag-green'], 7: ['按消费', 'tag-blue'], 8: ['老用户', 'tag-gray'], 9: ['随机抽样', 'tag-orange'], 10: ['按标签', 'tag-green'], 11: ['邀请排行', 'tag-orange'] };
+  const RULES = { 1: ['指定用户', 'tag-blue'], 2: ['全部用户', 'tag-green'], 3: ['按邀请数', 'tag-orange'], 4: ['持有藏品', 'tag-orange'], 5: ['持仓门槛', 'tag-blue'], 6: ['白名单', 'tag-green'], 7: ['按消费', 'tag-blue'], 8: ['老用户', 'tag-gray'], 9: ['随机抽样', 'tag-orange'], 10: ['按标签', 'tag-green'], 11: ['邀请排行', 'tag-orange'], 13: ['按名单', 'tag-green'] };
   const brief = t => {
     const v = t.rule_value || '';
+    if (t.rule_type === 13) { const r = S.db.rosters.find(x => x.id === +v); return r ? `${r.name}（${r.user_count} 人）` : '名单已删除'; }
     if (t.rule_type === 4) return '凭证：' + COL_NAME(+v);
     if (t.rule_type === 7) return '消费 ≥ ' + v + ' 元';
     if (t.rule_type === 8) return '注册早于 ' + v;
@@ -515,11 +543,151 @@ PAGES.airdrop = () => {
   }).join('');
   return `
   <div class="page-head rise" style="--i:0"><h2>定向发放</h2><span class="en">Airdrop</span></div>
-  <div class="glass filter-bar rise" style="--i:1"><span class="cell-sub">11 种定向规则 · 直接到账 / 领取式 · 定时空投 · 重复策略 · 批次撤销</span><span style="flex:1"></span>${W('<button class="btn btn-primary" data-act="air-add">创建任务</button>')}</div>
+  <div class="glass filter-bar rise" style="--i:1"><span class="cell-sub">12 种定向规则 · 支持按名单快照发放 · 直接到账 / 领取式 · 定时空投 · 重复策略 · 批次撤销</span><span style="flex:1"></span>${W('<button class="btn btn-primary" data-act="air-add">创建任务</button>')}</div>
   <div class="glass rise" style="--i:2"><div class="tbl-wrap"><table class="tbl">
     <thead><tr><th>任务</th><th>藏品</th><th>份数</th><th>目标规则</th><th>到账方式</th><th>进度</th><th>状态</th><th>执行时间</th><th style="width:230px">操作</th></tr></thead>
     <tbody>${rows}</tbody></table></div></div>`;
 };
+
+/* 9b. 名单管理（人群快照） */
+const ROS_TYPES = { 1: '按签到', 2: '持仓指定藏品', 3: '注册用户', 4: '邀请好友', 5: '手动导入' };
+/* 按条件圈人：返回 [{u, reason}]，同一用户去重 */
+function rosterCompute(ct, p) {
+  const users = S.db.users;
+  if (ct === 1) {
+    if (!p.time) return [];
+    const ts = new Date(p.time).getTime() / 1000;
+    const ts0 = p.tstart ? new Date(p.tstart).getTime() / 1000 : -Infinity;
+    /* 签到日期集合（统计区间内）：累计 = 去重计数；连续 = 从最近一次签到往前数不间断链条 */
+    const dayMap = new Map();
+    S.db.checkinRecords.forEach(r => { if (r.createtime <= ts && r.createtime >= ts0) { if (!dayMap.has(r.user)) dayMap.set(r.user, new Set()); dayMap.get(r.user).add(r.date); } });
+    const consecutive = dates => {
+      const ds = [...dates].sort().reverse();
+      if (!ds.length) return 0;
+      let days = 1, cur = new Date(ds[0] + 'T00:00:00+08:00').getTime();
+      for (let i = 1; i < ds.length; i++) {
+        const prev = new Date(ds[i] + 'T00:00:00+08:00').getTime();
+        if (Math.round((cur - prev) / 86400000) === 1) { days++; cur = prev; } else break;
+      }
+      return days;
+    };
+    const mode = p.daytype || 'cum';
+    const daysOf = dates => mode === 'con' ? consecutive(dates) : dates.size;
+    const th = +p.days || 0;
+    const cmp = p.dcmp || 'ge';
+    const ok = n => cmp === 'eq' ? n === th : cmp === 'le' ? n <= th : n >= th;
+    const cmpTxt = cmp === 'eq' ? '恰好' : cmp === 'le' ? '不超过' : '不少于';
+    const modeTxt = mode === 'con' ? '连续' : '累计';
+    return [...dayMap.keys()].filter(n => !th || ok(daysOf(dayMap.get(n)))).map(n => {
+      const u = users.find(x => x.nickname === n);
+      if (!u) return null;
+      const days = daysOf(dayMap.get(n));
+      return { u, reason: `${ts0 === -Infinity ? `${fmtT(ts)} 前` : `${fmtT(ts0)} ~ ${fmtT(ts)} 内`}${modeTxt}签到 ${days} 天${th ? `（条件：${cmpTxt} ${th} 天）` : ''}` };
+    }).filter(Boolean);
+  }
+  if (ct === 2) {
+    const colId = +p.col || 0;
+    if (!colId) return [];
+    const cut = p.cut ? new Date(p.cut).getTime() / 1000 : Infinity;
+    const cs = p.cstart ? new Date(p.cstart).getTime() / 1000 : -Infinity;
+    const cnt = new Map();
+    S.db.holds.forEach(h => { if ([0, 1].includes(h.status) && h.collection_id === colId && h.createtime <= cut && h.createtime >= cs) cnt.set(h.user_id, (cnt.get(h.user_id) || 0) + 1); });
+    const th = Math.max(1, +p.hcount || 1);
+    const cmp = p.cmp || 'ge';
+    const ok = n => cmp === 'eq' ? n === th : cmp === 'le' ? n <= th : n >= th;
+    const cmpTxt = cmp === 'eq' ? '恰好' : cmp === 'le' ? '不超过' : '不少于';
+    return [...cnt.keys()].filter(k => ok(cnt.get(k))).map(k => { const u = users.find(x => x.id === k); const cutTxt = fmtT(cut === Infinity ? NOW : cut); return u ? { u, reason: `${cs === -Infinity ? `截至 ${cutTxt}` : `${fmtT(cs)} ~ ${cutTxt} 内`} 持有「${COL_NAME(colId)}」${cmpTxt} ${th} 份（实际 ${cnt.get(k)} 份）` } : null; }).filter(Boolean);
+  }
+  if (ct === 3) {
+    const ts1 = p.dstart ? new Date(p.dstart).getTime() / 1000 : -Infinity;
+    const ts2 = p.dend ? new Date(p.dend).getTime() / 1000 : Infinity;
+    return users.filter(u => u.createtime >= ts1 && u.createtime < ts2).map(u => ({
+      u,
+      reason: ts1 === -Infinity && ts2 === Infinity ? '全部注册用户'
+        : ts1 === -Infinity ? `注册早于 ${p.dend.replace('T', ' ')}`
+        : ts2 === Infinity ? `注册晚于 ${p.dstart.replace('T', ' ')}`
+        : `注册于 ${p.dstart.replace('T', ' ')} ~ ${p.dend.replace('T', ' ')}`,
+    }));
+  }
+  if (ct === 4) {
+    const th = +p.num || 1;
+    const ts = p.iend ? new Date(p.iend).getTime() / 1000 : Infinity;
+    const is = p.istart ? new Date(p.istart).getTime() / 1000 : -Infinity;
+    const cnt = {}; S.db.inviteRecords.forEach(r => { if (r.createtime <= ts && r.createtime >= is) cnt[r.inviter] = (cnt[r.inviter] || 0) + 1; });
+    return Object.keys(cnt).filter(k => cnt[k] >= th).map(n => { const u = users.find(x => x.nickname === n); return u ? { u, reason: `邀请 ≥ ${th} 人${ts === Infinity ? '' : is === -Infinity ? ` · 截至 ${fmtT(ts)}` : ` · ${fmtT(is)} ~ ${fmtT(ts)} 内`}（实际 ${cnt[n]} 人）` } : null; }).filter(Boolean);
+  }
+  if (ct === 5) {
+    return (p.list || '').split(/[\n,，]+/).map(s => s.trim()).filter(Boolean).map(l => {
+      const u = users.find(x => String(x.id) === l || x.mobile === l || x.nickname === l);
+      return u ? { u, reason: '手动导入' } : null;
+    }).filter(Boolean);
+  }
+  return [];
+}
+PAGES.roster = () => {
+  const rows = S.db.rosters.map(r => {
+    const used = S.db.airdrops.some(t => t.rule_type === 13 && +t.rule_value === r.id);
+    return `<tr>
+    <td class="serif-num">${r.id}</td><td class="cell-main">${r.name}</td>
+    <td><span class="tag tag-blue">${ROS_TYPES[r.cond_type] || '-'}</span><div class="cell-sub">${r.cond_desc}</div></td>
+    <td><span class="serif-num">${r.user_count.toLocaleString()}</span> 人</td>
+    <td class="cell-sub">${used ? '<span class="tag tag-orange">已被空投引用</span>' : '-'}</td>
+    <td class="cell-sub">${fmtT(r.createtime)}</td>
+    <td style="white-space:nowrap">${W(`<button class="btn btn-ghost btn-sm" data-act="ros-detail" data-arg="${r.id}">查看明细</button>`)}
+    ${W(!used ? `<button class="btn btn-ghost btn-sm" data-act="wl-from-ros" data-arg="${r.id}">导入白名单</button><button class="btn btn-danger btn-sm" data-act="ros-del" data-arg="${r.id}">删除</button>` : '<span class="cell-sub">仅可查看</span>')}</td></tr>`;
+  }).join('');
+  return `
+  <div class="page-head rise" style="--i:0"><h2>名单管理</h2><span class="en">Segments</span></div>
+  <div class="glass filter-bar rise" style="--i:1"><span class="cell-sub">按条件圈人生成<b>快照名单</b>（生成即冻结，不可修改；换条件请重新生成）→ 供定向发放「按名单」规则与白名单导入使用</span><span style="flex:1"></span>
+    ${W('<button class="btn btn-primary" data-act="ros-add">生成名单</button>')}</div>
+  <div class="glass rise" style="--i:2"><div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>ID</th><th>名单名称</th><th>圈人条件</th><th>人数</th><th>引用状态</th><th>生成时间</th><th style="width:250px">操作</th></tr></thead>
+    <tbody>${rows}</tbody></table>${S.db.rosters.length ? '' : emptyBox()}</div></div>`;
+};
+function openRosForm() {
+  const colOpts = S.db.collections.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  const typeOpts = Object.entries(ROS_TYPES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+  openModal(`<div class="modal-head"><h3>生成名单</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
+  <div class="modal-body">
+    <div class="form-row"><label>名单名称 *</label><input class="input" id="rf-name" placeholder="如：10-31 15:00 前签到用户"></div>
+    <div class="form-row"><label>圈人条件 *</label><select class="select" id="rf-type">${typeOpts}</select></div>
+    <div class="form-row" id="rf-time-row" style="display:none"><label>签到统计区间 *（截止必填，开始留空 = 不限起点）</label><input class="input" id="rf-time-start" type="datetime-local" style="width:185px"><span class="cell-sub" style="margin:0 8px">至</span><input class="input" id="rf-time" type="datetime-local" style="width:185px"></div>
+    <div class="form-row" id="rf-days-row" style="display:none"><label>签到天数口径</label><select class="select" id="rf-daytype" style="width:120px"><option value="cum">累计签到</option><option value="con">连续签到</option></select><select class="select" id="rf-dcmp" style="width:90px;margin-left:8px"><option value="ge">≥</option><option value="eq">=</option><option value="le">≤</option></select><input class="input" id="rf-days" type="number" min="1" placeholder="天数" style="width:110px;margin-left:8px"><span class="cell-sub" style="margin-left:8px">天（累计按签到日期去重，连续按截止时点往前的不间断天数，留空 = 不限）</span></div>
+    <div class="form-row" id="rf-col-row" style="display:none"><label>指定藏品 *</label><select class="select" id="rf-col">${colOpts}</select></div>
+    <div class="form-row" id="rf-cut-row" style="display:none"><label>持仓快照区间（截止留空 = 当前持仓，开始留空 = 不限起点）</label><input class="input" id="rf-cut-start" type="datetime-local" style="width:185px"><span class="cell-sub" style="margin:0 8px">至</span><input class="input" id="rf-cut" type="datetime-local" style="width:185px"></div>
+    <div class="form-row" id="rf-hcnt-row" style="display:none"><label>持有数量 *</label><select class="select" id="rf-cmp" style="width:90px"><option value="ge">≥</option><option value="eq">=</option><option value="le">≤</option></select><input class="input" id="rf-hcount" type="number" min="1" value="1" style="width:110px;margin-left:8px"><span class="cell-sub" style="margin-left:8px">份（选 = 为精确匹配，如 = 2 表示恰好持有 2 份）</span></div>
+    <div class="form-row" id="rf-date-row" style="display:none"><label>注册时间区间（两端留空 = 全部注册用户）</label><input class="input" id="rf-date-start" type="datetime-local" style="width:190px"><span class="cell-sub" style="margin:0 8px">至</span><input class="input" id="rf-date-end" type="datetime-local" style="width:190px"></div>
+    <div class="form-row" id="rf-num-row" style="display:none"><label>邀请数门槛 *（填 1 = 所有邀请过好友的用户）</label><input class="input" id="rf-num" type="number" min="1" value="1"></div>
+    <div class="form-row" id="rf-invend-row" style="display:none"><label>邀请统计区间（截止留空 = 执行时点，开始留空 = 不限起点）</label><input class="input" id="rf-inv-start" type="datetime-local" style="width:185px"><span class="cell-sub" style="margin:0 8px">至</span><input class="input" id="rf-inv-end" type="datetime-local" style="width:185px"></div>
+    <div class="form-row" id="rf-list-row" style="display:none"><label>用户 ID / 手机号（每行一个）*</label><textarea class="input" id="rf-list" rows="5" placeholder="10001&#10;13800138000"></textarea></div>
+    <div class="form-row"><span class="cell-sub" id="rf-est" style="color:var(--blue)"></span></div>
+    <div class="form-row"><span class="cell-sub">生成后名单即<b>冻结</b>：人数、明细不再随数据变化；需要调整条件请重新生成一份。</span></div>
+  </div>
+  <div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">取消</button><button class="btn btn-primary" data-act="ros-form-ok">生成名单</button></div>`);
+  const sync = () => {
+    const t = +$('#rf-type').value;
+    $('#rf-time-row').style.display = t === 1 ? '' : 'none';
+    $('#rf-days-row').style.display = t === 1 ? '' : 'none';
+    $('#rf-col-row').style.display = t === 2 ? '' : 'none';
+    $('#rf-cut-row').style.display = t === 2 ? '' : 'none';
+    $('#rf-hcnt-row').style.display = t === 2 ? '' : 'none';
+    $('#rf-date-row').style.display = t === 3 ? '' : 'none';
+    $('#rf-num-row').style.display = t === 4 ? '' : 'none';
+    $('#rf-invend-row').style.display = t === 4 ? '' : 'none';
+    $('#rf-list-row').style.display = t === 5 ? '' : 'none';
+    updEst();
+  };
+  const updEst = () => {
+    if (!$('#rf-type')) return;
+    const t = +$('#rf-type').value;
+    const p = { time: $('#rf-time').value, tstart: $('#rf-time-start')?.value, daytype: $('#rf-daytype')?.value, dcmp: $('#rf-dcmp')?.value, days: $('#rf-days')?.value, col: $('#rf-col').value, cut: $('#rf-cut').value, cstart: $('#rf-cut-start')?.value, cmp: $('#rf-cmp')?.value, hcount: $('#rf-hcount')?.value, dstart: $('#rf-date-start')?.value, dend: $('#rf-date-end')?.value, num: $('#rf-num').value, iend: $('#rf-inv-end')?.value, istart: $('#rf-inv-start')?.value, list: $('#rf-list').value };
+    const n = rosterCompute(t, p).length;
+    $('#rf-est').textContent = n ? `预览：命中 ${n} 人` : '';
+  };
+  $('#rf-type').onchange = sync;
+  $('#modal-root').addEventListener('input', updEst);
+  sync();
+}
 
 /* 9b. 活动中心 */
 const RW_TYPE = { 1: ['抽奖次数', 'tag-green'], 2: ['藏品', 'tag-blue'], 3: ['优先购资格', 'tag-orange'] };
@@ -1096,7 +1264,7 @@ const ACT = {
     openModal(`<div class="modal-head"><h3>开售 · ${c.name}</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
     <div class="modal-body"><div class="form-row"><label>发售开始时间（到时 C 端自动开抢）*</label><input class="input" id="sale-time" type="datetime-local" value="2026-11-01T10:00"></div>
     <div class="form-row"><label>发售结束时间（可选；到期自动置为「已售罄」，C 端仍展示、仅停止购买）</label><input class="input" id="sale-end-time" type="datetime-local" value="${c.sale_end_time ? toLocalInput(c.sale_end_time) : ''}"></div>
-    <div class="cell-sub">发行量 ${c.stock.toLocaleString()} 份 · 售价 ￥${fmtY(c.price)} · 二级市场${c.resale ? '已开启（限价 ￥' + fmtY(c.resale_price_limit || 0) + '）' : '关闭'}</div></div>
+    <div class="cell-sub">发行量 ${c.stock.toLocaleString()} 份 · 售价 ￥${fmtY(c.price)} · 二级市场${c.resale ? '已开启（' + ((c.resale_price_min || 0) > 0 ? '限价 ￥' + fmtY(c.resale_price_min) + ' ~ ￥' + fmtY(c.resale_price_limit || 0) : '限价 ≤ ￥' + fmtY(c.resale_price_limit || 0)) + '）' : '关闭'}</div></div>
     <div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">取消</button><button class="btn btn-primary" data-act="col-sale-ok" data-arg="${c.id}">确认开售</button></div>`);
   },
   'col-sale-ok'(el) {
@@ -1298,6 +1466,85 @@ const ACT = {
     if (num <= 0) return toast('补发次数必须大于 0', 'err');
     S.db.chanceLogs.unshift({ id: Date.now() % 100000, user_id: uid, user: '用户#' + uid, num, source: 7, ref: $('#g-remark').value.trim() || '后台手动补发', createtime: NOW });
     closeModal(); toast(`已向用户#${uid} 补发 ${num} 次抽奖机会`, 'ok'); logOp('抽奖活动', '补发次数', '用户#' + uid, num + ' 次');
+  },
+
+  'raf-wl-import'() { openWlPicker('raf', +$('#raf-col').value || 0); },
+  'cf-wl-import'(el) { openWlPicker('col', +el.dataset.arg || 0); },
+  'wl-pick-close'() { closeWlPicker(); },
+  'wl-pick-ok'() {
+    const picked = [...new Set([...document.querySelectorAll('.wl-pick-ck:checked')].map(c => (S.db.whitelists.find(x => x.id == c.dataset.arg) || {}).mobile).filter(Boolean))];
+    if (!picked.length) return toast('请先勾选要导入的手机号', 'err');
+    const ta = wlPickCtx.target === 'raf' ? $('#raf-wl') : $('#cf-pre-list');
+    const exist = ta.value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    ta.value = [...new Set([...exist, ...picked])].join('\n');
+    const ctxDesc = wlPickCtx.target === 'raf' ? '抽签活动' : '藏品优先购';
+    closeWlPicker();
+    toast(`已导入 ${picked.length} 个手机号（快照保存，库内后续变更不影响本${ctxDesc}）`, 'ok');
+  },
+
+  /* 白名单管理 */
+  'wl-add'() { openWlForm(null); },
+  'wl-edit'(el) { openWlForm(S.db.whitelists.find(x => x.id == el.dataset.arg)); },
+  'wl-search'() { S.q.whitelist.keyword = ($('#wl-kw').value || '').trim(); renderPage(); },
+  'wl-status'(el) {
+    const w = S.db.whitelists.find(x => x.id == el.dataset.arg); w.status = w.status ? 0 : 1;
+    toast(`名单「${w.mobile}」已${w.status ? '启用' : '停用'}（不影响已导入活动的快照）`, 'ok'); renderPage();
+    logOp('白名单管理', w.status ? '启用' : '停用', w.mobile, '');
+  },
+  'wl-del'(el) { confirmBox('确认删除该白名单记录？已导入活动的快照不受影响', 'wl-del-ok', el.dataset.arg); },
+  'wl-del-ok'(el) {
+    const w = S.db.whitelists.find(x => x.id == el.dataset.arg);
+    S.db.whitelists = S.db.whitelists.filter(x => x.id != el.dataset.arg);
+    closeModal(); toast('删除成功', 'ok'); renderPage(); logOp('白名单管理', '删除', w.mobile, '');
+  },
+  'wl-form-ok'() {
+    const id = +$('#wlf-id').value;
+    const mobile = $('#wlf-mobile').value.trim();
+    if (!/^1\d{10}$/.test(mobile)) return toast('请输入正确的 11 位手机号', 'err');
+    const cid = +$('#wlf-col').value;
+    if (S.db.whitelists.some(x => x.mobile === mobile && x.collection_id === cid && x.id !== id)) return toast('该手机号在此藏品范围已存在', 'err');
+    const data = { mobile, collection_id: cid, remark: $('#wlf-remark').value.trim(), status: +$('#wlf-status').value };
+    if (id) Object.assign(S.db.whitelists.find(x => x.id === id), data);
+    else S.db.whitelists.push({ id: Date.now() % 10000, createtime: NOW, ...data });
+    closeModal(); toast('保存成功', 'ok'); renderPage(); logOp('白名单管理', id ? '编辑' : '添加', mobile, data.collection_id === 0 ? '全部藏品' : COL_NAME(data.collection_id));
+  },
+
+  'wl-batch'() { openWlBatch(); },  'wl-batch-ok'() {
+    const cid = +$('#wlb-col').value, status = +$('#wlb-status').value, remark = $('#wlb-remark').value.trim();
+    const r = parsePhoneWL($('#wlb-list').value);
+    if (r.bad) return toast(`第 ${r.bad} 行不是合法手机号（11 位、1 开头）`, 'err');
+    if (!r.lines.length) return toast('请先粘贴手机号，每行一个', 'err');
+    const existSet = new Set(S.db.whitelists.filter(x => x.collection_id === cid).map(x => x.mobile));
+    let added = 0, dup = 0;
+    r.lines.forEach(m => {
+      if (existSet.has(m)) { dup++; return; }
+      existSet.add(m);
+      S.db.whitelists.push({ id: Date.now() % 100000 + added, createtime: NOW, mobile: m, collection_id: cid, remark, status });
+      added++;
+    });
+    closeModal(); renderPage();
+    toast(`导入完成：新增 ${added} 条${dup ? `，跳过重复 ${dup} 条` : ''}`, 'ok');
+    logOp('白名单管理', '批量导入', `${added} 个手机号`, `适用 ${cid === 0 ? '全部藏品' : COL_NAME(cid)}${dup ? `，跳过重复 ${dup}` : ''}`);
+  },
+
+  'wl-from-ros'(el) { openWlFromRos(el ? +el.dataset.arg : (S.db.rosters[0] || {}).id); },
+  'wl-from-ros-ok'() {
+    const r = S.db.rosters.find(x => x.id === +$('#wlr-ros').value);
+    if (!r) return toast('名单不存在', 'err');
+    const cid = +$('#wlr-col').value, status = +$('#wlr-status').value, remark = $('#wlr-remark').value.trim() || `名单：${r.name}`;
+    const mobiles = S.db.rosterItems.filter(i => i.roster_id === r.id).map(i => i.mobile).filter(Boolean);
+    if (!mobiles.length) return toast('该名单没有可导入的手机号', 'err');
+    const existSet = new Set(S.db.whitelists.filter(x => x.collection_id === cid).map(x => x.mobile));
+    let added = 0, dup = 0;
+    mobiles.forEach(m => {
+      if (existSet.has(m)) { dup++; return; }
+      existSet.add(m);
+      S.db.whitelists.push({ id: Date.now() % 100000 + added, createtime: NOW, mobile: m, collection_id: cid, remark, status });
+      added++;
+    });
+    closeModal(); renderPage();
+    toast(`已从名单导入：新增 ${added} 条${dup ? `，跳过重复 ${dup} 条` : ''}`, 'ok');
+    logOp('白名单管理', '名单导入', r.name, `新增 ${added} 条${dup ? `，跳过重复 ${dup}` : ''}`);
   },
 
   'raf-add'() { openRafForm(null); },
@@ -1797,7 +2044,7 @@ ACT['ed-url-cancel'] = el => { const row = el.closest('.rte-url'); row.querySele
 function openColForm(c) {
   const isEdit = !!c;
   const catOpts = S.db.categories.map(x => `<option value="${x.id}" ${c?.category_id === x.id ? 'selected' : ''}>${x.name}</option>`).join('');
-  const colOptsPre = S.db.collections.filter(x => !c || x.id !== c.id).map(x => `<option value="${x.id}" ${c?.pre_rule_type === 1 && +c.pre_rule_value === x.id ? 'selected' : ''}>${x.name}</option>`).join('');
+  const colOptsPre = S.db.collections.filter(x => !c || x.id !== c.id).map(x => `<option value="${x.id}" ${[1, 3].includes(c?.pre_rule_type) && +c.pre_rule_value === x.id ? 'selected' : ''}>${x.name}</option>`).join('');
   openModal(`<div class="modal-head"><h3>${isEdit ? '编辑藏品' : '新增藏品'}</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
   <div class="modal-body">
     <div class="form-grid">
@@ -1811,7 +2058,8 @@ function openColForm(c) {
       <div class="form-row"><label>售价（元）*</label><input class="input" id="cf-price" type="number" step="0.01" value="${c ? fmtY(c.price) : ''}"></div>
       <div class="form-row"><label>市场参考价（元）</label><input class="input" id="cf-mkt" type="number" step="0.01" value="${c ? fmtY(c.market_price) : ''}"></div>
       <div class="form-row"><label>二级市场</label><select class="select" id="cf-resale"><option value="1">开启</option><option value="0">关闭</option></select></div>
-      <div class="form-row" id="cf-rpl-row"><label>寄售限价（元）*</label><input class="input" id="cf-rpl" type="number" step="0.01" min="0" placeholder="用户挂单价格不得超过此价" value="${c && c.resale ? fmtY(c.resale_price_limit || 0) : ''}"></div>
+      <div class="form-row" id="cf-rpl-row"><label>寄售限价上限（元）*</label><input class="input" id="cf-rpl" type="number" step="0.01" min="0" placeholder="用户挂单价格不得超过此价" value="${c && c.resale ? fmtY(c.resale_price_limit || 0) : ''}"></div>
+      <div class="form-row" id="cf-rpl-min-row"><label>寄售限价下限（元，0 = 不限）</label><input class="input" id="cf-rpl-min" type="number" step="0.01" min="0" placeholder="低于此价的挂单将被拦截，0 表示不设下限" value="${c && c.resale ? fmtY(c.resale_price_min || 0) : ''}"></div>
       <div class="form-row"><label>封面图（JPG/PNG/WebP/GIF，≤5MB）</label><input type="hidden" id="cf-cover" value="${c?.cover || ''}"><div class="upload-box" id="cf-cover-box" data-act="cf-cover-pick">${c?.cover ? boxImg(c.cover) : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span>上传封面</span>'}</div></div>
     </div>
     <div class="form-row"><label>图文详情（富文本）</label>
@@ -1819,27 +2067,27 @@ function openColForm(c) {
     <div class="form-row"><label>优先购（窗口内仅资格用户可购，至开售时间自动对全员开放）</label>
       <div class="chance-box" style="gap:10px">
         <div class="chance-item"><label class="ck">资格方式</label>
-          <select class="select" id="cf-pre-type" style="width:200px"><option value="0">不启用</option><option value="1">持有指定藏品（优先购凭证）</option><option value="2">白名单用户</option></select></div>
+          <select class="select" id="cf-pre-type" style="width:200px"><option value="0">不启用</option><option value="1">持有指定藏品（优先购凭证）</option><option value="2">白名单用户</option><option value="3">持有指定藏品 + 白名单用户</option></select></div>
         <div class="chance-item"><label class="ck">优先购开始时间</label><input class="input" id="cf-pre-time" type="datetime-local" style="width:220px"></div>
         <div class="chance-item" id="cf-pre-col-row" style="display:none"><label class="ck">凭证藏品</label>
           <select class="select" id="cf-pre-col" style="width:200px"><option value="">请选择藏品</option>${colOptsPre}</select></div>
-        <div class="chance-item" id="cf-pre-list-row" style="display:none"><label class="ck">白名单手机号</label>
-          <textarea class="input" id="cf-pre-list" rows="3" placeholder="13800000001&#10;13800000002（每行一个手机号，白名单用户可在优先购期购买）" style="flex:1">${c?.pre_rule_type === 2 ? esc((c.pre_rule_value || '').split(',').join('\n')) : ''}</textarea></div>
+        <div class="chance-item" id="cf-pre-list-row" style="display:none"><label class="ck">白名单手机号 ${W('<button class="btn btn-ghost btn-sm" data-act="cf-wl-import" data-arg="' + (c?.id || 0) + '" style="margin-left:8px">从白名单库导入</button>')}</label>
+          <textarea class="input" id="cf-pre-list" rows="3" placeholder="13800000001&#10;13800000002（每行一个手机号，白名单用户可在优先购期购买）" style="flex:1">${c?.pre_rule_type === 2 ? esc((c.pre_rule_value || '').split(',').join('\n')) : c?.pre_rule_type === 3 ? esc((c.pre_wl || '').split(',').join('\n')) : ''}</textarea></div>
         <div class="chance-item" id="cf-pre-limit-row" style="display:none"><label class="ck">优先购每人限购</label>
           <input class="input" id="cf-pre-limit" type="number" min="1" value="${c?.pre_limit || 1}" style="width:90px"></div>
       </div></div>
   </div>
   <div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">取消</button><button class="btn btn-primary" data-act="col-form-ok" data-arg="${c?.id || 0}">保存</button></div>`);
   if (c) $('#cf-resale').value = c.resale;
-  const syncResale = () => { $('#cf-rpl-row').style.display = +$('#cf-resale').value === 1 ? '' : 'none'; };
+  const syncResale = () => { const on = +$('#cf-resale').value === 1; $('#cf-rpl-row').style.display = on ? '' : 'none'; $('#cf-rpl-min-row').style.display = on ? '' : 'none'; };
   $('#cf-resale').onchange = syncResale;
   syncResale();
   bindEditor('col');
   const preType = $('#cf-pre-type');
   const syncPreRows = () => {
     const t = +preType.value;
-    $('#cf-pre-col-row').style.display = t === 1 ? 'flex' : 'none';
-    $('#cf-pre-list-row').style.display = t === 2 ? 'flex' : 'none';
+    $('#cf-pre-col-row').style.display = (t === 1 || t === 3) ? 'flex' : 'none';
+    $('#cf-pre-list-row').style.display = (t === 2 || t === 3) ? 'flex' : 'none';
     $('#cf-pre-limit-row').style.display = t > 0 ? 'flex' : 'none';
   };
   preType.onchange = syncPreRows;
@@ -1857,28 +2105,38 @@ ACT['col-form-ok'] = el => {
   if (!publisher) return toast('请输入发行方', 'err');
   const resale = +$('#cf-resale').value;
   const rpl = Math.round((+$('#cf-rpl').value || 0) * 100);
-  if (resale === 1 && rpl <= 0) return toast('开启二级市场必须设置寄售限价', 'err');
-  const data = { name, publisher, author: $('#cf-author').value, category_id: +$('#cf-cat').value, price, market_price: Math.round((+$('#cf-mkt').value || 0) * 100), stock: +$('#cf-stock').value || 0, resale, resale_price_limit: resale === 1 ? rpl : 0, cover: $('#cf-cover').value, detail: editorVal('col') };
+  const rplMin = Math.round((+$('#cf-rpl-min').value || 0) * 100);
+  if (resale === 1 && rpl <= 0) return toast('开启二级市场必须设置寄售限价上限', 'err');
+  if (resale === 1 && rplMin > 0 && rplMin >= rpl) return toast('限价下限必须小于上限', 'err');
+  const data = { name, publisher, author: $('#cf-author').value, category_id: +$('#cf-cat').value, price, market_price: Math.round((+$('#cf-mkt').value || 0) * 100), stock: +$('#cf-stock').value || 0, resale, resale_price_limit: resale === 1 ? rpl : 0, resale_price_min: resale === 1 ? rplMin : 0, cover: $('#cf-cover').value, detail: editorVal('col') };
   if (data.stock <= 0) return toast('发行量必须大于 0', 'err');
   // 优先购配置
   const preType = +$('#cf-pre-type').value;
   if (preType > 0) {
     const tstr = $('#cf-pre-time').value;
     if (!tstr) return toast('请选择优先购开始时间', 'err');
-    let val;
+    let val = '', preWl = '';
     if (preType === 1) {
       val = $('#cf-pre-col').value;
       if (!val) return toast('请选择优先购凭证藏品', 'err');
       if (id && +val === id) return toast('凭证藏品不能选择本品自身', 'err');
-    } else {
+    } else if (preType === 2) {
       const wl = parsePhoneWL($('#cf-pre-list').value);
       if (!wl.lines.length) return toast('请填写白名单手机号（每行一个）', 'err');
       if (wl.bad) return toast(`第 ${wl.bad} 行手机号格式不正确（需 11 位、1 开头）`, 'err');
       val = wl.lines.join(',');
+    } else {
+      val = $('#cf-pre-col').value;
+      if (!val) return toast('请选择优先购凭证藏品', 'err');
+      if (id && +val === id) return toast('凭证藏品不能选择本品自身', 'err');
+      const wl = parsePhoneWL($('#cf-pre-list').value);
+      if (!wl.lines.length) return toast('请填写白名单手机号（每行一个）', 'err');
+      if (wl.bad) return toast(`第 ${wl.bad} 行手机号格式不正确（需 11 位、1 开头）`, 'err');
+      preWl = wl.lines.join(',');
     }
-    Object.assign(data, { pre_rule_type: preType, pre_rule_value: val, pre_sale_time: Math.floor(new Date(tstr).getTime() / 1000), pre_limit: +$('#cf-pre-limit').value || 1 });
+    Object.assign(data, { pre_rule_type: preType, pre_rule_value: val, pre_wl: preWl, pre_sale_time: Math.floor(new Date(tstr).getTime() / 1000), pre_limit: +$('#cf-pre-limit').value || 1 });
   } else {
-    Object.assign(data, { pre_rule_type: 0, pre_rule_value: '', pre_sale_time: 0, pre_limit: 1 });
+    Object.assign(data, { pre_rule_type: 0, pre_rule_value: '', pre_wl: '', pre_sale_time: 0, pre_limit: 1 });
   }
   let autoOff = 0;
   if (id) {
@@ -1914,7 +2172,7 @@ ACT['cat-form-ok'] = el => {
 
 function openAirForm() {
   const colOpts = S.db.collections.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-  const RULE_OPTS = { 1: '指定用户（输入用户 ID）', 2: '全部用户', 3: '按邀请数（邀请 ≥ N 人）', 4: '持有指定藏品（凭证空投，持有 N 份投 N 份）', 5: '持仓门槛（持仓 ≥ N 份）', 6: '白名单导入（用户 ID / 手机号）', 7: '按消费金额（累计消费 ≥ N 元）', 8: '按注册时间（某日期前注册）', 9: '随机抽样（全体用户随机抽）', 10: '按用户标签（含指定标签）', 11: '邀请排行（邀请数 Top N）' };
+  const RULE_OPTS = { 1: '指定用户（输入用户 ID）', 2: '全部用户', 3: '按邀请数（邀请 ≥ N 人）', 4: '持有指定藏品（凭证空投，持有 N 份投 N 份）', 5: '持仓门槛（持仓 ≥ N 份）', 6: '白名单导入（用户 ID / 手机号）', 7: '按消费金额（累计消费 ≥ N 元）', 8: '按注册时间（某日期前注册）', 9: '随机抽样（全体用户随机抽）', 10: '按用户标签（含指定标签）', 11: '邀请排行（邀请数 Top N）', 13: '按名单（选择名单管理中已生成的快照名单）' };
   const ruleOpts = Object.entries(RULE_OPTS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
   openModal(`<div class="modal-head"><h3>创建空投任务</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
   <div class="modal-body">
@@ -1929,6 +2187,7 @@ function openAirForm() {
     <div class="form-row" id="air-num-row" style="display:none"><label class="air-num-label">门槛数量 *</label><input class="input" id="air-val-num" type="number" min="0"></div>
     <div class="form-row" id="air-date-row" style="display:none"><label>注册早于日期 *</label><input class="input" id="air-val-date" type="date"></div>
     <div class="form-row" id="air-tag-row" style="display:none"><label>标签名 *（用户管理中维护）</label><input class="input" id="air-val-tag" placeholder="如：vip"></div>
+    <div class="form-row" id="air-ros-row" style="display:none"><label>选择名单 *（名单管理中生成的快照，人数已冻结）</label><select class="select" id="air-ros">${S.db.rosters.map(r => `<option value="${r.id}">${r.name}（${r.user_count} 人）</option>`).join('')}</select></div>
     <div class="form-row" id="air-none-row" style="display:none"><span class="cell-sub">该规则无需参数</span></div>
     <div class="form-grid">
       <div class="form-row"><label>到账方式</label><select class="select" id="air-claim"><option value="0">直接到账</option><option value="1">需用户领取（C 端确认）</option></select></div>
@@ -1948,9 +2207,11 @@ function openAirForm() {
     if (NUM_LABELS[t]) $('.air-num-label').textContent = NUM_LABELS[t];
     $('#air-date-row').style.display = t === 8 ? '' : 'none';
     $('#air-tag-row').style.display = t === 10 ? '' : 'none';
+    $('#air-ros-row').style.display = t === 13 ? '' : 'none';
     $('#air-none-row').style.display = [2, 9].includes(t) ? '' : 'none';
   };
-  $('#air-rule').onchange = sync;
+  $('#air-rule').onchange = () => { sync(); if (+$('#air-rule').value === 13) { const r = S.db.rosters.find(x => x.id === +$('#air-ros').value); if (r) $('#air-num').value = r.user_count; } };
+  $('#air-ros').onchange = () => { const r = S.db.rosters.find(x => x.id === +$('#air-ros').value); if (r) $('#air-num').value = r.user_count; };
   $('#air-dup').onchange = () => { $('#air-reward-row').style.display = +$('#air-dup').value === 2 ? '' : 'none'; };
   sync();
 }
@@ -1965,7 +2226,9 @@ ACT['air-form-ok'] = () => {
   else if ([3, 5, 7, 11].includes(ruleType)) ruleValue = $('#air-val-num').value;
   else if (ruleType === 8) ruleValue = $('#air-val-date').value;
   else if (ruleType === 10) ruleValue = $('#air-val-tag').value.trim();
-  if ([1, 3, 4, 5, 6, 7, 8, 10, 11].includes(ruleType) && !ruleValue) return toast('请填写规则参数', 'err');
+  else if (ruleType === 13) ruleValue = $('#air-ros').value;
+  if ([1, 3, 4, 5, 6, 7, 8, 10, 11, 13].includes(ruleType) && !ruleValue) return toast('请填写规则参数', 'err');
+  if (ruleType === 13 && !S.db.rosters.some(r => r.id === +ruleValue)) return toast('名单不存在或已被删除', 'err');
   // 库存池硬约束：发放份数不得超过该藏品库存池
   const airCol = S.db.collections.find(x => x.id === +$('#air-col').value);
   if (airCol) {
@@ -2012,6 +2275,77 @@ const readChanceRules = () => ({
   consume: { enabled: $('#c-cons').checked, items: $('#c-cons').checked && $('#c-cons-col').value ? [{ collection_id: +$('#c-cons-col').value, num: +$('#c-cons-num').value || 1 }] : [] },
 });
 
+function openWlForm(w) {
+  const colOpts = `<option value="0" ${!w || w.collection_id === 0 ? 'selected' : ''}>全部藏品（通用）</option>` +
+    S.db.collections.map(c => `<option value="${c.id}" ${w?.collection_id === c.id ? 'selected' : ''}>${c.name}</option>`).join('');
+  openModal(`<div class="modal-head"><h3>${w ? '编辑白名单' : '添加白名单'}</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
+  <div class="modal-body">
+    <input type="hidden" id="wlf-id" value="${w?.id || 0}">
+    <div class="form-row"><label>手机号 *</label><input class="input" id="wlf-mobile" maxlength="11" placeholder="11 位手机号" value="${w?.mobile || ''}"></div>
+    <div class="form-row"><label>适用藏品</label><select class="select" id="wlf-col">${colOpts}</select></div>
+    <div class="form-row"><label>备注</label><input class="input" id="wlf-remark" value="${esc(w?.remark || '')}" placeholder="如：VIP 大客户 / 内部员工"></div>
+    <div class="form-row"><label>状态</label><select class="select" id="wlf-status"><option value="1">启用</option><option value="0">停用</option></select></div>
+    <div class="form-row"><span class="cell-sub">名单仅作为资格库沉淀；藏品/抽签通过「从白名单库导入」生成快照后，此处变更不影响已导入的活动。</span></div>
+  </div>
+  <div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">取消</button><button class="btn btn-primary" data-act="wl-form-ok">保存</button></div>`);
+  if (w) $('#wlf-status').value = w.status;
+}
+
+function openWlBatch() {
+  const colOpts = `<option value="0" selected>全部藏品（通用）</option>` +
+    S.db.collections.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  openModal(`<div class="modal-head"><h3>批量导入白名单</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
+  <div class="modal-body">
+    <div class="form-row"><label>手机号列表 *（每行一个，回车换行）</label><textarea class="input" id="wlb-list" rows="8" placeholder="13800000001&#10;13800000002&#10;13800000003" style="font-family:var(--mono,monospace)"></textarea></div>
+    <div class="form-row"><label>适用藏品</label><select class="select" id="wlb-col">${colOpts}</select></div>
+    <div class="form-row"><label>备注（本批次共用）</label><input class="input" id="wlb-remark" placeholder="如：VIP 大客户 / 内部员工"></div>
+    <div class="form-row"><label>状态</label><select class="select" id="wlb-status"><option value="1">启用</option><option value="0">停用</option></select></div>
+    <div class="form-row"><span class="cell-sub">每行一个 11 位手机号，自动校验格式并<b>去重</b>（与库内同适用范围的重复号码会跳过）；也可直接从 Excel 复制一列粘贴进来。</span></div>
+  </div>
+  <div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">取消</button><button class="btn btn-primary" data-act="wl-batch-ok">导入</button></div>`);
+}
+
+function openWlFromRos(rosId) {
+  if (!S.db.rosters.length) return toast('暂无名单，请先到「名单管理」生成', 'err');
+  const rosOpts = S.db.rosters.map(r => `<option value="${r.id}" ${+rosId === r.id ? 'selected' : ''}>${r.name}（${r.user_count} 人）</option>`).join('');
+  const colOpts = `<option value="0" selected>全部藏品（通用）</option>` +
+    S.db.collections.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  openModal(`<div class="modal-head"><h3>从名单导入白名单</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
+  <div class="modal-body">
+    <div class="form-row"><label>选择名单 *</label><select class="select" id="wlr-ros">${rosOpts}</select></div>
+    <div class="form-row"><label>适用藏品</label><select class="select" id="wlr-col">${colOpts}</select></div>
+    <div class="form-row"><label>备注（默认 = 名单名称）</label><input class="input" id="wlr-remark" placeholder="留空则备注为名单名称"></div>
+    <div class="form-row"><label>状态</label><select class="select" id="wlr-status"><option value="1">启用</option><option value="0">停用</option></select></div>
+    <div class="form-row"><span class="cell-sub">名单手机号合并进白名单库，自动<b>去重</b>（同适用范围的重复号码跳过）。名单本身保持不变。</span></div>
+  </div>
+  <div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">取消</button><button class="btn btn-primary" data-act="wl-from-ros-ok">导入</button></div>`);
+}
+
+/* 从白名单库导入（快照）：target 'raf'=抽签表单 / 'col'=藏品优先购表单；内嵌面板，不弹二级窗 */
+let wlPickCtx = null;
+function openWlPicker(target, colId) {
+  document.querySelectorAll('.wl-pick-panel').forEach(p => p.remove());
+  const entries = S.db.whitelists.filter(w => w.status === 1 && (w.collection_id === 0 || w.collection_id === colId));
+  if (!entries.length) return toast('白名单库中没有适用于该藏品的启用记录，可先到「白名单管理」添加', 'err');
+  wlPickCtx = { target, colId };
+  const ta = target === 'raf' ? $('#raf-wl') : $('#cf-pre-list');
+  const rows = entries.map(w => `<label style="display:flex;gap:10px;align-items:center;padding:7px 2px;border-bottom:1px solid rgba(126,139,155,.12);cursor:pointer">
+    <input type="checkbox" class="wl-pick-ck" data-arg="${w.id}" checked>
+    <span class="cell-main" style="flex:1">${w.mobile}</span>
+    <span class="cell-sub" style="width:120px">${w.collection_id === 0 ? '全部藏品' : COL_NAME(w.collection_id)}</span>
+    <span class="cell-sub">${esc(w.remark || '-')}</span></label>`).join('');
+  ta.closest('.form-row').insertAdjacentHTML('beforeend', `<div class="wl-pick-panel" style="margin-top:8px;padding:10px 12px;border:1px solid rgba(126,139,155,.3);border-radius:10px;background:rgba(255,255,255,.75)">
+    <div class="cell-sub" style="margin-bottom:4px">仅显示适用「${colId === 0 ? '全部藏品' : COL_NAME(colId)}」且启用的名单；导入为<b>快照</b>，库内后续变更不影响本表单 <a data-act="wl-pick-close" style="color:var(--blue);cursor:pointer">收起</a></div>
+    ${rows}
+    <div style="margin-top:8px;display:flex;gap:10px;align-items:center">
+      <label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="wl-pick-all" checked>全选</label>
+      <span style="flex:1"></span>
+      <button class="btn btn-primary btn-sm" data-act="wl-pick-ok">导入所选</button></div>
+  </div>`);
+  $('#wl-pick-all').onchange = e => { document.querySelectorAll('.wl-pick-panel .wl-pick-ck').forEach(c => { c.checked = e.target.checked; }); };
+}
+function closeWlPicker() { document.querySelectorAll('.wl-pick-panel').forEach(p => p.remove()); }
+
 function openRafForm(r) {
   const colOpts = S.db.collections.map(c => `<option value="${c.id}" ${r?.collection_id === c.id ? 'selected' : ''}>${c.name}</option>`).join('');
   openModal(`<div class="modal-head"><h3>${r ? '编辑抽签活动' : '新建抽签活动'}</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
@@ -2023,7 +2357,7 @@ function openRafForm(r) {
     <div class="form-row"><label>报名开始时间 *</label><input class="input" id="raf-as" type="datetime-local"></div>
     <div class="form-row"><label>报名截止时间 *</label><input class="input" id="raf-ae" type="datetime-local"></div>
     <div class="form-row"><label>中签购买截止时间 *</label><input class="input" id="raf-bd" type="datetime-local"></div>
-    <div class="form-row"><label>白名单手机号（每行一个，白名单必中签，可选）</label><textarea class="input" id="raf-wl" rows="3" placeholder="13800000001&#10;13800000002">${r?.whitelist ? esc(r.whitelist.split(',').join('\n')) : ''}</textarea></div>
+    <div class="form-row"><label>白名单手机号（每行一个，白名单必中签，可选）${W('<button class="btn btn-ghost btn-sm" data-act="raf-wl-import" style="margin-left:8px">从白名单库导入</button>')}</label><textarea class="input" id="raf-wl" rows="3" placeholder="13800000001&#10;13800000002">${r?.whitelist ? esc(r.whitelist.split(',').join('\n')) : ''}</textarea></div>
     <div class="form-row"><span class="cell-sub">中签名额 = 发售数量 ÷ 每人限购（向下取整）；报名人数不足名额时全部中签；白名单用户（按手机号匹配）必中签，占用中签名额。</span></div>
   </div>
   <div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">取消</button><button class="btn btn-primary" data-act="raf-form-ok" data-arg="${r?.id || 0}">保存</button></div>`);
@@ -2290,13 +2624,53 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('change', e => {
   const id = e.target?.id || '';
-  if (id.endsWith('-type') && $(`#${id.slice(0, -5)}-col-row`)) syncRewardCfg(id.slice(0, -5));
+  if (id.endsWith('-type') && id !== 'cf-pre-type' && $(`#${id.slice(0, -5)}-col-row`)) syncRewardCfg(id.slice(0, -5));
 });
 document.addEventListener('keyup', e => {
   if (e.key !== 'Enter') return;
   const map = { 'u-kw': 'user-search', 'w-kw': 'wallet-search', 'c-kw': 'col-search', 'o-kw': 'order-search', 'h-kw': 'hold-search', 'n-kw': 'not-search', 'ol-kw': 'ol-search' };
   if (map[e.target.id]) ACT[map[e.target.id]]();
 });
+/* 名单管理（人群快照）动作 */
+ACT['ros-add'] = () => openRosForm();
+ACT['ros-form-ok'] = () => {
+  const name = $('#rf-name').value.trim();
+  if (!name) return toast('请填写名单名称', 'err');
+  const ct = +$('#rf-type').value;
+  const p = { time: $('#rf-time').value, tstart: $('#rf-time-start').value, daytype: $('#rf-daytype').value, dcmp: $('#rf-dcmp').value, days: $('#rf-days').value, col: $('#rf-col').value, cut: $('#rf-cut').value, cstart: $('#rf-cut-start').value, cmp: $('#rf-cmp').value, hcount: $('#rf-hcount').value, dstart: $('#rf-date-start').value, dend: $('#rf-date-end').value, num: $('#rf-num').value, iend: $('#rf-inv-end').value, istart: $('#rf-inv-start').value, list: $('#rf-list').value };
+  if (ct === 1 && !p.time) return toast('请选择签到统计截止时间', 'err');
+  if (ct === 5 && !p.list.trim()) return toast('请粘贴用户 ID / 手机号', 'err');
+  const matched = rosterCompute(ct, p);
+  if (!matched.length) return toast('该条件未命中任何用户，请调整参数', 'err');
+  const condDesc = ct === 1 ? (() => { const th = +p.days || 0; const cmpTxt = p.dcmp === 'eq' ? '恰好' : p.dcmp === 'le' ? '不超过' : '不少于'; const modeTxt = p.daytype === 'con' ? '连续' : '累计'; return `签到${p.tstart ? ` ${p.tstart.replace('T', ' ')} ~` : ' 截至'} ${p.time.replace('T', ' ')}${th ? ` · ${modeTxt}${cmpTxt} ${th} 天` : ''}`; })()
+    : ct === 2 ? (() => { const th = Math.max(1, +p.hcount || 1); const cmpTxt = p.cmp === 'eq' ? '恰好' : p.cmp === 'le' ? '不超过' : '不少于'; return `持有「${COL_NAME(+p.col)}」${cmpTxt} ${th} 份${p.cstart ? ` · ${p.cstart.replace('T', ' ')} ~` : ' ·'} ${p.cut ? `截至 ${p.cut.replace('T', ' ')}` : '当前持仓'}`; })()
+    : ct === 3 ? (!p.dstart && !p.dend ? '全部注册用户' : p.dstart && p.dend ? `注册于 ${p.dstart.replace('T', ' ')} ~ ${p.dend.replace('T', ' ')}` : p.dstart ? `注册晚于 ${p.dstart.replace('T', ' ')}` : `注册早于 ${p.dend.replace('T', ' ')}`)
+    : ct === 4 ? `邀请 ≥ ${+p.num || 1} 人${p.istart || p.iend ? ` · ${p.istart ? p.istart.replace('T', ' ') + ' ~' : ''}${p.iend ? ` 截至 ${p.iend.replace('T', ' ')}` : ' 至今'}` : ''}` : '手动导入';
+  const id = Date.now() % 100000;
+  S.db.rosters.unshift({ id, name, cond_type: ct, cond_desc: condDesc, user_count: matched.length, status: 1, createtime: NOW });
+  S.db.rosterItems.push(...matched.map(m => ({ roster_id: id, user_id: m.u.id, mobile: m.u.mobile, reason: m.reason })));
+  closeModal(); toast(`名单已生成：${name}（${matched.length} 人，快照冻结）`, 'ok'); renderPage();
+  logOp('名单管理', '生成名单', name, `${condDesc}，命中 ${matched.length} 人`);
+};
+ACT['ros-detail'] = el => {
+  const r = S.db.rosters.find(x => x.id == el.dataset.arg);
+  const items = S.db.rosterItems.filter(i => i.roster_id == r.id);
+  openModal(`<div class="modal-head"><h3>名单明细 · ${r.name}</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
+  <div class="modal-body"><div class="cell-sub" style="margin-bottom:8px">${r.cond_desc} · 快照共 ${items.length} 人 · 生成于 ${fmtT(r.createtime)}</div>
+  <table class="tbl"><thead><tr><th>用户 ID</th><th>昵称</th><th>手机号</th><th>命中原因</th></tr></thead><tbody>
+  ${items.map(i => { const u = S.db.users.find(x => x.id === i.user_id) || {}; return `<tr><td class="serif-num">${i.user_id}</td><td class="cell-main">${u.nickname || '-'}</td><td class="serif-num">${i.mobile}</td><td class="cell-sub">${i.reason}</td></tr>`; }).join('')}
+  </tbody></table></div>
+  <div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">关闭</button></div>`);
+};
+ACT['ros-del'] = el => {
+  const r = S.db.rosters.find(x => x.id == el.dataset.arg);
+  confirmBox(`确认删除名单「${r.name}」？快照明细将一并删除`, 'ros-del-ok', r.id);
+};
+ACT['ros-del-ok'] = el => {
+  S.db.rosters = S.db.rosters.filter(x => x.id != el.dataset.arg);
+  S.db.rosterItems = S.db.rosterItems.filter(i => i.roster_id != el.dataset.arg);
+  closeModal(); toast('删除成功', 'ok'); renderPage(); logOp('名单管理', '删除名单', '#' + el.dataset.arg, '');
+};
 ACT['ol-search'] = () => { S.q.operlog.keyword = $('#ol-kw').value; S.q.operlog.page = 1; renderPage(); };
 ACT['ol-reset'] = () => { S.q.operlog = { keyword: '', page: 1 }; renderPage(); };
 ACT['ol-page'] = el => { S.q.operlog.page = +el.dataset.arg; renderPage(); };

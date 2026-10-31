@@ -52,10 +52,10 @@ function mkCollections() {
   Object.assign(list[0], { pre_rule_type: 1, pre_rule_value: '6', pre_sale_time: NOW - 3600, pre_limit: 2, sale_time: NOW + 3600 * 2 });
   Object.assign(list[4], { pre_rule_type: 2, pre_rule_value: '10001,10002,10007', pre_sale_time: NOW + 4 * 86400, pre_limit: 1 });
   // 发售结束时间 + 寄售限价（开启二级市场的藏品必填限价）
-  list.forEach(c => { c.sale_end_time = 0; c.resale_price_limit = 0; });
+  list.forEach(c => { c.sale_end_time = 0; c.resale_price_limit = 0; c.resale_price_min = 0; });
   // 单品转赠开关（与寄售开关互相独立）
   list.forEach((c, i) => { c.transfer_enabled = [1, 1, 0, 1, 1, 1, 0, 1][i]; });
-  Object.assign(list[1], { sale_end_time: NOW - 3600, resale_price_limit: 99900 }); // 已到期未售完 → 演示自动售罄（仍展示）
+  Object.assign(list[1], { sale_end_time: NOW - 3600, resale_price_limit: 99900, resale_price_min: 30000 }); // 已到期未售完 → 演示自动售罄（仍展示）；下限 300 元 → 128 元挂单演示「低于下限」
   Object.assign(list[2], { resale_price_limit: 45900 }); // 存在 52000 挂单 → 演示「超限」标记
   Object.assign(list[3], { resale_price_limit: 79900 });
   Object.assign(list[4], { sale_end_time: NOW + 25 * 86400, resale_price_limit: 599900 });
@@ -106,7 +106,7 @@ function mkMarket(users, collections) {
 }
 
 function mkHolds(users, collections) {
-  return Array.from({ length: 12 }, (_, i) => {
+  const base = Array.from({ length: 12 }, (_, i) => {
     const c = collections[i % 6];
     const u = users[(i * 5 + 2) % users.length];
     return {
@@ -119,13 +119,18 @@ function mkHolds(users, collections) {
       createtime: NOW - (15 - i) * 86400,
     };
   });
+  /* 演示：已持有敦煌飞天 · 壹的两位用户（i=0 / i=6）各追加 1 份（持有 2 份场景，供名单「持有数量」筛选演示） */
+  const h0 = base[0], h6 = base[6];
+  base.push({ id: 5012, sn: 'SN100876', collection_id: 1, collection_name: collections[0].name, user_id: h0.user_id, user: h0.user, source: 6, status: 0, mint_time: NOW - 10 * 86400, createtime: NOW - 10 * 86400 });
+  base.push({ id: 5013, sn: 'SN100889', collection_id: 1, collection_name: collections[0].name, user_id: h6.user_id, user: h6.user, source: 6, status: 0, mint_time: NOW - 9 * 86400, createtime: NOW - 9 * 86400 });
+  return base;
 }
 
 function buildDB() {
   const users = mkUsers();
   const collections = mkCollections();
   const mkt = mkMarket(users, collections);
-  return {
+  const db = {
     users,
     categories: CATEGORIES,
     collections,
@@ -266,6 +271,15 @@ function buildDB() {
         ],
       },
     },
+    // 优先购白名单库（collection_id 0 = 全部藏品；活动侧「从白名单库导入」生成快照）
+    whitelists: [
+      { id: 1, mobile: '13800001001', collection_id: 0, remark: 'VIP 大客户', status: 1, createtime: NOW - 20 * 86400 },
+      { id: 2, mobile: '13800001002', collection_id: 1, remark: '内部员工', status: 1, createtime: NOW - 15 * 86400 },
+      { id: 3, mobile: '13800001003', collection_id: 1, remark: '老用户回馈', status: 1, createtime: NOW - 12 * 86400 },
+      { id: 4, mobile: '13800001004', collection_id: 2, remark: '渠道合作', status: 1, createtime: NOW - 9 * 86400 },
+      { id: 5, mobile: '13800001005', collection_id: 0, remark: '媒体测评（已停用）', status: 0, createtime: NOW - 6 * 86400 },
+      { id: 6, mobile: '13800001006', collection_id: 5, remark: '社区管理员', status: 1, createtime: NOW - 3 * 86400 },
+    ],
     agreements: [
       {
         id: 1, name: '用户服务协议', version: 'v2.1', status: 1,
@@ -339,4 +353,17 @@ function buildDB() {
       createtime: NOW - i * 9200,
     })),
   };
+  /* 名单快照（人群包）：预置一份演示名单 = 10-27 15:00 前有签到记录的用户 */
+  /* 演示：首位用户补齐最近 3 天签到（加今日共连续 4 天，供名单「累计/连续签到天数」筛选演示） */
+  const u0name = db.users[0].nickname;
+  [1, 2, 3].forEach((d, i) => db.checkinRecords.push({ id: 1120 + i, user: u0name, date: new Date((NOW - d * 86400) * 1000).toISOString().slice(0, 10), continuous: 4 - i, reward: '1 次抽奖', status: 1, createtime: NOW - d * 86400 + 7200 }));
+  const CUT15 = Date.parse('2026-10-27T15:00:00+08:00') / 1000;
+  const ckNames = [...new Set(db.checkinRecords.filter(r => r.createtime <= CUT15).map(r => r.user))];
+  db.rosters = [{ id: 1, name: '10-27 15:00 前签到用户', cond_type: 1, cond_desc: `签到截至 2026-10-27 15:00`, user_count: 0, status: 1, createtime: NOW - 86400 }];
+  db.rosterItems = ckNames.map(n => {
+    const u = db.users.find(x => x.nickname === n);
+    return { roster_id: 1, user_id: u.id, mobile: u.mobile, reason: '2026-10-27 15:00 前有签到记录' };
+  });
+  db.rosters[0].user_count = db.rosterItems.length;
+  return db;
 }
