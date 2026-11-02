@@ -50,7 +50,7 @@ function mkCollections() {
   }));
   // 优先购演示：#1 持有指定藏品（优先购进行中），#5 白名单（已排期待启动）
   Object.assign(list[0], { pre_rule_type: 1, pre_rule_value: '6', pre_sale_time: NOW - 3600, pre_limit: 2, sale_time: NOW + 3600 * 2 });
-  Object.assign(list[4], { pre_rule_type: 2, pre_rule_value: '10001,10002,10007', pre_sale_time: NOW + 4 * 86400, pre_limit: 1 });
+  Object.assign(list[4], { pre_rule_type: 2, pre_rule_value: '13800001001,13800001002,13800001007', pre_sale_time: NOW + 4 * 86400, pre_limit: 1 });
   // 发售结束时间 + 寄售限价（开启二级市场的藏品必填限价）
   list.forEach(c => { c.sale_end_time = 0; c.resale_price_limit = 0; c.resale_price_min = 0; });
   // 单品转赠开关（与寄售开关互相独立）
@@ -91,7 +91,7 @@ function mkMarket(users, collections) {
     return {
       id: 700 + i, order_no: 'SELL202610' + (27 - i) + '0' + i,
       seller_id: u.id, seller: u.nickname,
-      collection_id: c.id, collection_name: c.name, sn: 'SN' + (100860 + i * 13),
+      collection_id: c.id, collection_name: c.name, sn: String(100860 + i * 13),
       price: [8800, 39900, 52000, 15800, 9900, 26800, 6900, 12800, 18800][i],
       status: [0, 0, 1, 0, 2, 0, 1, 0, 0][i],
       buyer_id: 0, soldtime: 0,
@@ -110,7 +110,7 @@ function mkHolds(users, collections) {
     const c = collections[i % 6];
     const u = users[(i * 5 + 2) % users.length];
     return {
-      id: 5000 + i, sn: 'SN' + (100860 + i * 13),
+      id: 5000 + i, sn: String(100860 + i * 13),
       collection_id: c.id, collection_name: c.name,
       user_id: u.id, user: u.nickname,
       source: [1, 2, 3, 4, 5, 6][i % 6],
@@ -121,8 +121,14 @@ function mkHolds(users, collections) {
   });
   /* 演示：已持有敦煌飞天 · 壹的两位用户（i=0 / i=6）各追加 1 份（持有 2 份场景，供名单「持有数量」筛选演示） */
   const h0 = base[0], h6 = base[6];
-  base.push({ id: 5012, sn: 'SN100876', collection_id: 1, collection_name: collections[0].name, user_id: h0.user_id, user: h0.user, source: 6, status: 0, mint_time: NOW - 10 * 86400, createtime: NOW - 10 * 86400 });
-  base.push({ id: 5013, sn: 'SN100889', collection_id: 1, collection_name: collections[0].name, user_id: h6.user_id, user: h6.user, source: 6, status: 0, mint_time: NOW - 9 * 86400, createtime: NOW - 9 * 86400 });
+  base.push({ id: 5012, sn: '100876', collection_id: 1, collection_name: collections[0].name, user_id: h0.user_id, user: h0.user, source: 6, status: 0, mint_time: NOW - 10 * 86400, createtime: NOW - 10 * 86400 });
+  base.push({ id: 5013, sn: '100889', collection_id: 1, collection_name: collections[0].name, user_id: h6.user_id, user: h6.user, source: 6, status: 0, mint_time: NOW - 9 * 86400, createtime: NOW - 9 * 86400 });
+  /* 演示：首位用户（星河旅人）补齐多藏品持仓，供用户详情「持仓明细（按藏品分组）」演示；合计 5 件与 hold_count 对齐 */
+  const u0 = users[0];
+  base.push({ id: 5110, sn: '100877', collection_id: 1, collection_name: collections[0].name, user_id: u0.id, user: u0.nickname, source: 1, status: 0, mint_time: NOW - 12 * 86400, createtime: NOW - 12 * 86400 });
+  base.push({ id: 5111, sn: '100890', collection_id: 1, collection_name: collections[0].name, user_id: u0.id, user: u0.nickname, source: 2, status: 0, mint_time: NOW - 7 * 86400, createtime: NOW - 7 * 86400 });
+  base.push({ id: 5112, sn: '100916', collection_id: 3, collection_name: collections[2].name, user_id: u0.id, user: u0.nickname, source: 3, status: 0, mint_time: NOW - 5 * 86400, createtime: NOW - 5 * 86400 });
+  base.push({ id: 5113, sn: '100929', collection_id: 3, collection_name: collections[2].name, user_id: u0.id, user: u0.nickname, source: 6, status: 0, mint_time: NOW - 2 * 86400, createtime: NOW - 2 * 86400 });
   return base;
 }
 
@@ -137,6 +143,7 @@ function buildDB() {
     orders: mkOrders(users),
     market: mkt.mo, marketBuys: mkt.buys,
     holds: mkHolds(users, collections),
+    swaps: [],
     walletLogs: Array.from({ length: 10 }, (_, i) => ({
       id: 6000 + i, user_id: 10001,
       type: ['recharge', 'income', 'consume', 'expense', 'refund', 'admin_adjust', 'freeze'][i % 7],
@@ -208,8 +215,8 @@ function buildDB() {
       { id: 8, user_id: 10008, user: mkUsers()[7].nickname, num: -1, source: 6, ref: '参与抽奖', createtime: NOW - 3600 * 22 },
     ],
     raffles: [
-      // 报名中
-      { id: 1, collection_id: 5, total: 3000, per_limit: 1, apply_start: NOW - 2 * 86400, apply_end: NOW + 2 * 86400, buy_deadline: NOW + 6 * 86400, apply_count: 18652, win_count: 0, status: 1, whitelist: '13871000000,13871413739', createtime: NOW - 3 * 86400 },
+      // 报名中（藏品 #3 无优先购配置——优先购与抽签发售互斥，演示数据保持自洽）
+      { id: 1, collection_id: 3, total: 3000, per_limit: 1, apply_start: NOW - 2 * 86400, apply_end: NOW + 2 * 86400, buy_deadline: NOW + 6 * 86400, apply_count: 18652, win_count: 0, status: 1, whitelist: '13871000000,13871413739', createtime: NOW - 3 * 86400 },
       // 已截止待抽签
       { id: 2, collection_id: 4, total: 500, per_limit: 2, apply_start: NOW - 5 * 86400, apply_end: NOW - 3600, buy_deadline: NOW + 2 * 86400, apply_count: 9240, win_count: 0, status: 2, createtime: NOW - 6 * 86400 },
       // 已抽签（购买期）
@@ -246,18 +253,33 @@ function buildDB() {
       { id: 3, title: '邀请有礼', image: '', link: '/invite', weigh: 80, status: 0 },
     ],
     thirdparty: {
-      huifu: {
-        enabled: 1,
-        items: [
-          { name: 'sys_id', title: '汇聚系统号（Sys ID）', value: '6666000108881234' },
-          { name: 'merchant_id', title: '汇付商户号', value: 'HF202610280001' },
-          { name: 'store_id', title: '门店编号', value: 'ST0001' },
-          { name: 'private_key', title: '商户 RSA 私钥', value: 'MIIEvQIBADANBgkqhkiG9w0BAQ********' },
-          { name: 'cert_sn', title: '证书序列号', value: '6A8F3D2C1107BEE4' },
-          { name: 'gateway', title: '网关地址', value: 'https://api.huifu.com' },
-          { name: 'notify_url', title: '异步通知地址', value: 'https://api.lingjing.cn/pay/huifu/notify' },
-        ],
-      },
+      // 支付渠道列表（多渠道管理：可添加/删除渠道，C 端按启用渠道展示支付方式）
+      pay: [
+        {
+          id: 1, name: '汇付天下钱包', enabled: 1,
+          items: [
+            { name: 'sys_id', title: '汇聚系统号（Sys ID）', value: '6666000108881234' },
+            { name: 'merchant_id', title: '汇付商户号', value: 'HF202610280001' },
+            { name: 'store_id', title: '门店编号', value: 'ST0001' },
+            { name: 'private_key', title: '商户 RSA 私钥', value: 'MIIEvQIBADANBgkqhkiG9w0BAQ********' },
+            { name: 'cert_sn', title: '证书序列号', value: '6A8F3D2C1107BEE4' },
+            { name: 'gateway', title: '网关地址', value: 'https://api.huifu.com' },
+            { name: 'notify_url', title: '异步通知地址', value: 'https://api.lingjing.cn/pay/huifu/notify' },
+          ],
+        },
+        {
+          id: 2, name: '微信支付', enabled: 0,
+          items: [
+            { name: 'mch_id', title: '商户号', value: '1900006666' },
+            { name: 'appid', title: 'AppID', value: 'wx888666aabbccdd' },
+            { name: 'api_v3_key', title: 'APIv3 密钥', value: 'wX3kKp8vQ2mR7sYd********' },
+            { name: 'serial_no', title: '证书序列号', value: '5157F09EFDC096DE15EBE81A47057A72' },
+            { name: 'private_key', title: '商户私钥', value: 'MIIEvQIBADANBgkqhkiG9w0BAQ********' },
+            { name: 'gateway', title: '网关地址', value: 'https://api.mch.weixin.qq.com' },
+            { name: 'notify_url', title: '异步通知地址', value: 'https://api.lingjing.cn/pay/wechat/notify' },
+          ],
+        },
+      ],
       sms: {
         enabled: 1,
         items: [
@@ -273,12 +295,12 @@ function buildDB() {
     },
     // 优先购白名单库（collection_id 0 = 全部藏品；活动侧「从白名单库导入」生成快照）
     whitelists: [
-      { id: 1, mobile: '13800001001', collection_id: 0, remark: 'VIP 大客户', status: 1, createtime: NOW - 20 * 86400 },
-      { id: 2, mobile: '13800001002', collection_id: 1, remark: '内部员工', status: 1, createtime: NOW - 15 * 86400 },
-      { id: 3, mobile: '13800001003', collection_id: 1, remark: '老用户回馈', status: 1, createtime: NOW - 12 * 86400 },
-      { id: 4, mobile: '13800001004', collection_id: 2, remark: '渠道合作', status: 1, createtime: NOW - 9 * 86400 },
-      { id: 5, mobile: '13800001005', collection_id: 0, remark: '媒体测评（已停用）', status: 0, createtime: NOW - 6 * 86400 },
-      { id: 6, mobile: '13800001006', collection_id: 5, remark: '社区管理员', status: 1, createtime: NOW - 3 * 86400 },
+      { id: 1, mobile: '13800001001', collection_id: 0, remark: 'VIP 大客户', status: 1, createtime: NOW - 20 * 86400, max_qty: 2, expires: NOW + 30 * 86400 },
+      { id: 2, mobile: '13800001002', collection_id: 1, remark: '内部员工', status: 1, createtime: NOW - 15 * 86400, max_qty: 1, expires: 0 },
+      { id: 3, mobile: '13800001003', collection_id: 1, remark: '老用户回馈', status: 1, createtime: NOW - 12 * 86400, max_qty: 3, expires: NOW + 7 * 86400 },
+      { id: 4, mobile: '13800001004', collection_id: 2, remark: '渠道合作', status: 1, createtime: NOW - 9 * 86400, max_qty: 1, expires: NOW - 86400 },
+      { id: 5, mobile: '13800001005', collection_id: 0, remark: '媒体测评（已停用）', status: 0, createtime: NOW - 6 * 86400, max_qty: 1, expires: 0 },
+      { id: 6, mobile: '13800001006', collection_id: 5, remark: '社区管理员', status: 1, createtime: NOW - 3 * 86400, max_qty: 2, expires: 0 },
     ],
     agreements: [
       {
@@ -365,5 +387,19 @@ function buildDB() {
     return { roster_id: 1, user_id: u.id, mobile: u.mobile, reason: '2026-10-27 15:00 前有签到记录' };
   });
   db.rosters[0].user_count = db.rosterItems.length;
+  /* 空投发放明细：每条 = 一次发放记录（供「明细 / 按用户回收」演示；大任务仅生成样本条目，实际量以任务汇总为准） */
+  db.airdropItems = (() => {
+    const items = []; let iid = 6000;
+    const plan = [{ tid: 1, ok: 22, rv: 0 }, { tid: 2, ok: 22, rv: 0 }, { tid: 6, ok: 18, rv: 0 }, { tid: 7, ok: 26, rv: 12 }];
+    plan.forEach(({ tid, ok, rv }, pi) => {
+      const t = db.airdrops.find(x => x.id === tid);
+      for (let k = 0; k < ok + rv; k++) {
+        const u = db.users[(k * 7 + pi * 3) % db.users.length];
+        const isRv = k >= ok;
+        items.push({ id: iid++, task_id: tid, user_id: u.id, nickname: u.nickname, mobile: u.mobile, num: 1, status: isRv ? 0 : 1, grant_time: t.createtime + k * 60, revoke_time: isRv ? t.createtime + 86400 : 0 });
+      }
+    });
+    return items;
+  })();
   return db;
 }
