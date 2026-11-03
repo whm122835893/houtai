@@ -1030,12 +1030,12 @@ PAGES.activity = () => {
     <td class="cell-sub">${r.time}</td>
     <td>${r.reward}</td>
     <td><button class="btn btn-sm ${r.on ? 'btn-primary' : 'btn-ghost'}" data-act="act-toggle" data-arg="${arg}">${r.on ? '开启中' : '已关闭'}</button></td>
-    <td style="white-space:nowrap">${W(`<button class="btn btn-ghost btn-sm" data-act="act-reward" data-arg="${arg}">配置奖励</button>${r.id ? `<button class="btn btn-danger btn-sm" data-act="lot-del" data-arg="${r.id}">删除</button>` : ''}`)}</td></tr>`;
+    <td style="white-space:nowrap">${W(`<button class="btn btn-ghost btn-sm" data-act="act-reward" data-arg="${arg}">${r.id ? '编辑' : '去配置'}</button>${r.id ? `<button class="btn btn-danger btn-sm" data-act="lot-del" data-arg="${r.id}">删除</button>` : ''}`)}</td></tr>`;
   }).join('');
   return `
   <div class="page-head rise" style="--i:0"><h2>活动中心</h2><span class="en">Activity Center</span></div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px">${stat('全部活动', rows.length, 'Total Activities')}${stat('进行中', openN, 'Active')}${stat('抽奖场次', S.db.lotteries.length, 'Lottery Rounds')}</div>
-  <div class="glass filter-bar rise" style="--i:2"><span class="cell-sub">邀请 / 签到 / 注册为系统唯一活动，抽奖可创建多场次；开启前请先完成奖励配置。</span><span style="flex:1"></span>${W('<button class="btn btn-primary" data-act="act-new">新建活动</button>')}</div>
+  <div class="glass filter-bar rise" style="--i:2"><span class="cell-sub">本页为全局总览：邀请 / 签到 / 注册为系统唯一活动，在各活动页配置；抽奖场次请在「抽奖活动」页新建。开启前请先完成奖励配置。</span></div>
   <div class="glass rise" style="--i:3"><div class="tbl-wrap"><table class="tbl">
     <thead><tr><th>类型</th><th>活动名称</th><th>活动时间</th><th>奖励概览</th><th>开关</th><th style="width:200px">操作</th></tr></thead>
     <tbody>${trs}</tbody></table></div><div class="card-pad"></div></div>`;
@@ -1882,34 +1882,6 @@ const ACT = {
     const [type, idStr] = String(el.dataset.arg).split(':');
     if (type === 'lottery') { openLotForm(S.db.lotteries.find(x => x.id == idStr)); return; }
     go(type);
-  },
-  'act-new'() {
-    openModal(`<div class="modal-head"><h3>新建活动</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
-    <div class="modal-body">
-      <div class="form-row"><label>活动类型 *</label><select class="select" id="act-new-type">
-        <option value="lottery">抽奖活动（可创建多场次）</option>
-        <option value="invite">邀请有礼（系统唯一，去配置）</option>
-        <option value="checkin">签到活动（系统唯一，去配置）</option>
-        <option value="register">注册活动（系统唯一，去配置）</option></select></div>
-      <div class="form-row"><label>活动名称 *</label><input class="input" id="act-new-name" placeholder="如：双十一 · 天天抽"></div>
-      <div class="cell-sub">抽奖活动创建后默认关闭，请在「配置奖励」中完成奖池与次数获取方式配置后再开启。</div>
-    </div>
-    <div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">取消</button><button class="btn btn-primary" data-act="act-new-ok">创建</button></div>`);
-  },
-  'act-new-ok'() {
-    const type = $('#act-new-type').value;
-    const name = $('#act-new-name').value.trim();
-    if (type !== 'lottery') {
-      closeModal(); toast('该类型为系统唯一活动，已为你打开配置页', 'ok');
-      go(type);
-      return;
-    }
-    if (!name) return toast('请输入活动名称', 'err');
-    const a = { id: Date.now() % 10000, title: name, chance_rules: { daily_free: { enabled: false, num: 1 }, register: { enabled: false, num: 2 }, hold: { enabled: false, items: [] }, invite: { enabled: false, num: 1, daily_cap: 5 }, consume: { enabled: false, items: [] } }, status: 0, start_time: NOW, end_time: NOW + 10 * 86400, prizes: [] };
-    S.db.lotteries.push(a);
-    closeModal(); renderPage(); logOp('活动中心', '新建活动', name, '抽奖场次');
-    toast('活动已创建（默认关闭），请配置奖励后再开启', 'ok');
-    openLotForm(a);
   },
 
   /* 抽奖 */
