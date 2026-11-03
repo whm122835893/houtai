@@ -87,7 +87,7 @@ const S = {
   page: 'dashboard', collapsed: localStorage.getItem('nft_sidebar') === '1',
   readonly: false, db: buildDB(),
   expandedWallet: 0,
-  q: { user: { keyword: '', status: -1, page: 1 }, wallet: { keyword: '', page: 1 }, collection: { keyword: '', status: -1, category_id: 0 }, category: {}, order: { keyword: '', type: 0, status: -1, page: 1 }, market: { tab: 0, status: -1 }, hold: { keyword: '', status: -1, collection_id: 0 }, airdrop: {}, lottery: {}, synthesis: {}, invite: {}, checkin: { keyword: '', page: 1 }, register: { keyword: '', status: -1, page: 1 }, notice: { keyword: '', status: -1 }, banner: {}, operlog: { keyword: '', page: 1 }, blindbox: {}, transfer: { status: -1 }, whitelist: { keyword: '' } },
+  q: { user: { keyword: '', status: -1, page: 1 }, wallet: { keyword: '', page: 1 }, collection: { keyword: '', status: -1, category_id: 0 }, category: {}, order: { keyword: '', type: 0, status: -1, page: 1 }, market: { tab: 0, status: -1 }, hold: { keyword: '', status: -1, collection_id: 0 }, airdrop: {}, lottery: {}, synthesis: {}, invite: { act: 0 }, checkin: { act: 0, keyword: '', page: 1 }, register: { act: 0, keyword: '', status: -1, page: 1 }, notice: { keyword: '', status: -1 }, banner: {}, operlog: { keyword: '', page: 1 }, blindbox: {}, transfer: { status: -1 }, whitelist: { keyword: '' } },
 };
 const canWrite = () => !S.readonly;
 const W = html => canWrite() ? html : '';
@@ -607,6 +607,7 @@ const TRASH_META = {
   user: ['users', '用户'], order: ['orders', '订单'], collection: ['collections', '藏品'],
   raffle: ['raffles', '抽签活动'], airdrop: ['airdrops', '发放任务'], whitelist: ['whitelists', '白名单'],
   roster: ['rosters', '名单'], notice: ['notices', '公告'], category: ['categories', '分类'], lottery: ['lotteries', '抽奖活动'],
+  invite_act: ['inviteActs', '邀请活动'], checkin_act: ['checkinActs', '签到活动'], register_act: ['registerActs', '注册活动'],
 };
 function softDel(type, ids, extra) {
   const [key, name] = TRASH_META[type];
@@ -1008,15 +1009,55 @@ const settingSet = (name, val) => {
   }
   return false;
 };
-const ACT_TYPE = { invite: ['邀请有礼', 'tag-orange'], lottery: ['抽奖活动', 'tag-blue'], checkin: ['签到活动', 'tag-green'], register: ['注册活动', 'tag-purple'] };const activityRows = () => {
-  const rows = [
-    { key: 'invite', name: '邀请有礼', on: +(settingVal('invite_reward_enable', 1)), time: '长期有效', reward: `${S.db.inviteRules.filter(r => r.status).length} 档奖励规则`, page: 'invite' },
-    { key: 'checkin', name: '每日签到', on: +S.db.checkin.enabled, time: '长期有效', reward: `每日 ${rewardTxt(S.db.checkin.daily)} · ${S.db.checkin.rules.length} 档阶梯`, page: 'checkin' },
-    { key: 'register', name: '新人注册礼', on: +S.db.register.enabled, time: '长期有效', reward: `${rewardTxt({ type: 1, num: S.db.register.chance })}${S.db.register.lot_activity_id ? ' · 绑定「' + ((S.db.lotteries.find(l => l.id === S.db.register.lot_activity_id) || {}).title || '') + '」' : ' · 通用'}${+S.db.register.collection_id ? ' + 新人藏品' : ''}${+S.db.register.pre_num ? ' + 优先购 ' + S.db.register.pre_num + ' 次' : ''}`, page: 'register' },
-  ];
+const ACT_TYPE = { invite: ['邀请有礼', 'tag-orange'], lottery: ['抽奖活动', 'tag-blue'], checkin: ['签到活动', 'tag-green'], register: ['注册活动', 'tag-purple'] };
+/* 三类唯一活动已升级为多场次：UNIQ_ACT = { 数据键, 类型名, 页面名 } */
+const UNIQ_ACT = { invite: ['inviteActs', '邀请有礼', '邀请活动'], checkin: ['checkinActs', '签到活动', '签到活动'], register: ['registerActs', '新人注册礼', '注册活动'] };
+const actTimeTxt = a => `${a.start_time ? fmtT(a.start_time) : '—'} ~ ${a.end_time ? fmtT(a.end_time) : '长期'}`;
+const selAct = k => { const list = S.db[UNIQ_ACT[k][0]]; return list.find(x => x.id === S.q[k].act) || list[0]; };
+const UACT_DEL = { invite: 'invite_act', checkin: 'checkin_act', register: 'register_act' };
+/* 开启校验：空配置的活动不允许开启 */
+function toggleUact(k, id) {
+  const [key, , label] = UNIQ_ACT[k];
+  const a = S.db[key].find(x => x.id === +id);
+  if (!a) return '活动不存在';
+  if (!a.status) {
+    if (k === 'invite' && !a.rules.some(r => r.status)) return '开启失败：请先添加并启用至少一条奖励规则';
+    if (k === 'checkin' && !a.rules.length) return '开启失败：请先添加至少一档连续签到阶梯奖励';
+    if (k === 'register' && !(a.chance > 0 || a.collection_id || a.pre_num > 0)) return '开启失败：请先配置新人礼包（抽奖次数 / 赠送藏品 / 优先购）';
+    a.status = 1;
+  } else a.status = 0;
+  return a.status ? `${label}「${a.title}」已开启` : `${label}「${a.title}」已关闭`;
+}
+const activityRows = () => {
+  const rows = [];
+  S.db.inviteActs.forEach(a => rows.push({ key: 'invite', id: a.id, name: a.title, on: a.status, time: actTimeTxt(a), reward: `${a.rules.filter(r => r.status).length} 档奖励规则`, page: 'invite' }));
+  S.db.checkinActs.forEach(a => rows.push({ key: 'checkin', id: a.id, name: a.title, on: a.status, time: actTimeTxt(a), reward: `每日 ${rewardTxt(a.daily)} · ${a.rules.length} 档阶梯`, page: 'checkin' }));
+  S.db.registerActs.forEach(a => rows.push({ key: 'register', id: a.id, name: a.title, on: a.status, time: actTimeTxt(a), reward: `${rewardTxt({ type: 1, num: a.chance })}${a.lot_activity_id ? ' · 绑定「' + ((S.db.lotteries.find(l => l.id === a.lot_activity_id) || {}).title || '') + '」' : ' · 通用'}${+a.collection_id ? ' + 新人藏品' : ''}${+a.pre_num ? ' + 优先购 ' + a.pre_num + ' 次' : ''}`, page: 'register' }));
   S.db.lotteries.forEach(a => rows.push({ key: 'lottery', id: a.id, name: a.title, on: +a.status, time: `${fmtT(a.start_time)} ~ ${fmtT(a.end_time)}`, reward: `${(a.prizes || []).length} 种奖品 · ${chanceTagHtml(a.chance_rules)}`, page: 'lottery' }));
   return rows;
 };
+/* 多场次唯一活动的共享 UI：活动列表表格 + 新建/编辑表单 */
+const uniqActTable = (k, i) => {
+  const list = S.db[UNIQ_ACT[k][0]];
+  const rows = list.map(a => `<tr><td class="serif-num">${a.id}</td>
+    <td class="cell-main">${esc(a.title)}${S.q[k].act === a.id ? '<span class="tag tag-blue" style="margin-left:4px">配置中</span>' : ''}</td>
+    <td class="cell-sub">${actTimeTxt(a)}</td>
+    <td><button class="btn btn-sm ${a.status ? 'btn-primary' : 'btn-ghost'}" data-act="uact-toggle" data-arg="${k}:${a.id}">${a.status ? '开启中' : '已关闭'}</button></td>
+    <td style="white-space:nowrap">${W(`<button class="btn btn-ghost btn-sm" data-act="uact-pick" data-arg="${k}:${a.id}">配置</button><button class="btn btn-ghost btn-sm" data-act="uact-edit" data-arg="${k}:${a.id}">编辑</button><button class="btn btn-danger btn-sm" data-act="uact-del" data-arg="${k}:${a.id}">删除</button>`)}</td></tr>`).join('');
+  return `<div class="glass rise" style="--i:${i}"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>ID</th><th>活动名称</th><th>活动时间</th><th>开关</th><th style="width:210px">操作</th></tr></thead><tbody>${rows}</tbody></table></div><div class="card-pad"></div></div>`;
+};
+function openUactForm(k, a) {
+  const label = UNIQ_ACT[k][2];
+  openModal(`<div class="modal-head"><h3>${a ? '编辑活动' : '新建活动'} · ${label}</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
+  <div class="modal-body">
+    <div class="form-row"><label>活动名称 *</label><input class="input" id="ua-name" value="${a ? esc(a.title) : ''}" placeholder="如：春节签到季"></div>
+    <div class="form-grid">
+    <div class="form-row"><label>开始时间（可空 = 立即）</label><input class="input" id="ua-s" type="datetime-local" value="${a?.start_time ? toLocalInput(a.start_time) : ''}"></div>
+    <div class="form-row"><label>结束时间（可空 = 长期）</label><input class="input" id="ua-e" type="datetime-local" value="${a?.end_time ? toLocalInput(a.end_time) : ''}"></div></div>
+    <div class="form-row"><span class="cell-sub">新建后默认关闭：请为该场次完成奖励配置，再通过列表开关开启。空配置的活动不允许开启。</span></div>
+  </div>
+  <div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">取消</button><button class="btn btn-primary" data-act="uact-form-ok" data-arg="${k}" data-id="${a?.id || 0}">保存</button></div>`);
+}
 PAGES.activity = () => {
   const rows = activityRows();
   const openN = rows.filter(r => r.on).length;
@@ -1035,7 +1076,7 @@ PAGES.activity = () => {
   return `
   <div class="page-head rise" style="--i:0"><h2>活动中心</h2><span class="en">Activity Center</span></div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px">${stat('全部活动', rows.length, 'Total Activities')}${stat('进行中', openN, 'Active')}${stat('抽奖场次', S.db.lotteries.length, 'Lottery Rounds')}</div>
-  <div class="glass filter-bar rise" style="--i:2"><span class="cell-sub">本页为全局总览：邀请 / 签到 / 注册为系统唯一活动，在各活动页配置；抽奖场次请在「抽奖活动」页新建。开启前请先完成奖励配置。</span></div>
+  <div class="glass filter-bar rise" style="--i:2"><span class="cell-sub">本页为全局总览：邀请 / 签到 / 注册 / 抽奖均可创建多场次，新建与配置在各自活动页进行；空配置的活动不可开启。</span></div>
   <div class="glass rise" style="--i:3"><div class="tbl-wrap"><table class="tbl">
     <thead><tr><th>类型</th><th>活动名称</th><th>活动时间</th><th>奖励概览</th><th>开关</th><th style="width:200px">操作</th></tr></thead>
     <tbody>${trs}</tbody></table></div><div class="card-pad"></div></div>`;
@@ -1092,10 +1133,11 @@ PAGES.synthesis = () => {
     <tbody>${rows}</tbody></table></div></div>`;
 };
 
-/* 12. 邀请有礼 */
+/* 12. 邀请有礼（多场次） */
 PAGES.invite = () => {
   const INV_TYPE = { 1: ['藏品', 'tag-blue'], 2: ['抽奖次数', 'tag-green'], 3: ['优先购资格', 'tag-orange'] };
-  const rules = S.db.inviteRules.map(r => {
+  const a = selAct('invite');
+  const rules = (a?.rules || []).map(r => {
     const t = INV_TYPE[r.reward_type] || ['未知', 'tag-gray'];
     const content = r.reward_type === 1 ? r.collection_name : r.reward_type === 2 ? `<span class="serif-num">${r.reward_num} 次抽奖</span>` : `<span class="serif-num">优先购 ${r.reward_num} 次 · ${r.pre_collection_id ? COL_NAME(r.pre_collection_id) : '<span style="color:var(--danger)">未绑定藏品</span>'}</span>`;
     return `<tr>
@@ -1105,31 +1147,28 @@ PAGES.invite = () => {
     <td><span class="tag ${r.status ? 'tag-green' : 'tag-gray'}">${r.status ? '启用' : '停用'}</span></td>
     <td style="white-space:nowrap">${W(`<button class="btn btn-ghost btn-sm" data-act="inv-edit" data-arg="${r.id}">编辑</button><button class="btn btn-danger btn-sm" data-act="inv-del" data-arg="${r.id}">删除</button>`)}</td></tr>`;
   }).join('');
-  const records = S.db.inviteRecords.map(r => `<tr>
+  const records = S.db.inviteRecords.filter(r => r.activity_id === (a?.id || -1)).map(r => `<tr>
     <td>${r.inviter}</td><td>${r.invitee}</td>
     <td><span class="tag ${r.reward_status ? 'tag-green' : 'tag-gray'}">${r.reward_status ? '已发放' : '未达标'}</span></td>
     <td class="cell-sub">${fmtT(r.createtime)}</td></tr>`).join('');
   return `
   <div class="page-head rise" style="--i:0"><h2>邀请有礼</h2><span class="en">Invite</span></div>
-  <div class="glass rise" style="--i:1"><div class="card-pad" style="display:flex;align-items:center;gap:14px;padding:14px 20px">
-    <span class="cell-main">活动状态</span>
-    <select class="select" id="inv-enabled" style="width:110px"><option value="1" ${+(settingVal('invite_reward_enable', 1)) ? 'selected' : ''}>开启</option><option value="0" ${+(settingVal('invite_reward_enable', 1)) ? '' : 'selected'}>关闭</option></select>
-    ${W('<button class="btn btn-primary btn-sm" data-act="inv-sw-save">保存</button>')}
-    <span class="cell-sub">关闭后 C 端邀请奖励暂停发放，已配置的规则保留</span></div></div>
-  <div class="glass rise" style="--i:2"><div class="card-head"><h3>奖励规则</h3><span class="en">Reward Rules</span></div>
+  <div class="glass filter-bar rise" style="--i:1"><span class="cell-sub">可创建多场邀请活动，每场独立奖励规则与时间；关闭某场后该场 C 端暂停发放，规则保留。</span><span style="flex:1"></span>${W('<button class="btn btn-primary" data-act="uact-add" data-arg="invite">新建活动</button>')}</div>
+  ${uniqActTable('invite', 2)}
+  ${a ? `<div class="glass rise" style="--i:3"><div class="card-head"><h3>奖励规则 · ${esc(a.title)}</h3><span class="en">Reward Rules</span></div>
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th>邀请人数门槛</th><th>奖励类型</th><th>奖励内容</th><th>状态</th><th style="width:130px">操作</th></tr></thead><tbody>${rules}</tbody></table></div>
     <div class="card-pad">${W('<button class="btn btn-primary" data-act="inv-add">添加规则</button>')}</div></div>
-  <div class="glass rise" style="--i:3"><div class="card-head"><h3>邀请记录</h3><span class="en">Records</span></div>
-    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>邀请人</th><th>被邀请人</th><th>奖励状态</th><th>时间</th></tr></thead><tbody>${records}</tbody></table></div><div class="card-pad"></div></div>`;
+  <div class="glass rise" style="--i:4"><div class="card-head"><h3>邀请记录 · ${esc(a.title)}</h3><span class="en">Records</span></div>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th>邀请人</th><th>被邀请人</th><th>奖励状态</th><th>时间</th></tr></thead><tbody>${records}</tbody></table>${records ? '' : emptyBox()}</div><div class="card-pad"></div></div>` : ''}`;
 };
 
-/* 12b. 签到活动 */
+/* 12b. 签到活动（多场次） */
 PAGES.checkin = () => {
-  const c = S.db.checkin;
+  const c = selAct('checkin');
   const q = S.q.checkin;
-  let recs = S.db.checkinRecords.filter(r => !q.keyword || r.user.includes(q.keyword));
+  let recs = S.db.checkinRecords.filter(r => r.activity_id === (c?.id || -1) && (!q.keyword || r.user.includes(q.keyword)));
   const total = recs.length; recs = recs.slice((q.page - 1) * 8, q.page * 8);
-  const rules = c.rules.map((r, i) => `<tr>
+  const rules = (c?.rules || []).map((r, i) => `<tr>
     <td class="cell-main">连续签到 ${r.day_num} 天</td>
     <td>${rewardTag(r)}</td>
     <td style="white-space:nowrap">${W(`<button class="btn btn-ghost btn-sm" data-act="ck-rule-edit" data-arg="${i}">编辑</button><button class="btn btn-danger btn-sm" data-act="ck-rule-del" data-arg="${i}">删除</button>`)}</td></tr>`).join('');
@@ -1141,12 +1180,11 @@ PAGES.checkin = () => {
     <td class="cell-sub">${fmtT(r.createtime)}</td></tr>`).join('');
   return `
   <div class="page-head rise" style="--i:0"><h2>签到活动</h2><span class="en">Check-in</span></div>
-  <div class="glass rise" style="--i:1"><div class="card-head"><h3>签到规则</h3><span class="en">Rules</span></div>
+  <div class="glass filter-bar rise" style="--i:1"><span class="cell-sub">可创建多场签到活动（如「每日签到」+「春节签到季」），每场独立规则与时间；空规则场次不可开启。</span><span style="flex:1"></span>${W('<button class="btn btn-primary" data-act="uact-add" data-arg="checkin">新建活动</button>')}</div>
+  ${uniqActTable('checkin', 2)}
+  ${c ? `<div class="glass rise" style="--i:3"><div class="card-head"><h3>签到规则 · ${esc(c.title)}</h3><span class="en">Rules</span></div>
     <div class="card-pad">
-      <div class="form-grid">
-        <div class="form-row"><label>活动状态</label><select class="select" id="ck-enabled"><option value="1" ${c.enabled ? 'selected' : ''}>开启</option><option value="0">关闭</option></select></div>
-        <div class="form-row"><label>每月补签次数上限</label><input class="input" id="ck-repair" type="number" value="${c.repair_limit}"></div>
-      </div>
+      <div class="form-row"><label>每月补签次数上限</label><input class="input" id="ck-repair" type="number" value="${c.repair_limit}"></div>
       <div class="form-row"><label>每日签到奖励</label>${rewardCfgHtml('ck-daily', c.daily)}</div>
       <div class="form-row"><label>连续签到阶梯奖励（达成天数 → 额外奖励，在每日奖励之上叠加）</label>
         <div class="tbl-wrap" style="border:1px solid rgba(126,139,155,.15);border-radius:10px"><table class="tbl">
@@ -1155,28 +1193,28 @@ PAGES.checkin = () => {
         ${W('<button class="btn btn-ghost btn-sm" style="margin-top:10px" data-act="ck-rule-add">＋ 添加阶梯</button>')}</div>
       ${W('<button class="btn btn-primary" data-act="ck-save">保存签到规则</button>')}
     </div></div>
-  <div class="glass rise" style="--i:2"><div class="card-head"><h3>签到记录</h3><span class="en">Records</span></div>
+  <div class="glass rise" style="--i:4"><div class="card-head"><h3>签到记录 · ${esc(c.title)}</h3><span class="en">Records</span></div>
     <div class="card-pad" style="display:flex;gap:10px;flex-wrap:wrap;padding-bottom:0">
       <input class="input" id="ck-kw" placeholder="用户昵称" value="${esc(q.keyword)}" style="width:180px">
       <button class="btn btn-primary" data-act="ck-search">查询</button><button class="btn btn-ghost" data-act="ck-reset">重置</button></div>
     <div class="tbl-wrap"><table class="tbl">
       <thead><tr><th>用户</th><th>签到日期</th><th>连续天数</th><th>获得奖励</th><th>状态</th><th>时间</th></tr></thead>
       <tbody>${rows}</tbody></table>${recs.length ? '' : emptyBox()}</div>
-    ${pager('ck-page', q.page, total, 8)}</div>`;
+    ${pager('ck-page', q.page, total, 8)}</div>` : ''}`;
 };
 
-/* 12c. 注册活动 */
+/* 12c. 注册活动（多场次） */
 PAGES.register = () => {
-  const c = S.db.register;
+  const c = selAct('register');
   const q = S.q.register;
-  let logs = S.db.registerLogs.filter(l => (q.status < 0 || l.status === q.status) && (!q.keyword || l.user.includes(q.keyword)));
+  let logs = S.db.registerLogs.filter(l => l.activity_id === (c?.id || -1) && (q.status < 0 || l.status === q.status) && (!q.keyword || l.user.includes(q.keyword)));
   const total = logs.length; logs = logs.slice((q.page - 1) * 8, q.page * 8);
   const ST_NAME = ['未发售', '已排期', '发售中', '已下架', '已售罄'];
   const colOpt = (sel, mark) => S.db.collections.map(x => `<option value="${x.id}" ${sel === x.id ? 'selected' : ''}>${x.name}（${ST_NAME[x.status]}${mark && x.status !== 2 ? '，可预配置' : ''}）</option>`).join('');
-  const colOpts = colOpt(c.collection_id, false);
-  const preColOpts = colOpt(c.pre_collection_id, true);
-  const lotOpts = S.db.lotteries.map(l => `<option value="${l.id}" ${c.lot_activity_id === l.id ? 'selected' : ''}>${l.title}（${l.status ? '开启中' : '未开启，次数待生效'}）</option>`).join('');
-  const invTag = rewardTag(c.inviter || { type: 1, num: 1 });
+  const colOpts = colOpt(c?.collection_id, false);
+  const preColOpts = colOpt(c?.pre_collection_id, true);
+  const lotOpts = S.db.lotteries.map(l => `<option value="${l.id}" ${c?.lot_activity_id === l.id ? 'selected' : ''}>${l.title}（${l.status ? '开启中' : '未开启，次数待生效'}）</option>`).join('');
+  const invTag = rewardTag(c?.inviter || { type: 1, num: 1 });
   const rows = logs.map(l => `<tr>
     <td class="cell-main">${l.user}</td><td>${l.reward}</td>
     <td>${l.inviter ? `${l.inviter} <span class="tag tag-blue">邀请人 ${invTag}</span>` : '<span class="cell-sub">自然注册</span>'}</td>
@@ -1184,10 +1222,11 @@ PAGES.register = () => {
     <td class="cell-sub">${fmtT(l.createtime)}</td></tr>`).join('');
   return `
   <div class="page-head rise" style="--i:0"><h2>注册活动</h2><span class="en">Register Gift</span></div>
-  <div class="glass rise" style="--i:1"><div class="card-head"><h3>新人礼包配置</h3><span class="en">Gift Config</span></div>
+  <div class="glass filter-bar rise" style="--i:1"><span class="cell-sub">可创建多场注册活动（如按渠道/按档期区分新人礼包），每场独立礼包配置；空礼包场次不可开启。</span><span style="flex:1"></span>${W('<button class="btn btn-primary" data-act="uact-add" data-arg="register">新建活动</button>')}</div>
+  ${uniqActTable('register', 2)}
+  ${c ? `<div class="glass rise" style="--i:3"><div class="card-head"><h3>新人礼包配置 · ${esc(c.title)}</h3><span class="en">Gift Config</span></div>
     <div class="card-pad">
       <div class="form-grid">
-        <div class="form-row"><label>活动状态</label><select class="select" id="rg-enabled"><option value="1" ${c.enabled ? 'selected' : ''}>开启</option><option value="0">关闭</option></select></div>
         <div class="form-row"><label>注册送抽奖次数（0 = 不送）</label><input class="input" id="rg-score" type="number" min="0" value="${c.chance}"></div>
         <div class="form-row"><label>绑定抽奖活动（次数在该场次可用）</label><select class="select" id="rg-lot"><option value="0" ${!c.lot_activity_id ? 'selected' : ''}>全部开启中的场次（通用）</option>${lotOpts}</select></div>
         <div class="form-row"><label>赠送藏品（新人空投，可选）</label><select class="select" id="rg-col"><option value="0">不赠送</option>${colOpts}</select></div>
@@ -1198,7 +1237,7 @@ PAGES.register = () => {
       <div class="form-row"><label>邀请人额外奖励（被邀请注册时发放，0 = 不发放）</label>${rewardCfgHtml('rg-inv', c.inviter || { type: 1, num: 1 })}</div>
       ${W('<button class="btn btn-primary" data-act="rg-save">保存配置</button>')}
     </div></div>
-  <div class="glass rise" style="--i:2"><div class="card-head"><h3>发放记录</h3><span class="en">Gift Logs</span></div>
+  <div class="glass rise" style="--i:4"><div class="card-head"><h3>发放记录 · ${esc(c.title)}</h3><span class="en">Gift Logs</span></div>
     <div class="card-pad" style="display:flex;gap:10px;flex-wrap:wrap;padding-bottom:0">
       <input class="input" id="rg-kw" placeholder="用户昵称" value="${esc(q.keyword)}" style="width:180px">
       <select class="select" id="rg-status" style="width:140px"><option value="-1">全部状态</option><option value="1">已发放</option><option value="0">待发放</option></select>
@@ -1206,7 +1245,7 @@ PAGES.register = () => {
     <div class="tbl-wrap"><table class="tbl">
       <thead><tr><th>新用户</th><th>奖励内容</th><th>邀请来源</th><th>状态</th><th>注册时间</th></tr></thead>
       <tbody>${rows}</tbody></table>${logs.length ? '' : emptyBox()}</div>
-    ${pager('rg-page', q.page, total, 8)}</div>`;
+    ${pager('rg-page', q.page, total, 8)}</div>` : ''}`;
 };
 
 /* 13. 公告管理 */
@@ -1666,9 +1705,9 @@ const ACT = {
     if (S.db.airdrops.some(t => t.collection_id == c.id)) refs.push('定向发放');
     if (S.db.lotteries.some(l => (l.prizes || []).some(p => +p.collection_id === c.id) || ['hold', 'consume'].some(k => l.chance_rules?.[k]?.items?.some(it => +it.collection_id === c.id)))) refs.push('抽奖活动');
     if (S.db.syntheses.some(s => s.target_collection_id == c.id || (s.materials || []).some(m => m.collection_id == c.id))) refs.push('合成活动');
-    if (S.db.register.collection_id == c.id || S.db.register.pre_collection_id == c.id) refs.push('注册活动');
-    if (S.db.inviteRules.some(r => r.collection_id == c.id || r.pre_collection_id == c.id)) refs.push('邀请有礼');
-    if (S.db.checkin.daily?.collection_id == c.id || S.db.checkin.daily?.pre_collection_id == c.id || S.db.checkin.rules.some(r => r.collection_id == c.id || r.pre_collection_id == c.id)) refs.push('签到活动');
+    if (S.db.registerActs.some(a => a.collection_id == c.id || a.pre_collection_id == c.id)) refs.push('注册活动');
+    if (S.db.inviteActs.some(a => a.rules.some(r => r.collection_id == c.id || r.pre_collection_id == c.id))) refs.push('邀请有礼');
+    if (S.db.checkinActs.some(a => a.daily?.collection_id == c.id || a.daily?.pre_collection_id == c.id || a.rules.some(r => r.collection_id == c.id || r.pre_collection_id == c.id))) refs.push('签到活动');
     if (refs.length) return toast(`藏品「${c.name}」被 ${refs.join('、')} 引用，请先解除引用再删除`, 'err');
     confirmBox(`确认删除藏品「${c.name}」？将移入回收站，可在回收站恢复。`, 'col-del-ok', c.id);
   },
@@ -1869,11 +1908,15 @@ const ACT = {
   /* 活动中心 */
   'act-toggle'(el) {
     const [type, idStr] = String(el.dataset.arg).split(':');
-    let msg = '状态已更新';
-    if (type === 'invite') { const v = +(settingVal('invite_reward_enable', 1)) ? 0 : 1; settingSet('invite_reward_enable', v); msg = v ? '邀请有礼已开启' : '邀请有礼已关闭'; }
-    else if (type === 'checkin') { S.db.checkin.enabled = +!S.db.checkin.enabled; msg = S.db.checkin.enabled ? '签到活动已开启' : '签到活动已关闭'; }
-    else if (type === 'register') { S.db.register.enabled = +!S.db.register.enabled; msg = S.db.register.enabled ? '注册活动已开启' : '注册活动已关闭'; }
-    else { const a = S.db.lotteries.find(x => x.id == idStr); a.status = +!a.status; msg = a.status ? '活动已开启' : '活动已关闭'; }
+    if (UNIQ_ACT[type]) {
+      const msg = toggleUact(type, idStr);
+      if (msg.startsWith('开启失败')) return toast(msg, 'err');
+      const name = (el.closest && el.closest('tr')?.querySelector('.cell-main')?.innerText.trim()) || type;
+      toast(msg, 'ok'); renderPage(); logOp('活动中心', '切换开关', name, '');
+      return;
+    }
+    const a = S.db.lotteries.find(x => x.id == idStr); a.status = +!a.status;
+    const msg = a.status ? '活动已开启' : '活动已关闭';
     const name = (el.closest && el.closest('tr')?.querySelector('.cell-main')?.innerText.trim()) || type;
     toast(msg, 'ok');
     renderPage(); logOp('活动中心', '切换开关', name, '');
@@ -1881,6 +1924,7 @@ const ACT = {
   'act-reward'(el) {
     const [type, idStr] = String(el.dataset.arg).split(':');
     if (type === 'lottery') { openLotForm(S.db.lotteries.find(x => x.id == idStr)); return; }
+    if (UNIQ_ACT[type]) S.q[type].act = +idStr;  /* 跳转后直接定位到该场次配置 */
     go(type);
   },
 
@@ -2215,18 +2259,13 @@ const ACT = {
     closeModal(); toast('保存成功', 'ok'); renderPage(); logOp('合成活动', '保存活动', '活动#' + s.id, s.name);
   },
 
-  /* 邀请 */
+  /* 邀请（规则作用于当前选中场次） */
   'inv-add'() { openInvForm(null); },
-  'inv-edit'(el) { openInvForm(S.db.inviteRules.find(x => x.id == el.dataset.arg)); },
+  'inv-edit'(el) { openInvForm(selAct('invite').rules.find(x => x.id == el.dataset.arg)); },
   'inv-del'(el) { confirmBox('确认删除该奖励规则？', 'inv-del-ok', el.dataset.arg); },
-  'inv-sw-save'() {
-    const v = +$('#inv-enabled').value;
-    settingSet('invite_reward_enable', v);
-    toast(v ? '邀请有礼已开启，C 端即时生效' : '邀请有礼已关闭，C 端暂停发放', 'ok'); renderPage();
-    logOp('邀请有礼', v ? '开启活动' : '关闭活动', 'invite', '');
-  },
-  'inv-del-ok'(el) { S.db.inviteRules = S.db.inviteRules.filter(x => x.id != el.dataset.arg); closeModal(); toast('删除成功', 'ok'); renderPage(); },
+  'inv-del-ok'(el) { const a = selAct('invite'); a.rules = a.rules.filter(x => x.id != el.dataset.arg); closeModal(); toast('删除成功', 'ok'); renderPage(); },
   'inv-save'() {
+    const a = selAct('invite');
     const r = { id: $('#inv-id').value ? +$('#inv-id').value : 0, invite_num: +$('#inv-num').value || 0, reward_type: +$('#inv-type').value, collection_id: 0, pre_collection_id: 0, reward_num: 0, status: 1 };
     if (!r.invite_num) return toast('请输入邀请人数门槛', 'err');
     if (r.reward_type === 1) {
@@ -2241,8 +2280,49 @@ const ACT = {
       }
     }
     r.collection_name = COL_NAME(r.collection_id);
-    if (r.id) Object.assign(S.db.inviteRules.find(x => x.id === r.id), r); else S.db.inviteRules.push(r);
-    closeModal(); toast('保存成功', 'ok'); renderPage(); logOp('邀请有礼', '保存规则', '规则#' + (r.id || 'new'), '');
+    if (r.id) Object.assign(a.rules.find(x => x.id === r.id), r); else a.rules.push(r);
+    closeModal(); toast('保存成功', 'ok'); renderPage(); logOp('邀请活动', '保存规则', a.title, `邀 ${r.invite_num} 人`);
+  },
+
+  /* 多场次唯一活动：新建 / 编辑 / 开关 / 选中配置 / 删除 */
+  'uact-add'(el) { openUactForm(el.dataset.arg, null); },
+  'uact-edit'(el) { const [k, id] = String(el.dataset.arg).split(':'); openUactForm(k, S.db[UNIQ_ACT[k][0]].find(x => x.id === +id)); },
+  'uact-form-ok'(el) {
+    const k = el.dataset.arg, id = +el.dataset.id;
+    const [key, , label] = UNIQ_ACT[k];
+    const name = $('#ua-name').value.trim();
+    if (!name) return toast('请输入活动名称', 'err');
+    const s = $('#ua-s').value, e = $('#ua-e').value;
+    if (s && e && new Date(s) >= new Date(e)) return toast('结束时间必须晚于开始时间', 'err');
+    const data = { title: name, start_time: s ? new Date(s).getTime() / 1000 | 0 : 0, end_time: e ? new Date(e).getTime() / 1000 | 0 : 0 };
+    if (id) {
+      Object.assign(S.db[key].find(x => x.id === id), data);
+      closeModal(); toast('保存成功', 'ok'); renderPage(); logOp(label, '编辑活动', name, '');
+    } else {
+      const a = { id: Date.now() % 100000, status: 0, createtime: NOW, ...data };
+      if (k === 'checkin') { a.repair_limit = 3; a.daily = { type: 1, num: 1 }; a.rules = []; }
+      if (k === 'invite') a.rules = [];
+      if (k === 'register') { a.chance = 0; a.lot_activity_id = 0; a.collection_id = 0; a.pre_collection_id = 0; a.pre_num = 0; a.inviter = { type: 1, num: 1, collection_id: 0 }; }
+      S.db[key].push(a); S.q[k].act = a.id;
+      closeModal(); toast('活动已创建（默认关闭），请完成配置后开启', 'ok'); renderPage();
+      logOp(label, '新建活动', name, '');
+    }
+  },
+  'uact-toggle'(el) {
+    const [k, id] = String(el.dataset.arg).split(':');
+    const msg = toggleUact(k, id);
+    if (msg.startsWith('开启失败')) return toast(msg, 'err');
+    toast(msg, 'ok'); renderPage();
+    logOp(UNIQ_ACT[k][2], msg.includes('已开启') ? '开启活动' : '关闭活动', (S.db[UNIQ_ACT[k][0]].find(x => x.id === +id) || {}).title || '', '');
+  },
+  'uact-pick'(el) { const [k, id] = String(el.dataset.arg).split(':'); S.q[k].act = +id; renderPage(); },
+  'uact-del'(el) { const [k, id] = String(el.dataset.arg).split(':'); const a = S.db[UNIQ_ACT[k][0]].find(x => x.id === +id); confirmBox(`确认删除活动「${a.title}」？活动配置与该场记录将一并移入回收站，可恢复`, 'uact-del-ok', `${k}:${id}`); },
+  'uact-del-ok'(el) {
+    const [k, id] = String(el.dataset.arg).split(':');
+    softDel(UACT_DEL[k], [id]);
+    if (S.q[k].act === +id) S.q[k].act = 0;
+    closeModal(); toast('已移入回收站（恢复活动时该场记录自动关联回来）', 'ok'); renderPage();
+    logOp(UNIQ_ACT[k][2], '删除活动', '#' + id, '软删除');
   },
 
   /* 公告 */
@@ -2500,36 +2580,37 @@ const ACT = {
     logOp('数据清理', '清空', groups.join(','), '硬删除 · 备份 ' + bakNo);
   },
 
-  /* 签到活动 */
+  /* 签到活动（配置作用于当前选中场次） */
   'ck-save'() {
-    const c = S.db.checkin;
-    c.enabled = +$('#ck-enabled').value; c.repair_limit = +$('#ck-repair').value || 0;
+    const c = selAct('checkin');
+    c.repair_limit = +$('#ck-repair').value || 0;
     c.daily = rewardCfgRead('ck-daily');
     if (!rewardCfgCheck(c.daily)) return toast(c.daily.type === 3 ? '每日签到优先购奖励需选择目标藏品' : '每日签到藏品奖励需选择藏品', 'err');
-    toast('签到规则已保存，C 端即时生效', 'ok'); renderPage(); logOp('签到活动', '保存规则', 'checkin', `每日 ${rewardTxt(c.daily)}`);
+    toast('签到规则已保存，开启后 C 端即时生效', 'ok'); renderPage(); logOp('签到活动', '保存规则', c.title, `每日 ${rewardTxt(c.daily)}`);
   },
   'ck-search'() { S.q.checkin.keyword = $('#ck-kw').value; S.q.checkin.page = 1; renderPage(); },
-  'ck-reset'() { S.q.checkin = { keyword: '', page: 1 }; renderPage(); },
+  'ck-reset'() { Object.assign(S.q.checkin, { keyword: '', page: 1 }); renderPage(); },
   'ck-page'(el) { S.q.checkin.page = +el.dataset.arg; renderPage(); },
   'ck-rule-add'() { openCkRuleForm(null); },
-  'ck-rule-edit'(el) { openCkRuleForm(S.db.checkin.rules[+el.dataset.arg], +el.dataset.arg); },
+  'ck-rule-edit'(el) { openCkRuleForm(selAct('checkin').rules[+el.dataset.arg], +el.dataset.arg); },
   'ck-rule-del'(el) { confirmBox('确认删除该签到阶梯？', 'ck-rule-del-ok', el.dataset.arg); },
-  'ck-rule-del-ok'(el) { S.db.checkin.rules.splice(+el.dataset.arg, 1); closeModal(); toast('删除成功', 'ok'); renderPage(); },
+  'ck-rule-del-ok'(el) { selAct('checkin').rules.splice(+el.dataset.arg, 1); closeModal(); toast('删除成功', 'ok'); renderPage(); },
   'ck-rule-save'() {
+    const a = selAct('checkin');
     const idx = $('#ckr-idx').value;
     const rule = { day_num: +$('#ckr-day').value || 0, ...rewardCfgRead('ckr') };
     if (!rule.day_num) return toast('请输入连续天数', 'err');
     if (rule.num < 1) return toast('奖励数量不能小于 1', 'err');
     if (!rewardCfgCheck(rule)) return toast(rule.type === 3 ? '优先购奖励需选择目标藏品' : '藏品奖励需选择藏品', 'err');
-    if (idx === '') S.db.checkin.rules.push(rule); else S.db.checkin.rules[+idx] = rule;
-    S.db.checkin.rules.sort((a, b) => a.day_num - b.day_num);
-    closeModal(); toast('保存成功', 'ok'); renderPage(); logOp('签到活动', '阶梯配置', `连续${rule.day_num}天`, rewardTxt(rule));
+    if (idx === '') a.rules.push(rule); else a.rules[+idx] = rule;
+    a.rules.sort((x, y) => x.day_num - y.day_num);
+    closeModal(); toast('保存成功', 'ok'); renderPage(); logOp('签到活动', '阶梯配置', a.title, `连续${rule.day_num}天`);
   },
 
-  /* 注册活动 */
+  /* 注册活动（配置作用于当前选中场次） */
   'rg-save'() {
-    const c = S.db.register;
-    c.enabled = +$('#rg-enabled').value; c.chance = +$('#rg-score').value || 0;
+    const c = selAct('register');
+    c.chance = +$('#rg-score').value || 0;
     c.lot_activity_id = +$('#rg-lot').value || 0;
     c.collection_id = +$('#rg-col').value;
     c.pre_collection_id = +$('#rg-pre-col').value || 0;
@@ -2540,11 +2621,11 @@ const ACT = {
     if (c.pre_num > 0 && c.pre_collection_id && ![0, 1, 2].includes(S.db.collections.find(x => x.id === c.pre_collection_id).status)) return toast('该藏品已下架或售罄，不能再配置优先购资格', 'err');
     if (!rewardCfgCheck(c.inviter)) return toast('邀请人藏品奖励需选择藏品', 'err');
     const lotName = c.lot_activity_id ? (S.db.lotteries.find(l => l.id === c.lot_activity_id) || {}).title || '' : '通用';
-    toast('新人礼包配置已保存，新注册用户即时生效', 'ok'); renderPage();
-    logOp('注册活动', '保存配置', 'register', `${c.chance} 次抽奖（${lotName}）` + (c.pre_num ? ` + 优先购 ${c.pre_num} 次` : ''));
+    toast('新人礼包配置已保存，开启后新注册用户即时生效', 'ok'); renderPage();
+    logOp('注册活动', '保存配置', c.title, `${c.chance} 次抽奖（${lotName}）` + (c.pre_num ? ` + 优先购 ${c.pre_num} 次` : ''));
   },
   'rg-search'() { S.q.register.keyword = $('#rg-kw').value; S.q.register.status = +$('#rg-status').value; S.q.register.page = 1; renderPage(); },
-  'rg-reset'() { S.q.register = { keyword: '', status: -1, page: 1 }; renderPage(); },
+  'rg-reset'() { Object.assign(S.q.register, { keyword: '', status: -1, page: 1 }); renderPage(); },
   'rg-page'(el) { S.q.register.page = +el.dataset.arg; renderPage(); },
 
   /* 弹窗内部复用动作 */

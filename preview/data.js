@@ -266,12 +266,15 @@ function buildDB() {
       { id: 1, name: '飞天合体 · 九色鹿降临', target_collection_id: 6, target_name: '敦煌九色鹿', materials: [{ collection_id: 1, num: 2 }, { collection_id: 2, num: 2 }], limit_num: 3, done_num: 861, status: 1, start_time: NOW - 2 * 86400, end_time: NOW + 20 * 86400, createtime: NOW - 3 * 86400 },
     ],
     synthesisRecords: Array.from({ length: 6 }, (_, i) => ({ id: 950 + i, synthesis_id: 1, user_id: 10001 + i, user: mkUsers()[i].nickname, status: i % 4 === 3 ? 2 : 1, createtime: NOW - i * 7200 })),
-    inviteRules: [
-      { id: 1, invite_num: 3, reward_type: 2, collection_id: 0, reward_num: 3, status: 1, createtime: NOW - 40 * 86400 },
-      { id: 2, invite_num: 10, reward_type: 1, collection_id: 4, collection_name: '非遗剪纸 · 锦鲤', reward_num: 0, status: 1, createtime: NOW - 40 * 86400 },
-      { id: 3, invite_num: 30, reward_type: 3, collection_id: 0, pre_collection_id: 5, reward_num: 1, status: 0, createtime: NOW - 20 * 86400 },
+    /* 邀请活动（多场次）：每场独立规则与时间 */
+    inviteActs: [
+      { id: 1, title: '邀请有礼 · 常驻', status: 1, start_time: NOW - 40 * 86400, end_time: 0, createtime: NOW - 40 * 86400, rules: [
+        { id: 1, invite_num: 3, reward_type: 2, collection_id: 0, reward_num: 3, status: 1, createtime: NOW - 40 * 86400 },
+        { id: 2, invite_num: 10, reward_type: 1, collection_id: 4, collection_name: '非遗剪纸 · 锦鲤', reward_num: 0, status: 1, createtime: NOW - 40 * 86400 },
+        { id: 3, invite_num: 30, reward_type: 3, collection_id: 0, pre_collection_id: 5, reward_num: 1, status: 0, createtime: NOW - 20 * 86400 },
+      ] },
     ],
-    inviteRecords: Array.from({ length: 8 }, (_, i) => ({ id: 970 + i, inviter: mkUsers()[i].nickname, invitee: mkUsers()[(i + 5) % 12].nickname, reward_status: i % 3 === 0 ? 1 : 0, createtime: NOW - i * 6600 })),
+    inviteRecords: Array.from({ length: 8 }, (_, i) => ({ id: 970 + i, activity_id: 1, inviter: mkUsers()[i].nickname, invitee: mkUsers()[(i + 5) % 12].nickname, reward_status: i % 3 === 0 ? 1 : 0, createtime: NOW - i * 6600 })),
     notices: [
       { id: 1, title: '「敦煌飞天」系列 10 月 25 日 10:00 正式开售', category: 2, is_top: 1, status: 1, publish_time: NOW - 3 * 86400, createtime: NOW - 4 * 86400, content: '<p>本次发售共 10,000 份，每人限购 5 份…</p>' },
       { id: 2, title: '二级市场手续费临时下调至 3%', category: 3, is_top: 0, status: 1, publish_time: NOW - 6 * 86400, createtime: NOW - 6 * 86400, content: '<p>即日起至月底…</p>' },
@@ -372,26 +375,33 @@ function buildDB() {
         { name: 'register_pre_num', title: '新人优先购资格次数', value: '2' },
       ],
     },
-    checkin: {
-      enabled: 1, repair_limit: 3, daily: { type: 1, num: 1 },
-      rules: [
-        { day_num: 3, type: 1, num: 2, collection_id: 0 },
-        { day_num: 7, type: 2, num: 1, collection_id: 4 },
-        { day_num: 15, type: 3, num: 2, collection_id: 0, pre_collection_id: 5 },
-        { day_num: 30, type: 1, num: 10, collection_id: 0 },
-      ],
-    },
+    /* 签到活动（多场次）：每场独立每日奖励 / 阶梯 / 补签上限 */
+    checkinActs: [
+      { id: 1, title: '每日签到 · 常驻', status: 1, start_time: NOW - 40 * 86400, end_time: 0, createtime: NOW - 40 * 86400,
+        repair_limit: 3, daily: { type: 1, num: 1 },
+        rules: [
+          { day_num: 3, type: 1, num: 2, collection_id: 0 },
+          { day_num: 7, type: 2, num: 1, collection_id: 4 },
+          { day_num: 15, type: 3, num: 2, collection_id: 0, pre_collection_id: 5 },
+          { day_num: 30, type: 1, num: 10, collection_id: 0 },
+        ] },
+      // 第二场：未配置未开启，演示「空规则不可开启」校验
+      { id: 2, title: '春节签到季', status: 0, start_time: NOW + 30 * 86400, end_time: NOW + 60 * 86400, createtime: NOW - 86400,
+        repair_limit: 3, daily: { type: 1, num: 1 }, rules: [] },
+    ],
     checkinRecords: Array.from({ length: 10 }, (_, i) => ({
-      id: 1100 + i, user: mkUsers()[i % 12].nickname,
+      id: 1100 + i, activity_id: 1, user: mkUsers()[i % 12].nickname,
       date: new Date((NOW - i * 86400) * 1000).toISOString().slice(0, 10),
       continuous: 12 - i, reward: ['1 次抽奖', '非遗剪纸 · 锦鲤 ×1（连续 7 天阶梯）', '1 次抽奖', '1 次抽奖（补签）'][i % 4],
       status: 1, createtime: NOW - i * 86400 + 3600,
     })),
-    register: {
-      enabled: 1, chance: 1, lot_activity_id: 1, collection_id: 4, pre_collection_id: 5, pre_num: 2, inviter: { type: 1, num: 1, collection_id: 0 },
-    },
+    /* 注册活动（多场次）：每场独立礼包配置 */
+    registerActs: [
+      { id: 1, title: '新人注册礼 · 常驻', status: 1, start_time: NOW - 40 * 86400, end_time: 0, createtime: NOW - 40 * 86400,
+        chance: 1, lot_activity_id: 1, collection_id: 4, pre_collection_id: 5, pre_num: 2, inviter: { type: 1, num: 1, collection_id: 0 } },
+    ],
     registerLogs: Array.from({ length: 8 }, (_, i) => ({
-      id: 1200 + i, user: mkUsers()[(i + 3) % 12].nickname,
+      id: 1200 + i, activity_id: 1, user: mkUsers()[(i + 3) % 12].nickname,
       reward: '1 次抽奖 + 非遗剪纸 · 锦鲤 ×1 + 优先购 2 次',
       inviter: i % 3 === 0 ? mkUsers()[i].nickname : '',
       status: i === 0 ? 0 : 1, createtime: NOW - i * 43200,
