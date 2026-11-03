@@ -1015,12 +1015,25 @@ const UNIQ_ACT = { invite: ['inviteActs', '邀请有礼', '邀请活动'], check
 const actTimeTxt = a => `${a.start_time ? fmtT(a.start_time) : '—'} ~ ${a.end_time ? fmtT(a.end_time) : '长期'}`;
 const selAct = k => { const list = S.db[UNIQ_ACT[k][0]]; return list.find(x => x.id === S.q[k].act) || list[0]; };
 const UACT_DEL = { invite: 'invite_act', checkin: 'checkin_act', register: 'register_act' };
+/* 活动状态三态：人工开关 × 时间窗（借鉴司南：enabled 但未到开始不生效，过结束自动「已结束」） */
+const actState = a => {
+  if (!a.status) return ['已关闭', 'tag-gray'];
+  if (a.end_time && a.end_time < NOW) return ['已结束', 'tag-red'];
+  if (a.start_time && a.start_time > NOW) return ['未开始', 'tag-blue'];
+  return ['开启中', 'tag-green'];
+};
+/* switch 开关渲染器：开关滑块 + 状态标签；已结束的活动开关呈现关闭态（点击会被拦截并提示） */
+const actSwitch = (a, act, arg) => {
+  const [t, cls] = actState(a);
+  return `<span class="sw-row"><button class="sw${a.status && t !== '已结束' ? ' on' : ''}" data-act="${act}" data-arg="${arg}" title="${t}"></button><span class="tag ${cls}">${t}</span></span>`;
+};
 /* 开启校验：空配置的活动不允许开启 */
 function toggleUact(k, id) {
   const [key, , label] = UNIQ_ACT[k];
   const a = S.db[key].find(x => x.id === +id);
   if (!a) return '活动不存在';
   if (!a.status) {
+    if (a.end_time && a.end_time < NOW) return '开启失败：结束时间已过，请先在编辑中调整时间窗';
     if (k === 'invite' && !a.rules.some(r => r.status)) return '开启失败：请先添加并启用至少一条奖励规则';
     if (k === 'checkin' && !a.rules.length) return '开启失败：请先添加至少一档连续签到阶梯奖励';
     if (k === 'register' && !(a.chance > 0 || a.collection_id || a.pre_num > 0)) return '开启失败：请先配置新人礼包（抽奖次数 / 赠送藏品 / 优先购）';
@@ -1030,10 +1043,10 @@ function toggleUact(k, id) {
 }
 const activityRows = () => {
   const rows = [];
-  S.db.inviteActs.forEach(a => rows.push({ key: 'invite', id: a.id, name: a.title, on: a.status, time: actTimeTxt(a), reward: `${a.rules.filter(r => r.status).length} 档奖励规则`, page: 'invite' }));
-  S.db.checkinActs.forEach(a => rows.push({ key: 'checkin', id: a.id, name: a.title, on: a.status, time: actTimeTxt(a), reward: `每日 ${rewardTxt(a.daily)} · ${a.rules.length} 档阶梯`, page: 'checkin' }));
-  S.db.registerActs.forEach(a => rows.push({ key: 'register', id: a.id, name: a.title, on: a.status, time: actTimeTxt(a), reward: `${rewardTxt({ type: 1, num: a.chance })}${a.lot_activity_id ? ' · 绑定「' + ((S.db.lotteries.find(l => l.id === a.lot_activity_id) || {}).title || '') + '」' : ' · 通用'}${+a.collection_id ? ' + 新人藏品' : ''}${+a.pre_num ? ' + 优先购 ' + a.pre_num + ' 次' : ''}`, page: 'register' }));
-  S.db.lotteries.forEach(a => rows.push({ key: 'lottery', id: a.id, name: a.title, on: +a.status, time: `${fmtT(a.start_time)} ~ ${fmtT(a.end_time)}`, reward: `${(a.prizes || []).length} 种奖品 · ${chanceTagHtml(a.chance_rules)}`, page: 'lottery' }));
+  S.db.inviteActs.forEach(a => rows.push({ key: 'invite', id: a.id, a, name: a.title, time: actTimeTxt(a), reward: `${a.rules.filter(r => r.status).length} 档奖励规则`, page: 'invite' }));
+  S.db.checkinActs.forEach(a => rows.push({ key: 'checkin', id: a.id, a, name: a.title, time: actTimeTxt(a), reward: `每日 ${rewardTxt(a.daily)} · ${a.rules.length} 档阶梯`, page: 'checkin' }));
+  S.db.registerActs.forEach(a => rows.push({ key: 'register', id: a.id, a, name: a.title, time: actTimeTxt(a), reward: `${rewardTxt({ type: 1, num: a.chance })}${a.lot_activity_id ? ' · 绑定「' + ((S.db.lotteries.find(l => l.id === a.lot_activity_id) || {}).title || '') + '」' : ' · 通用'}${+a.collection_id ? ' + 新人藏品' : ''}${+a.pre_num ? ' + 优先购 ' + a.pre_num + ' 次' : ''}`, page: 'register' }));
+  S.db.lotteries.forEach(a => rows.push({ key: 'lottery', id: a.id, a, name: a.title, time: `${fmtT(a.start_time)} ~ ${fmtT(a.end_time)}`, reward: `${(a.prizes || []).length} 种奖品 · ${chanceTagHtml(a.chance_rules)}`, page: 'lottery' }));
   return rows;
 };
 /* 多场次唯一活动的共享 UI：活动列表表格 + 新建/编辑表单 */
@@ -1042,7 +1055,7 @@ const uniqActTable = (k, i) => {
   const rows = list.map(a => `<tr><td class="serif-num">${a.id}</td>
     <td class="cell-main">${esc(a.title)}${S.q[k].act === a.id ? '<span class="tag tag-blue" style="margin-left:4px">配置中</span>' : ''}</td>
     <td class="cell-sub">${actTimeTxt(a)}</td>
-    <td><button class="btn btn-sm ${a.status ? 'btn-primary' : 'btn-ghost'}" data-act="uact-toggle" data-arg="${k}:${a.id}">${a.status ? '开启中' : '已关闭'}</button></td>
+    <td>${actSwitch(a, 'uact-toggle', `${k}:${a.id}`)}</td>
     <td style="white-space:nowrap">${W(`<button class="btn btn-ghost btn-sm" data-act="uact-pick" data-arg="${k}:${a.id}">配置</button><button class="btn btn-ghost btn-sm" data-act="uact-edit" data-arg="${k}:${a.id}">编辑</button><button class="btn btn-danger btn-sm" data-act="uact-del" data-arg="${k}:${a.id}">删除</button>`)}</td></tr>`).join('');
   return `<div class="glass rise" style="--i:${i}"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>ID</th><th>活动名称</th><th>活动时间</th><th>开关</th><th style="width:210px">操作</th></tr></thead><tbody>${rows}</tbody></table></div><div class="card-pad"></div></div>`;
 };
@@ -1060,8 +1073,10 @@ function openUactForm(k, a) {
 }
 PAGES.activity = () => {
   const rows = activityRows();
-  const openN = rows.filter(r => r.on).length;
+  const openN = rows.filter(r => actState(r.a)[0] === '开启中').length;
   const stat = (t, n, sub) => `<div class="glass stat-card rise" style="--i:1"><div class="label">${t}</div><div class="num serif-num">${n}</div><div class="sub">${sub}</div></div>`;
+  const MODS = [['invite', '邀请'], ['checkin', '签到'], ['register', '注册'], ['lottery', '抽奖'], ['synthesis', '合成']];
+  const modBar = MODS.map(([k, n]) => `<span class="sw-row" style="padding:0 14px;border-right:1px solid rgba(126,139,155,.15)"><button class="sw ${+(settingVal('mod_' + k, 1)) ? 'on' : ''}" data-act="mod-toggle" data-arg="${k}" title="模块总开关"></button><span class="cell-main">${n}</span></span>`).join('');
   const trs = rows.map((r, i) => {
     const arg = r.id ? `${r.key}:${r.id}` : r.key;
     const [tName, tCls] = ACT_TYPE[r.key];
@@ -1070,13 +1085,14 @@ PAGES.activity = () => {
     <td class="cell-main">${esc(r.name)}${r.id ? ` <span class="cell-sub">#${r.id}</span>` : ''}</td>
     <td class="cell-sub">${r.time}</td>
     <td>${r.reward}</td>
-    <td><button class="btn btn-sm ${r.on ? 'btn-primary' : 'btn-ghost'}" data-act="act-toggle" data-arg="${arg}">${r.on ? '开启中' : '已关闭'}</button></td>
+    <td>${actSwitch(r.a, 'act-toggle', arg)}</td>
     <td style="white-space:nowrap">${W(`<button class="btn btn-ghost btn-sm" data-act="act-reward" data-arg="${arg}">${r.id ? '编辑' : '去配置'}</button>${r.id ? `<button class="btn btn-danger btn-sm" data-act="lot-del" data-arg="${r.id}">删除</button>` : ''}`)}</td></tr>`;
   }).join('');
   return `
   <div class="page-head rise" style="--i:0"><h2>活动中心</h2><span class="en">Activity Center</span></div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px">${stat('全部活动', rows.length, 'Total Activities')}${stat('进行中', openN, 'Active')}${stat('抽奖场次', S.db.lotteries.length, 'Lottery Rounds')}</div>
-  <div class="glass filter-bar rise" style="--i:2"><span class="cell-sub">本页为全局总览：邀请 / 签到 / 注册 / 抽奖均可创建多场次，新建与配置在各自活动页进行；空配置的活动不可开启。</span></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px">${stat('全部活动', rows.length, 'Total Activities')}${stat('开启中', openN, 'Active')}${stat('抽奖场次', S.db.lotteries.length, 'Lottery Rounds')}</div>
+  <div class="glass rise" style="--i:1"><div class="card-pad" style="display:flex;align-items:center;gap:6px;padding:12px 20px;flex-wrap:wrap"><span class="cell-sub" style="margin-right:6px">模块总开关（关闭后 C 端该模块整体隐藏，各场次配置保留）：</span>${modBar}</div></div>
+  <div class="glass filter-bar rise" style="--i:2"><span class="cell-sub">状态说明：开启中 = 开关开启且在时间窗内；未开始 = 开关开启但未到开始时间（C 端不展示）；已结束 = 过了结束时间自动判定，需调整时间窗才能重新开启。</span></div>
   <div class="glass rise" style="--i:3"><div class="tbl-wrap"><table class="tbl">
     <thead><tr><th>类型</th><th>活动名称</th><th>活动时间</th><th>奖励概览</th><th>开关</th><th style="width:200px">操作</th></tr></thead>
     <tbody>${trs}</tbody></table></div><div class="card-pad"></div></div>`;
@@ -1099,7 +1115,7 @@ PAGES.lottery = () => {
   const rows = S.db.lotteries.map(a => {
     const stock = a.prizes.reduce((s, p) => s + (p.type === 3 ? 0 : p.stock - p.sent), 0);
     return `<tr><td class="serif-num">${a.id}</td><td class="cell-main">${a.title}</td><td>${chanceTagHtml(a.chance_rules)}</td>
-    <td><span class="tag ${a.status ? 'tag-green' : 'tag-gray'}">${a.status ? '开启' : '关闭'}</span></td>
+    <td>${actSwitch(a, 'act-toggle', 'lottery:' + a.id)}</td>
     <td class="cell-sub">${fmtT(a.start_time)} ~ ${fmtT(a.end_time)}</td><td class="cell-sub">${stock.toLocaleString()} 份</td>
     <td style="white-space:nowrap">${W(`<button class="btn btn-ghost btn-sm" data-act="lot-prizes" data-arg="${a.id}">奖池配置</button>
     <button class="btn btn-ghost btn-sm" data-act="lot-edit" data-arg="${a.id}">编辑</button><button class="btn btn-danger btn-sm" data-act="lot-del" data-arg="${a.id}">删除</button>`)}
@@ -1121,7 +1137,7 @@ PAGES.synthesis = () => {
     <td class="serif-num">${s.id}</td><td class="cell-main">${s.name}</td><td>${s.target_name}</td>
     <td>${s.materials.map(m => `<span class="tag tag-blue">${COL_NAME(m.collection_id)} ×${m.num}</span>`).join(' ')}</td>
     <td class="serif-num">${s.limit_num}</td><td class="serif-num">${s.done_num}</td>
-    <td><span class="tag ${s.status ? 'tag-green' : 'tag-gray'}">${s.status ? '开启' : '关闭'}</span></td>
+    <td>${actSwitch(s, 'act-toggle', 'synthesis:' + s.id)}</td>
     <td class="cell-sub">${fmtT(s.start_time)} ~ ${fmtT(s.end_time)}</td>
     <td style="white-space:nowrap">${W(`<button class="btn btn-ghost btn-sm" data-act="syn-edit" data-arg="${s.id}">编辑</button><button class="btn btn-danger btn-sm" data-act="syn-del" data-arg="${s.id}">删除</button>`)}
     <button class="btn btn-ghost btn-sm" data-act="syn-records" data-arg="${s.id}">记录</button></td></tr>`).join('');
@@ -1915,11 +1931,21 @@ const ACT = {
       toast(msg, 'ok'); renderPage(); logOp('活动中心', '切换开关', name, '');
       return;
     }
-    const a = S.db.lotteries.find(x => x.id == idStr); a.status = +!a.status;
+    const a = (type === 'synthesis' ? S.db.syntheses : S.db.lotteries).find(x => x.id == idStr);
+    if (actState(a)[0] === '已结束') return toast('开启失败：活动已结束，请先在编辑中调整结束时间', 'err');
+    a.status = +!a.status;
     const msg = a.status ? '活动已开启' : '活动已关闭';
     const name = (el.closest && el.closest('tr')?.querySelector('.cell-main')?.innerText.trim()) || type;
     toast(msg, 'ok');
     renderPage(); logOp('活动中心', '切换开关', name, '');
+  },
+  'mod-toggle'(el) {
+    const labels = { invite: '邀请', checkin: '签到', register: '注册', lottery: '抽奖', synthesis: '合成' };
+    const k = el.dataset.arg;
+    const v = +(settingVal('mod_' + k, 1)) ? 0 : 1;
+    settingSet('mod_' + k, v);
+    toast(`${labels[k]}模块已${v ? '开启' : '关闭'}：关闭后 C 端该模块整体隐藏，各场次配置保留`, 'ok');
+    renderPage(); logOp('活动中心', '模块开关', labels[k] + '模块', v ? '开启' : '关闭');
   },
   'act-reward'(el) {
     const [type, idStr] = String(el.dataset.arg).split(':');

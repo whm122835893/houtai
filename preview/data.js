@@ -368,6 +368,12 @@ function buildDB() {
       activity: [
         { name: 'lottery_daily_times', title: '每日抽奖次数', value: '3' },
         { name: 'synthesis_daily_times', title: '每日合成次数', value: '5' },
+        /* 模块总开关（借鉴司南 feature-switches）：关闭后 C 端该模块整体隐藏，各场次配置保留 */
+        { name: 'mod_invite', title: '邀请模块总开关', value: '1' },
+        { name: 'mod_checkin', title: '签到模块总开关', value: '1' },
+        { name: 'mod_register', title: '注册模块总开关', value: '1' },
+        { name: 'mod_lottery', title: '抽奖模块总开关', value: '1' },
+        { name: 'mod_synthesis', title: '合成模块总开关', value: '1' },
       ],
       reward: [
         { name: 'invite_reward_enable', title: '邀请奖励开关', value: '1' },
