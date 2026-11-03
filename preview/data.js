@@ -144,6 +144,7 @@ function buildDB() {
     market: mkt.mo, marketBuys: mkt.buys,
     holds: mkHolds(users, collections),
     swaps: [],
+    trash: [],
     walletLogs: Array.from({ length: 10 }, (_, i) => ({
       id: 6000 + i, user_id: 10001,
       type: ['recharge', 'income', 'consume', 'expense', 'refund', 'admin_adjust', 'freeze'][i % 7],
@@ -216,11 +217,12 @@ function buildDB() {
     ],
     raffles: [
       // 报名中（藏品 #3 无优先购配置——优先购与抽签发售互斥，演示数据保持自洽）
-      { id: 1, collection_id: 3, total: 3000, per_limit: 1, apply_start: NOW - 2 * 86400, apply_end: NOW + 2 * 86400, buy_deadline: NOW + 6 * 86400, apply_count: 18652, win_count: 0, status: 1, whitelist: '13871000000,13871413739', createtime: NOW - 3 * 86400 },
-      // 已截止待抽签
-      { id: 2, collection_id: 4, total: 500, per_limit: 2, apply_start: NOW - 5 * 86400, apply_end: NOW - 3600, buy_deadline: NOW + 2 * 86400, apply_count: 9240, win_count: 0, status: 2, createtime: NOW - 6 * 86400 },
-      // 已抽签（购买期）
-      { id: 3, collection_id: 1, total: 100, per_limit: 1, apply_start: NOW - 10 * 86400, apply_end: NOW - 2 * 86400, buy_deadline: NOW + 3600 * 20, apply_count: 45321, win_count: 100, status: 3, createtime: NOW - 11 * 86400 },
+      // 码配置：8 位字母码 · 报名自动得 1 码 · 邀请每 3 人得 1 码上限 5 · 按人中签
+      { id: 1, collection_id: 3, total: 3000, per_limit: 1, apply_start: NOW - 2 * 86400, apply_end: NOW + 2 * 86400, buy_deadline: NOW + 6 * 86400, apply_count: 18652, win_count: 0, status: 1, whitelist: '13871000000,13871413739', createtime: NOW - 3 * 86400, base_mode: 1, code_fmt: 1, code_prefix: '', invite_on: 1, invite_per: 3, invite_cap: 5, invite_new: 1, draw_mode: 1, max_wins: 0 },
+      // 已截止待抽签（演示按签中签：10 位数字码 · 邀请每 2 人得 1 码上限 3 · 单人最多中 2 签）
+      { id: 2, collection_id: 4, total: 500, per_limit: 2, apply_start: NOW - 5 * 86400, apply_end: NOW - 3600, buy_deadline: NOW + 2 * 86400, apply_count: 9240, win_count: 0, status: 2, createtime: NOW - 6 * 86400, base_mode: 1, code_fmt: 2, code_prefix: '', invite_on: 1, invite_per: 2, invite_cap: 3, invite_new: 1, draw_mode: 2, max_wins: 2 },
+      // 已抽签（购买期）：前缀码 DH26-XXXXXXXX · 按签中签
+      { id: 3, collection_id: 1, total: 100, per_limit: 1, apply_start: NOW - 10 * 86400, apply_end: NOW - 2 * 86400, buy_deadline: NOW + 3600 * 20, apply_count: 45321, win_count: 100, status: 3, createtime: NOW - 11 * 86400, base_mode: 1, code_fmt: 3, code_prefix: 'DH26', invite_on: 0, invite_per: 3, invite_cap: 5, invite_new: 1, draw_mode: 2, max_wins: 2 },
     ],
     raffleApplys: (() => {
       const users = mkUsers();
@@ -230,6 +232,35 @@ function buildDB() {
           status: drawn ? (win ? 1 : 2) : 0, win_num: win ? [1, 2][i % 2] : 0, paid: win && i % 3 === 0 ? 1 : 0, createtime: NOW - i * 4200 };
       });
       return [...mk(1, 6, false, 0), ...mk(2, 6, false, 0), ...mk(3, 8, true, 0.375)];
+    })(),
+    /* 抽签码池（借鉴司南 DrawCodeService）：source join=报名 | invite=邀请 | manual=后台手动；status 0=有效 1=已中 2=作废 3=未中 */
+    raffleCodes: (() => {
+      const users = mkUsers();
+      const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      const core8 = seed => Array.from({ length: 8 }, (_, i) => ALPHA[(seed * 7 + i * 13 + 5) % 32]).join('');
+      const num10 = seed => String(1000000000 + (seed * 7919) % 8999999999);
+      const mkCode = (rid, uid, source, fmt, prefix, status, remark, inviteFrom) => ({
+        id: cid++, raffle_id: rid, user_id: uid, user: users[uid - 10001].nickname, source,
+        invite_from: inviteFrom || 0, status, code: fmt === 2 ? num10(cid) : (fmt === 3 ? prefix + '-' + core8(cid) : core8(cid)),
+        remark: remark || '', createtime: NOW - cid * 3600,
+      });
+      let cid = 1;
+      const codes = [];
+      // 活动1（报名中，8 位字母码，报名自动得码）：6 个报名码 + 邀请码 + 手动码 + 1 条作废
+      [0, 1, 2, 3, 4, 5].forEach(i => codes.push(mkCode(1, 10001 + (i * 3) % 12, 'join', 1, '', 0)));
+      codes.push(mkCode(1, 10001, 'invite', 1, '', 0, '邀请 3 位好友获得', 10004));
+      codes.push(mkCode(1, 10001, 'invite', 1, '', 0, '邀请 6 位好友获得', 10005));
+      codes.push(mkCode(1, 10004, 'invite', 1, '', 0, '邀请 3 位好友获得', 10006));
+      codes.push(mkCode(1, 10007, 'manual', 1, '', 0, '大客户补偿发码'));
+      codes.push(mkCode(1, 10008, 'manual', 1, '', 2, '误发，已作废'));
+      // 活动2（待抽签，10 位数字码，按签中签）：6 报名码 + 邀请码（一人 2 个邀请码可中多签）
+      [0, 1, 2, 3, 4, 5].forEach(i => codes.push(mkCode(2, 10001 + (i * 3) % 12, 'join', 2, '', 0)));
+      codes.push(mkCode(2, 10001, 'invite', 2, '', 0, '邀请 2 位好友获得', 10007));
+      codes.push(mkCode(2, 10001, 'invite', 2, '', 0, '邀请 4 位好友获得', 10008));
+      codes.push(mkCode(2, 10004, 'manual', 2, '', 0, '客服手工补发'));
+      // 活动3（已开奖，前缀码）：8 条全部结算——3 已中 / 5 未中
+      [0, 1, 2, 3, 4, 5, 6, 7].forEach(i => codes.push(mkCode(3, 10001 + (i * 3) % 12, 'join', 3, 'DH26', i < 3 ? 1 : 3)));
+      return codes;
     })(),
     syntheses: [
       { id: 1, name: '飞天合体 · 九色鹿降临', target_collection_id: 6, target_name: '敦煌九色鹿', materials: [{ collection_id: 1, num: 2 }, { collection_id: 2, num: 2 }], limit_num: 3, done_num: 861, status: 1, start_time: NOW - 2 * 86400, end_time: NOW + 20 * 86400, createtime: NOW - 3 * 86400 },

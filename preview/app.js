@@ -79,6 +79,7 @@ const NAV = [
     ['thirdparty', '第三方配置', '<path d="M5 12a7 7 0 0 1 14 0M2.5 8.5v7h4v-7zM17.5 8.5v7h4v-7z"/><path d="M19 15.5a4 4 0 0 1-4 4h-2"/>'],
     ['cleanup', '数据清理', '<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>'],
     ['operlog', '日志审计', '<path d="M12 2 4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5z"/>'],
+    ['trash', '回收站', '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>'],
   ] },
 ];
 
@@ -174,7 +175,7 @@ function renderShell() {
 function bindShell() {
   $('#tb-title').textContent = (NAV.flatMap(g => g.items).find(i => i[0] === S.page) || ['', ''])[1];
   $('#tb-en').textContent = (NAV.flatMap(g => g.items).find(i => i[0] === S.page) || ['', ''])[1];
-  $('#tb-en').textContent = { dashboard: 'Dashboard', user: 'Users', wallet: 'Wallet Logs', collection: 'Collections', category: 'Categories', order: 'Orders', market: 'Market', hold: 'Holdings', airdrop: 'Airdrop', activity: 'Activity Center', lottery: 'Lottery', synthesis: 'Synthesis', invite: 'Invite', checkin: 'Check-in', register: 'Register Gift', notice: 'Notices', banner: 'Banners', setting: 'Settings', cleanup: 'Cleanup', operlog: 'Audit Log' }[S.page] || '';
+  $('#tb-en').textContent = { dashboard: 'Dashboard', user: 'Users', wallet: 'Wallet Logs', collection: 'Collections', category: 'Categories', order: 'Orders', market: 'Market', hold: 'Holdings', airdrop: 'Airdrop', activity: 'Activity Center', lottery: 'Lottery', synthesis: 'Synthesis', invite: 'Invite', checkin: 'Check-in', register: 'Register Gift', notice: 'Notices', banner: 'Banners', setting: 'Settings', cleanup: 'Cleanup', operlog: 'Audit Log', trash: 'Recycle Bin', whitelist: 'Whitelist', roster: 'Roster', swap: 'Swap' }[S.page] || '';
 }
 function go(page) {
   S.page = page;
@@ -268,6 +269,7 @@ PAGES.user = () => {
     <select class="select" id="u-status"><option value="-1">全部状态</option><option value="1" ${q.status === 1 ? 'selected' : ''}>正常</option><option value="0" ${q.status === 0 ? 'selected' : ''}>已冻结</option></select>
     <button class="btn btn-primary" data-act="user-search">查询</button>
     <button class="btn btn-ghost" data-act="user-reset">重置</button><span style="flex:1"></span>
+    ${W('<button class="btn btn-ghost" data-act="user-export">导出</button>')}
     ${W(`<button class="btn btn-ghost" data-act="user-add">新增会员</button><button class="btn btn-danger btn-sm" data-act="user-batchdel">批量删除</button>`)}
   </div>
   <div class="glass rise" style="--i:2"><div class="tbl-wrap"><table class="tbl">
@@ -389,6 +391,7 @@ PAGES.whitelist = () => {
   <div class="glass filter-bar rise" style="--i:1"><span class="cell-sub">优先购资格名单库：每人<b>限购份数</b>控制可购数量，<b>有效期</b>到期后资格自动失效；藏品/抽签通过「从白名单库导入」生成<b>快照</b>，导入后库内变更不影响已导入的活动</span><span style="flex:1"></span>
     <input class="input" id="wl-kw" placeholder="搜索手机号/备注" style="width:170px" value="${esc(q.keyword)}">
     ${W('<button class="btn btn-ghost" data-act="wl-search">搜索</button>')}
+    ${W('<button class="btn btn-ghost" data-act="wl-export">导出</button>')}
     ${W('<button class="btn btn-ghost" data-act="wl-batch">批量导入</button>')}
     ${S.db.rosters.length ? W('<button class="btn btn-ghost" data-act="wl-from-ros">从名单导入</button>') : ''}
     ${W('<button class="btn btn-primary" data-act="wl-add">添加名单</button>')}</div>
@@ -407,12 +410,13 @@ PAGES.raffle = () => {
     <td class="cell-sub">${fmtT(r.apply_start)}<br>~ ${fmtT(r.apply_end)}</td>
     <td class="cell-sub">${fmtT(r.buy_deadline)}</td>
     <td style="white-space:nowrap">${ph === 2 ? W(`<button class="btn btn-primary btn-sm" data-act="raf-draw" data-arg="${r.id}">执行抽签</button>`) : ''}
+    <button class="btn btn-ghost btn-sm" data-act="raf-codes" data-arg="${r.id}">抽签码</button>
     <button class="btn btn-ghost btn-sm" data-act="raf-applys" data-arg="${r.id}">报名记录</button>
     ${W(r.status < 3 ? `<button class="btn btn-ghost btn-sm" data-act="raf-edit" data-arg="${r.id}">编辑</button><button class="btn btn-danger btn-sm" data-act="raf-del" data-arg="${r.id}">删除</button>` : '')}</td></tr>`;
   }).join('');
   return `
   <div class="page-head rise" style="--i:0"><h2>抽签发售</h2><span class="en">Raffle Sale</span></div>
-  <div class="glass rise" style="--i:1;margin-bottom:14px"><div class="card-pad" style="padding:14px 20px"><span class="cell-sub">报名期 → 截止后「执行抽签」→ 中签者获得购买资格（至购买截止）。中签名额 = 发售数量 ÷ 每人限购，报名不足名额时全部中签。</span></div></div>
+  <div class="glass rise" style="--i:1;margin-bottom:14px"><div class="card-pad" style="padding:14px 20px"><span class="cell-sub">报名期 → 截止后「执行抽签」→ 中签者获得购买资格（至购买截止）。中签名额 = 发售数量 ÷ 每人限购；抽签码是参与凭证（报名 / 邀请好友 / 后台发码入池），开奖从码池抽取，白名单用户必中。</span></div></div>
   <div class="glass filter-bar rise" style="--i:1"><span style="flex:1"></span>${W('<button class="btn btn-primary" data-act="raf-add">新建抽签</button>')}</div>
   <div class="glass rise" style="--i:2"><div class="tbl-wrap"><table class="tbl">
     <thead><tr><th>ID</th><th>发售藏品</th><th>发售量 / 限购</th><th>报名 / 中签</th><th>阶段</th><th>报名时间</th><th>购买截止</th><th style="width:260px">操作</th></tr></thead>
@@ -460,7 +464,7 @@ PAGES.order = () => {
     <input class="input" id="o-kw" placeholder="订单号 / 支付单号" value="${esc(q.keyword)}">
     <select class="select" id="o-type"><option value="0">全部类型</option><option value="1" ${q.type === 1 ? 'selected' : ''}>一级购</option><option value="2" ${q.type === 2 ? 'selected' : ''}>市场购</option></select>
     <select class="select" id="o-status"><option value="-1">全部状态</option><option value="0">待支付</option><option value="1">已支付</option><option value="2">已取消</option><option value="3">已退款</option></select>
-    <button class="btn btn-primary" data-act="order-search">查询</button><button class="btn btn-ghost" data-act="order-reset">重置</button>
+    <button class="btn btn-primary" data-act="order-search">查询</button><button class="btn btn-ghost" data-act="order-reset">重置</button>${W('<button class="btn btn-ghost" data-act="order-export">导出</button>')}
   </div>
   <div class="glass rise" style="--i:2"><div class="tbl-wrap"><table class="tbl">
     <thead><tr><th>订单号</th><th>买家</th><th>藏品</th><th>类型</th><th>金额</th><th>支付方式</th><th>状态</th><th>下单时间</th><th>操作</th></tr></thead>
@@ -517,7 +521,7 @@ PAGES.hold = () => {
     <input class="input" id="h-kw" placeholder="编号 / 持有人" value="${esc(q.keyword)}">
     <select class="select" id="h-col"><option value="0">全部藏品</option>${colOpts}</select>
     <select class="select" id="h-status"><option value="-1">全部状态</option><option value="0">持有</option><option value="1">寄售中</option><option value="2">已锁定</option><option value="3">已回收</option></select>
-    <button class="btn btn-primary" data-act="hold-search">查询</button><button class="btn btn-ghost" data-act="hold-reset">重置</button>
+    <button class="btn btn-primary" data-act="hold-search">查询</button><button class="btn btn-ghost" data-act="hold-reset">重置</button>${W('<button class="btn btn-ghost" data-act="hold-export">导出</button>')}
     <span style="flex:1"></span>
     ${W('<button class="btn btn-ghost" data-act="h-recycle-sn">按编号回收</button>')}
   </div>
@@ -597,6 +601,57 @@ function renderSnResult() {
 
 /* 8.9 置换管理（统一置换：回收源持仓 + 按比例空投新藏品，借鉴司南 SwapPlanService） */
 const SWAP_MAX_SRC = 5, SWAP_MAX_RATIO = 10;
+
+/* ============ 软删除 / 回收站 / 导出（借鉴司南：软删可恢复 + 明细可导出） ============ */
+const TRASH_META = {
+  user: ['users', '用户'], order: ['orders', '订单'], collection: ['collections', '藏品'],
+  raffle: ['raffles', '抽签活动'], airdrop: ['airdrops', '发放任务'], whitelist: ['whitelists', '白名单'],
+  roster: ['rosters', '名单'], notice: ['notices', '公告'], category: ['categories', '分类'], lottery: ['lotteries', '抽奖活动'],
+};
+function softDel(type, ids, extra) {
+  const [key, name] = TRASH_META[type];
+  ids.forEach(id => {
+    const idx = S.db[key].findIndex(x => x.id == id);
+    if (idx < 0) return;
+    S.db.trash.unshift({
+      id: Date.now() % 100000 + Math.floor(Math.random() * 9000), type, type_name: name, ref_id: S.db[key][idx].id,
+      name: S.db[key][idx].name || S.db[key][idx].title || S.db[key][idx].nickname || S.db[key][idx].mobile || ('#' + S.db[key][idx].id),
+      data: JSON.parse(JSON.stringify(S.db[key][idx])), extra: extra ? extra(id) : {}, admin: '系统管理员', deleted_at: NOW,
+    });
+    S.db[key].splice(idx, 1);
+  });
+}
+function trashRestore(id) {
+  const t = S.db.trash.find(x => x.id == id);
+  if (!t) return toast('记录不存在', 'err');
+  const [key] = TRASH_META[t.type];
+  if (S.db[key].some(x => x.id == t.ref_id)) return toast(`恢复失败：${t.type_name}列表已存在 ID ${t.ref_id}，请先处理冲突`, 'err');
+  S.db[key].push(t.data);
+  Object.entries(t.extra || {}).forEach(([k, arr]) => S.db[k].push(...arr));
+  S.db.trash = S.db.trash.filter(x => x.id != id);
+  toast(`「${t.name}」已恢复到${t.type_name}列表`, 'ok');
+  logOp('回收站', '恢复', `${t.type_name}「${t.name}」`, '');
+  renderPage();
+}
+function trashPurge(id) {
+  const t = S.db.trash.find(x => x.id == id);
+  if (!t) return;
+  S.db.trash = S.db.trash.filter(x => x.id != id);
+  toast(`「${t.name}」已彻底删除，不可恢复`, 'ok');
+  logOp('回收站', '彻底删除', `${t.type_name}「${t.name}」`, '');
+  renderPage();
+}
+function exportCsv(filename, headers, rows) {
+  if (!rows.length) return toast('当前没有可导出的数据', 'err');
+  const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const csv = '\ufeff' + [headers.map(q).join(',')].concat(rows.map(r => r.map(q).join(','))).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `${filename}_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  toast(`已导出 ${rows.length} 条记录`, 'ok');
+  logOp('数据导出', filename, `${rows.length} 条`, '');
+}
 PAGES.swap = () => {
   const rows = S.db.swaps.map(p => `<tr>
     <td class="cell-sub">${p.plan_no}</td>
@@ -1412,6 +1467,30 @@ PAGES.operlog = () => {
     <tbody>${rows}</tbody></table></div>${pager('ol-page', q.page, total)}</div>`;
 };
 
+/* 16.5 回收站（软删除统一恢复/彻底删除） */
+PAGES.trash = () => {
+  const q = S.q.trash || (S.q.trash = { keyword: '', type: '0' });
+  const list = S.db.trash.filter(t => (q.type === '0' || t.type === q.type) && (!q.keyword || t.name.toLowerCase().includes(q.keyword.toLowerCase())));
+  const rows = list.map(t => `<tr>
+    <td class="serif-num">${t.ref_id}</td>
+    <td><div class="cell-main">${esc(t.name)}</div><div class="cell-sub">${t.type_name}</div></td>
+    <td><span class="tag tag-gray">${t.type_name}</span></td>
+    <td class="cell-sub">${t.admin}</td>
+    <td class="cell-sub">${fmtT(t.deleted_at)}</td>
+    <td style="white-space:nowrap">${W(`<button class="btn btn-primary btn-sm" data-act="trash-restore" data-arg="${t.id}">恢复</button><button class="btn btn-danger btn-sm" data-act="trash-purge" data-arg="${t.id}">彻底删除</button>`)}</td></tr>`).join('');
+  const typeOpts = Object.entries(TRASH_META).map(([k, v]) => `<option value="${k}" ${q.type === k ? 'selected' : ''}>${v[1]}</option>`).join('');
+  return `
+  <div class="page-head rise" style="--i:0"><h2>回收站</h2><span class="en">Recycle Bin</span></div>
+  <div class="glass filter-bar rise" style="--i:1"><span class="cell-sub">所有删除均为<b>软删除</b>：先入回收站，可随时恢复；彻底删除后不可恢复。子数据（报名记录、名单明细等）随主体一并保存</span><span style="flex:1"></span>
+    <input class="input" id="tr-kw" placeholder="搜索名称" style="width:160px" value="${esc(q.keyword)}">
+    <select class="select" id="tr-type"><option value="0">全部类型</option>${typeOpts}</select>
+    ${W('<button class="btn btn-primary" data-act="tr-search">查询</button>')}
+    ${S.db.trash.length ? W('<button class="btn btn-danger" data-act="tr-clear">清空回收站</button>') : ''}</div>
+  <div class="glass rise" style="--i:2"><div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>原 ID</th><th>名称</th><th>类型</th><th>删除人</th><th>删除时间</th><th style="width:180px">操作</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>${S.db.trash.length ? '' : emptyBox('回收站是空的') }</div>`;
+};
+
 /* ---------- 弹窗与交互动作 ---------- */
 const ACT = {
   login() {
@@ -1515,14 +1594,14 @@ const ACT = {
     closeModal(); toast(`用户「${u.nickname}」密码已重置，请通知用户修改`, 'ok');
     S.db.operlogs.unshift({ id: 400, admin: '管理员', module: '用户管理', action: '重置密码', target: '用户#' + u.id, detail: `新密码 ${pwd.length} 位`, ip: '113.88.20.66', createtime: NOW });
   },
-  'user-del'(el) { const u = S.db.users.find(x => x.id == el.dataset.arg); confirmBox(`确认删除用户「${u.nickname}」？删除后不可恢复。`, 'user-del-ok', u.id); },
-  'user-del-ok'(el) { S.db.users = S.db.users.filter(x => x.id != el.dataset.arg); closeModal(); toast('删除成功', 'ok'); renderPage(); },
+  'user-del'(el) { const u = S.db.users.find(x => x.id == el.dataset.arg); confirmBox(`确认删除用户「${u.nickname}」？将移入回收站，可在回收站恢复。`, 'user-del-ok', u.id); },
+  'user-del-ok'(el) { softDel('user', [el.dataset.arg]); closeModal(); toast('已移入回收站', 'ok'); renderPage(); logOp('用户管理', '删除', '#' + el.dataset.arg, '软删除'); },
   'user-batchdel'() {
     const ids = [...document.querySelectorAll('.u-ck:checked')].map(c => +c.value);
     if (!ids.length) return toast('请先勾选要删除的用户', 'err');
-    confirmBox(`确认批量删除选中的 ${ids.length} 个用户？删除后不可恢复。`, 'user-batchdel-ok', ids.join(','));
+    confirmBox(`确认批量删除选中的 ${ids.length} 个用户？将移入回收站，可在回收站恢复。`, 'user-batchdel-ok', ids.join(','));
   },
-  'user-batchdel-ok'(el) { const ids = el.dataset.arg.split(',').map(Number); S.db.users = S.db.users.filter(u => !ids.includes(u.id)); closeModal(); toast(`已删除 ${ids.length} 个用户`, 'ok'); renderPage(); },
+  'user-batchdel-ok'(el) { const ids = el.dataset.arg.split(','); softDel('user', ids); closeModal(); toast(`已移入回收站 ${ids.length} 个用户`, 'ok'); renderPage(); logOp('用户管理', '批量删除', `${ids.length} 个用户`, '软删除'); },
 
   /* 钱包 */
   'wallet-search'() { S.q.wallet.keyword = $('#w-kw').value; S.q.wallet.page = 1; renderPage(); },
@@ -1591,9 +1670,9 @@ const ACT = {
     if (S.db.inviteRules.some(r => r.collection_id == c.id || r.pre_collection_id == c.id)) refs.push('邀请有礼');
     if (S.db.checkin.daily?.collection_id == c.id || S.db.checkin.daily?.pre_collection_id == c.id || S.db.checkin.rules.some(r => r.collection_id == c.id || r.pre_collection_id == c.id)) refs.push('签到活动');
     if (refs.length) return toast(`藏品「${c.name}」被 ${refs.join('、')} 引用，请先解除引用再删除`, 'err');
-    confirmBox(`确认删除藏品「${c.name}」？`, 'col-del-ok', c.id);
+    confirmBox(`确认删除藏品「${c.name}」？将移入回收站，可在回收站恢复。`, 'col-del-ok', c.id);
   },
-  'col-del-ok'(el) { S.db.collections = S.db.collections.filter(x => x.id != el.dataset.arg); closeModal(); toast('删除成功', 'ok'); renderPage(); },
+  'col-del-ok'(el) { softDel('collection', [el.dataset.arg]); closeModal(); toast('已移入回收站', 'ok'); renderPage(); logOp('藏品管理', '删除', '#' + el.dataset.arg, '软删除'); },
 
   /* 分类 */
   'cat-add'() { openCatForm(null); },
@@ -1604,7 +1683,7 @@ const ACT = {
     if (c.count > 0) return toast(`该分类下有 ${c.count} 个藏品，不能删除`, 'err');
     confirmBox(`确认删除分类「${c.name}」？`, 'cat-del-ok', c.id);
   },
-  'cat-del-ok'(el) { S.db.categories = S.db.categories.filter(x => x.id != el.dataset.arg); closeModal(); toast('删除成功', 'ok'); renderPage(); },
+  'cat-del-ok'(el) { softDel('category', [el.dataset.arg]); closeModal(); toast('已移入回收站', 'ok'); renderPage(); logOp('分类管理', '删除', '#' + el.dataset.arg, '软删除'); },
 
   /* 订单 */
   'order-search'() { S.q.order.keyword = $('#o-kw').value; S.q.order.type = +$('#o-type').value; S.q.order.status = +$('#o-status').value; S.q.order.page = 1; renderPage(); },
@@ -1785,7 +1864,7 @@ const ACT = {
     logOp('定向发放', '按用户回收', `任务#${t.id} ${t.name}`, `回收 ${n} 份`);
   },
   'air-del'(el) { const t = S.db.airdrops.find(x => x.id == el.dataset.arg); confirmBox(`确认删除任务「${t.name}」？`, 'air-del-ok', t.id); },
-  'air-del-ok'(el) { S.db.airdrops = S.db.airdrops.filter(x => x.id != el.dataset.arg); closeModal(); toast('删除成功', 'ok'); renderPage(); },
+  'air-del-ok'(el) { softDel('airdrop', [el.dataset.arg]); closeModal(); toast('已移入回收站（发放明细保留，恢复后自动关联）', 'ok'); renderPage(); logOp('定向发放', '删除任务', '#' + el.dataset.arg, '软删除'); },
 
   /* 活动中心 */
   'act-toggle'(el) {
@@ -1837,7 +1916,7 @@ const ACT = {
   'lot-add'() { openLotForm(null); },
   'lot-edit'(el) { openLotForm(S.db.lotteries.find(x => x.id == el.dataset.arg)); },
   'lot-del'(el) { const a = S.db.lotteries.find(x => x.id == el.dataset.arg); confirmBox(`确认删除活动「${a.title}」及奖池？`, 'lot-del-ok', a.id); },
-  'lot-del-ok'(el) { S.db.lotteries = S.db.lotteries.filter(x => x.id != el.dataset.arg); closeModal(); toast('删除成功', 'ok'); renderPage(); },
+  'lot-del-ok'(el) { softDel('lottery', [el.dataset.arg]); closeModal(); toast('已移入回收站', 'ok'); renderPage(); logOp('抽奖活动', '删除', '#' + el.dataset.arg, '软删除'); },
   'lot-prizes'(el) { openPrizeModal(S.db.lotteries.find(x => x.id == el.dataset.arg)); },
   'lot-records'(el) {
     const a = S.db.lotteries.find(x => x.id == el.dataset.arg);
@@ -1911,11 +1990,11 @@ const ACT = {
     toast(`名单「${w.mobile}」已${w.status ? '启用' : '停用'}（不影响已导入活动的快照）`, 'ok'); renderPage();
     logOp('白名单管理', w.status ? '启用' : '停用', w.mobile, '');
   },
-  'wl-del'(el) { confirmBox('确认删除该白名单记录？已导入活动的快照不受影响', 'wl-del-ok', el.dataset.arg); },
+  'wl-del'(el) { confirmBox('确认删除该白名单记录？将移入回收站，可在回收站恢复；已导入活动的快照不受影响', 'wl-del-ok', el.dataset.arg); },
   'wl-del-ok'(el) {
     const w = S.db.whitelists.find(x => x.id == el.dataset.arg);
-    S.db.whitelists = S.db.whitelists.filter(x => x.id != el.dataset.arg);
-    closeModal(); toast('删除成功', 'ok'); renderPage(); logOp('白名单管理', '删除', w.mobile, '');
+    softDel('whitelist', [el.dataset.arg]);
+    closeModal(); toast('已移入回收站', 'ok'); renderPage(); logOp('白名单管理', '删除', w.mobile, '软删除');
   },
   'wl-form-ok'() {
     const id = +$('#wlf-id').value;
@@ -1981,29 +2060,152 @@ const ACT = {
   'raf-add'() { openRafForm(null); },
   'raf-edit'(el) { openRafForm(S.db.raffles.find(x => x.id == el.dataset.arg)); },
   'raf-del'(el) { const r = S.db.raffles.find(x => x.id == el.dataset.arg); confirmBox(`确认删除抽签活动「${COL_NAME(r.collection_id)}」？报名记录将一并删除`, 'raf-del-ok', r.id); },
-  'raf-del-ok'(el) { S.db.raffles = S.db.raffles.filter(x => x.id != el.dataset.arg); S.db.raffleApplys = S.db.raffleApplys.filter(a => a.raffle_id != el.dataset.arg); closeModal(); toast('删除成功', 'ok'); renderPage(); },
+  'raf-del-ok'(el) { const rid = el.dataset.arg; const applies = S.db.raffleApplys.filter(a => a.raffle_id == rid); const codes = S.db.raffleCodes.filter(c => c.raffle_id == rid); S.db.raffleApplys = S.db.raffleApplys.filter(a => a.raffle_id != rid); S.db.raffleCodes = S.db.raffleCodes.filter(c => c.raffle_id != rid); softDel('raffle', [rid], () => ({ raffleApplys: applies, raffleCodes: codes })); closeModal(); toast(`已移入回收站（含报名 ${applies.length} 条、抽签码 ${codes.length} 个）`, 'ok'); renderPage(); logOp('抽签发售', '删除', '#' + rid, `软删除，含报名记录 ${applies.length} 条、抽签码 ${codes.length} 个`); },
   'raf-draw'(el) {
     const r = S.db.raffles.find(x => x.id == el.dataset.arg);
     const quota = rafQuota(r);
-    const wlCount = (r.whitelist || '').split(',').filter(Boolean).length;
-    confirmBox(`确认对「${COL_NAME(r.collection_id)}」执行抽签？共 ${r.apply_count.toLocaleString()} 人报名，中签名额 ${quota.toLocaleString()} 个${wlCount ? `，白名单必中 ${wlCount} 人（占用名额）` : ''}，结果不可撤销`, 'raf-draw-ok', r.id);
+    const phoneSet = new Set((r.whitelist || '').split(',').filter(Boolean));
+    const umobile = uid => (S.db.users.find(u => u.id === uid) || {}).mobile || '';
+    const wlCount = phoneSet.size ? S.db.raffleApplys.filter(a => a.raffle_id == r.id && phoneSet.has(umobile(a.user_id))).length : 0;
+    const codes = S.db.raffleCodes.filter(c => c.raffle_id == r.id && c.status === 0);
+    const invUsers = new Set(codes.filter(c => c.source === 'invite').map(c => c.user_id));
+    const detail = r.draw_mode === 2 ? `按签抽取，单人最多中 ${r.max_wins || '不限'} 签` : '按人抽取，每人最多中 1 签';
+    confirmBox(`确认对「${COL_NAME(r.collection_id)}」执行抽签？<br>报名 <b>${r.apply_count.toLocaleString()}</b> 人 · 有效码池 <b>${codes.length.toLocaleString()}</b> 个（邀请码 ${codes.filter(c => c.source === 'invite').length}）<br>中签名额 ${quota.toLocaleString()} 签${wlCount ? `，白名单必中 ${wlCount} 人（占用名额）` : ''}<br>抽取方式：${detail}。结果不可撤销`, 'raf-draw-ok', r.id);
   },
   'raf-draw-ok'(el) {
     const r = S.db.raffles.find(x => x.id == el.dataset.arg);
     const applies = S.db.raffleApplys.filter(a => a.raffle_id == r.id);
     const quota = rafQuota(r);
-    // 白名单必中签：按用户手机号匹配，占用中签名额；剩余名额随机
-    const phoneSet = new Set((r.whitelist || '').split(',').filter(Boolean));
     const umobile = uid => (S.db.users.find(u => u.id === uid) || {}).mobile || '';
+    const codes = S.db.raffleCodes.filter(c => c.raffle_id == r.id && c.status === 0);
+    // 白名单必中签：按用户手机号匹配，占用中签名额（每人 1 签，不依赖码）
+    const phoneSet = new Set((r.whitelist || '').split(',').filter(Boolean));
     const wlWins = phoneSet.size ? applies.filter(a => phoneSet.has(umobile(a.user_id))) : [];
     const rest = applies.filter(a => !wlWins.includes(a));
     const quotaLeft = Math.max(0, quota - wlWins.length);
-    const shuffled = [...rest].sort(() => Math.random() - 0.5);
-    const winIds = new Set([...wlWins, ...shuffled.slice(0, quotaLeft)].map(a => a.id));
-    applies.forEach(a => { a.status = winIds.has(a.id) ? 1 : 2; a.win_num = winIds.has(a.id) ? r.per_limit : 0; });
-    r.status = 3; r.win_count = winIds.size;
-    closeModal(); toast(`抽签完成：${applies.length} 人报名，${winIds.size} 人中签${wlWins.length ? `（含白名单必中 ${wlWins.length} 人）` : ''}`, 'ok'); renderPage();
-    logOp('抽签发售', '执行抽签', '活动#' + r.id, `报名 ${applies.length} 人，中签 ${winIds.size} 人${wlWins.length ? `（白名单必中 ${wlWins.length}）` : ''}`);
+    // 码池抽取：按签/按人两种口径（借鉴司南 drawWinCount + maxWinsPerUser）
+    const winByUser = {};   // user_id -> 中签签数
+    const winCodeIds = new Set();
+    if (r.draw_mode === 2) {
+      // 按签：每个有效码是一张抽签券，抽中该用户 +1 签；达单人上限后其剩余码退出
+      const capped = r.max_wins > 0 ? r.max_wins : Infinity;
+      const shuffled = [...codes].sort(() => Math.random() - 0.5);
+      for (const c of shuffled) {
+        if (Object.values(winByUser).reduce((s, n) => s + n, 0) >= quotaLeft) break;
+        const n = winByUser[c.user_id] || 0;
+        if (n >= capped) continue;
+        winByUser[c.user_id] = n + 1; winCodeIds.add(c.id);
+      }
+    } else {
+      // 按人：一人多码只加权重，抽中即占 1 签并退出候选
+      const pool = [];
+      codes.forEach(c => { pool.push(c.user_id); });  // 一码一权重
+      const shuffled = pool.sort(() => Math.random() - 0.5);
+      for (const uid of shuffled) {
+        if (Object.keys(winByUser).length >= quotaLeft) break;
+        if (winByUser[uid]) continue;
+        winByUser[uid] = 1;
+        codes.filter(c => c.user_id === uid).forEach(c => winCodeIds.add(c.id));
+      }
+    }
+    // 结算：中签码标记已中，未中码标记未中；报名记录按签数结算
+    codes.forEach(c => { if (c.status === 0) c.status = winCodeIds.has(c.id) ? 1 : 3; });
+    applies.forEach(a => {
+      const wins = winByUser[a.user_id] || 0;
+      a.status = wins ? 1 : 2;
+      a.win_num = wins ? wins * r.per_limit : 0;
+    });
+    // 后台发码/邀请码给未报名用户：中签后补建参与记录，避免中签结果丢失
+    Object.entries(winByUser).forEach(([uid, wins]) => {
+      if (applies.some(a => a.user_id == uid)) return;
+      const u = S.db.users.find(x => x.id == uid) || {};
+      S.db.raffleApplys.push({ id: Date.now() % 100000 + Math.floor(Math.random() * 9000), raffle_id: r.id, user_id: +uid, user: u.nickname || '用户#' + uid, status: 1, win_num: wins * r.per_limit, paid: 0, createtime: NOW });
+      logOp('抽签发售', '补建参与记录', '活动#' + r.id, `${u.nickname || '用户#' + uid} 持码中签 ${wins} 签（原无报名记录）`);
+    });
+    r.status = 3; r.win_count = Object.keys(winByUser).length + wlWins.length;
+    closeModal();
+    const totalWins = Object.values(winByUser).reduce((s, n) => s + n, 0);
+    toast(`抽签完成：${applies.length} 人报名，${r.win_count} 人中签共 ${totalWins + wlWins.length} 签${wlWins.length ? `（含白名单必中 ${wlWins.length}）` : ''}${quotaLeft > totalWins ? `，剩余 ${quotaLeft - totalWins} 签作废（码池不足）` : ''}`, 'ok'); renderPage();
+    logOp('抽签发售', '执行抽签', '活动#' + r.id, `报名 ${applies.length} 人，码池 ${codes.length}，中签 ${r.win_count} 人 ${totalWins + wlWins.length} 签（${r.draw_mode === 2 ? '按签' : '按人'}）${wlWins.length ? `，白名单必中 ${wlWins.length}` : ''}`);
+  },
+  'raf-codes'(el) {
+    const r = S.db.raffles.find(x => x.id == el.dataset.arg);
+    const list = S.db.raffleCodes.filter(c => c.raffle_id == r.id).sort((a, b) => b.id - a.id);
+    const srcTag = { join: ['报名', 'tag-blue'], invite: ['邀请', 'tag-orange'], manual: ['手动', 'tag-purple'] };
+    const stTag = { 0: ['有效', 'tag-green'], 1: ['已中', 'tag-blue'], 2: ['作废', 'tag-gray'], 3: ['未中', 'tag-gray'] };
+    const cnt = f => list.filter(f).length;
+    const invN = cnt(c => c.source === 'invite'), manN = cnt(c => c.source === 'manual');
+    openModal(`<div class="modal-head"><h3>抽签码 · ${COL_NAME(r.collection_id)}</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
+    <div class="modal-body">
+      <div style="display:flex;gap:18px;margin-bottom:10px;flex-wrap:wrap" class="cell-sub">
+        <span>总码数 <b class="serif-num">${list.length}</b></span><span>报名码 <b class="serif-num">${list.length - invN - manN}</b></span>
+        <span>邀请码 <b class="serif-num">${invN}</b></span><span>手动码 <b class="serif-num">${manN}</b></span>
+        <span>有效 <b class="serif-num">${cnt(c => c.status === 0)}</b></span><span>已中 <b class="serif-num">${cnt(c => c.status === 1)}</b></span>
+        <span>作废 <b class="serif-num">${cnt(c => c.status === 2)}</b></span>
+        <span style="color:var(--blue)">名额 ${rafQuota(r).toLocaleString()} 签 · ${r.draw_mode === 2 ? '按签抽取' : '按人抽取'}</span>
+      </div>
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>码</th><th>用户</th><th>来源</th><th>状态</th><th>备注 / 邀请人</th><th>发放时间</th><th style="width:90px">操作</th></tr></thead><tbody>
+      ${list.map(c => { const [st, sc] = stTag[c.status]; const [so, soc] = srcTag[c.source]; const inv = c.invite_from ? (S.db.users.find(u => u.id === c.invite_from) || {}).nickname || '#' + c.invite_from : ''; return `<tr>
+        <td class="cell-main serif-num">${c.code}</td><td>${c.user}</td>
+        <td><span class="tag ${soc}">${so}</span></td>
+        <td><span class="tag ${sc}">${st}</span></td>
+        <td class="cell-sub">${esc(c.remark || '-')}${inv ? `<br>邀请人：${esc(inv)}` : ''}</td>
+        <td class="cell-sub">${fmtT(c.createtime)}</td>
+        <td>${c.status === 0 ? W(`<button class="btn btn-danger btn-sm" data-act="raf-code-void" data-arg="${c.id}">作废</button>`) : '-'}</td></tr>`; }).join('')}
+      </tbody></table></div></div>
+    <div class="modal-foot"><button class="btn btn-ghost" data-act="raf-code-add" data-arg="${r.id}">手动发码</button><button class="btn btn-ghost" data-act="raf-codes-export" data-arg="${r.id}">导出</button><button class="btn btn-ghost" data-act="modal-close">关闭</button></div>`);
+  },
+  'raf-code-add'(el) {
+    const r = S.db.raffles.find(x => x.id == el.dataset.arg);
+    openModal(`<div class="modal-head"><h3>手动发码 · ${COL_NAME(r.collection_id)}</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
+    <div class="modal-body">
+      <div class="form-row"><label>用户手机号 *</label><input class="input" id="rc-mobile" placeholder="13800000000" maxlength="11"></div>
+      <div class="form-grid">
+      <div class="form-row"><label>数量（1-100）</label><input class="input" id="rc-count" type="number" min="1" max="100" value="1"></div>
+      <div class="form-row"><label>自定义码串（仅数量 1 时可填，可选）</label><input class="input" id="rc-custom" placeholder="如 VIP8888" maxlength="20"></div></div>
+      <div class="form-row"><label>备注</label><input class="input" id="rc-remark" placeholder="如：大客户补偿发码"></div>
+      <div class="form-row"><span class="cell-sub">按活动码格式生成；后台发码不受邀请上限限制；自定义码串与已有码重复时将拒绝保存。</span></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">取消</button><button class="btn btn-primary" data-act="raf-code-add-ok" data-arg="${r.id}">发码</button></div>`);
+  },
+  'raf-code-add-ok'(el) {
+    const r = S.db.raffles.find(x => x.id == el.dataset.arg);
+    const mobile = $('#rc-mobile').value.trim();
+    if (!/^1\d{10}$/.test(mobile)) return toast('请输入正确的 11 位手机号', 'err');
+    const u = S.db.users.find(x => x.mobile === mobile);
+    if (!u) return toast('该手机号未注册', 'err');
+    const count = Math.min(100, Math.max(1, +$('#rc-count').value || 1));
+    const custom = $('#rc-custom').value.trim().toUpperCase();
+    if (custom && count > 1) return toast('自定义码串时一次只能发 1 个', 'err');
+    if (custom && S.db.raffleCodes.some(c => c.code === custom)) return toast(`码串 ${custom} 已存在`, 'err');
+    const remark = $('#rc-remark').value.trim() || '后台手动发码';
+    const newCodes = Array.from({ length: count }, () => ({
+      id: Date.now() % 100000 + Math.floor(Math.random() * 9000) + S.db.raffleCodes.length,
+      raffle_id: r.id, user_id: u.id, user: u.nickname, source: 'manual', invite_from: 0, status: 0,
+      code: custom || genRaffleCode(r.code_fmt, r.code_prefix), remark, createtime: NOW,
+    }));
+    S.db.raffleCodes.push(...newCodes);
+    closeModal(); toast(`已为「${u.nickname}」发放 ${count} 个抽签码`, 'ok'); logOp('抽签发售', '手动发码', COL_NAME(r.collection_id), `${u.nickname} × ${count}`);
+    renderPage(); ACT['raf-codes']({ dataset: { arg: String(r.id) } });
+  },
+  'raf-code-void'(el) {
+    const c = S.db.raffleCodes.find(x => x.id == el.dataset.arg);
+    confirmBox(`确认作废抽签码 <b>${c.code}</b>（${c.user}）？作废后不可参与抽签，操作不可撤销`, 'raf-code-void-ok', c.id);
+  },
+  'raf-code-void-ok'(el) {
+    const c = S.db.raffleCodes.find(x => x.id == el.dataset.arg);
+    const rid = c.raffle_id;
+    c.status = 2; c.remark = (c.remark ? c.remark + '；' : '') + '后台作废';
+    closeModal(); toast(`码 ${c.code} 已作废`, 'ok'); logOp('抽签发售', '作废抽签码', '活动#' + rid, c.code);
+    renderPage(); ACT['raf-codes']({ dataset: { arg: String(rid) } });
+  },
+  'raf-codes-export'(el) {
+    const r = S.db.raffles.find(x => x.id == el.dataset.arg);
+    const srcCn = { join: '报名', invite: '邀请', manual: '手动' };
+    const stCn = { 0: '有效', 1: '已中', 2: '作废', 3: '未中' };
+    const list = S.db.raffleCodes.filter(c => c.raffle_id == r.id).sort((a, b) => b.id - a.id);
+    exportCsv(`抽签码_${COL_NAME(r.collection_id)}`, ['码', '用户', '来源', '状态', '邀请人', '备注', '发放时间'],
+      list.map(c => [c.code, c.user, srcCn[c.source], stCn[c.status], c.invite_from ? (S.db.users.find(u => u.id === c.invite_from) || {}).nickname || '#' + c.invite_from : '', c.remark, fmtT(c.createtime)]));
   },
   'raf-applys'(el) {
     const r = S.db.raffles.find(x => x.id == el.dataset.arg);
@@ -2011,12 +2213,15 @@ const ACT = {
     const stTag = s => [['待抽签', 'tag-gray'], ['已中签', 'tag-green'], ['未中签', 'tag-red']][s];
     const wlSet = new Set((r.whitelist || '').split(',').filter(Boolean));
     const umobile = uid => (S.db.users.find(u => u.id === uid) || {}).mobile || '';
+    const ucodes = uid => S.db.raffleCodes.filter(c => c.raffle_id == r.id && c.user_id === uid);
     openModal(`<div class="modal-head"><h3>报名记录 · ${COL_NAME(r.collection_id)}</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
-    <div class="modal-body"><table class="tbl"><thead><tr><th>ID</th><th>用户</th><th>抽签状态</th><th>可购数量</th><th>已购买</th><th>报名时间</th></tr></thead><tbody>
-    ${list.map(a => { const [t, cls] = a.status ? stTag(a.status) : stTag(0); return `<tr><td class="serif-num">${a.id}</td><td>${a.user}${wlSet.has(umobile(a.user_id)) ? '<span class="tag tag-orange" style="margin-left:4px">白名单</span>' : ''}</td>
-      <td><span class="tag ${cls}">${t}</span></td><td class="serif-num">${a.win_num || '-'}</td>
+    <div class="modal-body"><table class="tbl"><thead><tr><th>ID</th><th>用户</th><th>抽签状态</th><th>码数</th><th>可购数量</th><th>已购买</th><th>报名时间</th></tr></thead><tbody>
+    ${list.map(a => { const [t, cls] = a.status ? stTag(a.status) : stTag(0); const cs = ucodes(a.user_id); const invN = cs.filter(c => c.source === 'invite').length; return `<tr><td class="serif-num">${a.id}</td><td>${a.user}${wlSet.has(umobile(a.user_id)) ? '<span class="tag tag-orange" style="margin-left:4px">白名单</span>' : ''}</td>
+      <td><span class="tag ${cls}">${t}</span></td>
+      <td class="serif-num" title="${cs.map(c => c.code + '（' + ({ join: '报名', invite: '邀请', manual: '手动' })[c.source] + '）').join('、') || '无码'}">${cs.length || '-'}${invN ? `<span class="tag tag-orange" style="margin-left:4px">邀 ${invN}</span>` : ''}</td>
+      <td class="serif-num">${a.win_num || '-'}</td>
       <td><span class="tag ${a.paid ? 'tag-green' : 'tag-gray'}">${a.paid ? '已购' : '未购'}</span></td><td class="cell-sub">${fmtT(a.createtime)}</td></tr>`; }).join('')}
-    </tbody></table></div><div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">关闭</button></div>`);
+    </tbody></table></div><div class="modal-foot"><button class="btn btn-ghost" data-act="raf-applys-export" data-arg="${r.id}">导出报名记录</button><button class="btn btn-ghost" data-act="modal-close">关闭</button></div>`);
   },
 
   /* 合成 */
@@ -2073,7 +2278,7 @@ const ACT = {
   'not-add'() { openNotForm(null); },
   'not-edit'(el) { openNotForm(S.db.notices.find(x => x.id == el.dataset.arg)); },
   'not-del'(el) { confirmBox('确认删除该公告？', 'not-del-ok', el.dataset.arg); },
-  'not-del-ok'(el) { S.db.notices = S.db.notices.filter(x => x.id != el.dataset.arg); closeModal(); toast('删除成功', 'ok'); renderPage(); },
+  'not-del-ok'(el) { softDel('notice', [el.dataset.arg]); closeModal(); toast('已移入回收站', 'ok'); renderPage(); logOp('公告管理', '删除', '#' + el.dataset.arg, '软删除'); },
 
   /* 轮播 */
   'ban-add'() { openBanForm(null); },
@@ -2665,6 +2870,7 @@ function openAirDetail(tid) {
     ${items.length ? `<table class="tbl"><thead><tr><th></th><th>用户</th><th>份数</th><th>状态</th><th>发放时间</th><th>撤销时间</th></tr></thead><tbody>${rows}</tbody></table>` : '<div class="cell-sub" style="padding:20px 0;text-align:center">该任务暂无发放明细</div>'}
   </div>
   <div class="modal-foot"><span class="cell-sub" id="air-sel-tip">未勾选记录</span><span style="flex:1"></span>
+    <button class="btn btn-ghost" data-act="air-detail-export" data-arg="${t.id}">导出明细</button>
     <button class="btn btn-danger" data-act="air-revoke-sel" data-arg="${t.id}">撤销选中</button>
     <button class="btn btn-ghost" data-act="modal-close">关闭</button></div>`);
 }
@@ -2864,6 +3070,8 @@ function closeWlPicker() { document.querySelectorAll('.wl-pick-panel').forEach(p
 
 function openRafForm(r) {
   const colOpts = S.db.collections.map(c => `<option value="${c.id}" ${r?.collection_id === c.id ? 'selected' : ''}>${c.name}</option>`).join('');
+  const sel = (v, cur) => v === cur ? 'selected' : '';
+  const bm = r?.base_mode ?? 1, cf = r?.code_fmt ?? 1, iv = r?.invite_on ?? 0;
   openModal(`<div class="modal-head"><h3>${r ? '编辑抽签活动' : '新建抽签活动'}</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
   <div class="modal-body">
     <div class="form-row"><label>发售藏品 *</label><select class="select" id="raf-col"><option value="">请选择藏品</option>${colOpts}</select></div>
@@ -2875,6 +3083,21 @@ function openRafForm(r) {
     <div class="form-row"><label>中签购买截止时间 *</label><input class="input" id="raf-bd" type="datetime-local"></div>
     <div class="form-row"><label>白名单手机号（每行一个，白名单必中签，可选）${W('<button class="btn btn-ghost btn-sm" data-act="raf-wl-import" style="margin-left:8px">从白名单库导入</button>')}</label><textarea class="input" id="raf-wl" rows="3" placeholder="13800000001&#10;13800000002">${r?.whitelist ? esc(r.whitelist.split(',').join('\n')) : ''}</textarea>
       <span class="cell-sub" id="raf-wl-hint" style="color:var(--blue)"></span></div>
+    <div style="border-top:1px solid var(--line);margin:6px 0 12px;padding-top:12px"><b style="font-size:13px">抽签码</b><div class="cell-sub" style="margin-top:2px">码是参与抽签的凭证：报名/邀请/后台发码产生的码进入码池，开奖从码池抽取；白名单用户必中，不依赖码</div></div>
+    <div class="form-grid">
+    <div class="form-row"><label>发码模式</label><select class="select" id="raf-base"><option value="1" ${sel(1, bm)}>报名自动得 1 码</option><option value="2" ${sel(2, bm)}>凭码参与（报名不发码，未持有效码不能中签）</option></select></div>
+    <div class="form-row"><label>码格式</label><select class="select" id="raf-fmt"><option value="1" ${sel(1, cf)}>8 位字母码（如 R7K39QMD）</option><option value="2" ${sel(2, cf)}>10 位数字码（如 1008612345）</option><option value="3" ${sel(3, cf)}>前缀 + 8 位字母码（如 DH26-R7K39QMD）</option></select></div></div>
+    <div class="form-row" id="raf-prefix-row" style="display:${cf === 3 ? 'block' : 'none'}"><label>码前缀 *</label><input class="input" id="raf-prefix" value="${esc(r?.code_prefix || '')}" placeholder="如 DH26，限 2-6 位字母数字" maxlength="6"></div>
+    <div style="border-top:1px solid var(--line);margin:6px 0 12px;padding-top:12px"><b style="font-size:13px">邀请得码</b><div class="cell-sub" style="margin-top:2px">C 端用户邀请好友注册后得额外抽签码，多码提升中奖概率；后台手动发码不受上限限制</div></div>
+    <div class="form-grid">
+    <div class="form-row"><label>邀请得码</label><select class="select" id="raf-inv"><option value="0" ${sel(0, iv)}>关闭（纯报名制）</option><option value="1" ${sel(1, iv)}>开启</option></select></div>
+    <div class="form-row"><label>每 N 位有效好友得 1 码</label><input class="input" id="raf-inv-per" type="number" min="1" max="100" value="${r?.invite_per ?? 3}"></div></div>
+    <div class="form-grid">
+    <div class="form-row"><label>单人额外码上限（0 = 不限）</label><input class="input" id="raf-inv-cap" type="number" min="0" max="99" value="${r?.invite_cap ?? 5}"></div>
+    <div class="form-row"><label>好友须为新注册</label><select class="select" id="raf-inv-new"><option value="1" ${sel(1, r?.invite_new ?? 1)}>是（防小号刷码）</option><option value="0" ${sel(0, r?.invite_new ?? 1)}>否</option></select></div></div>
+    <div style="border-top:1px solid var(--line);margin:6px 0 12px;padding-top:12px"><b style="font-size:13px">开奖模式</b></div>
+    <div class="form-row"><label>中奖口径</label><select class="select" id="raf-mode"><option value="1" ${sel(1, r?.draw_mode ?? 1)}>按人中签（多码仅提升概率，每人最多中 1 签）</option><option value="2" ${sel(2, r?.draw_mode ?? 1)}>按签中签（一人可中多签）</option></select></div>
+    <div class="form-row" id="raf-maxwins-row" style="display:${(r?.draw_mode ?? 1) === 2 ? 'block' : 'none'}"><label>单人最大中签数（0 = 不限，仅按签模式生效）</label><input class="input" id="raf-maxwins" type="number" min="0" value="${r?.max_wins ?? 0}"></div>
     <div class="form-row"><span class="cell-sub">中签名额 = 发售数量 ÷ 每人限购（向下取整）；报名人数不足名额时全部中签；白名单用户（按手机号匹配）必中签，占用中签名额。</span></div>
   </div>
   <div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">取消</button><button class="btn btn-primary" data-act="raf-form-ok" data-arg="${r?.id || 0}">保存</button></div>`);
@@ -2883,6 +3106,9 @@ function openRafForm(r) {
     $('#raf-ae').value = toLocalInput(r.apply_end);
     $('#raf-bd').value = toLocalInput(r.buy_deadline);
   }
+  /* 码格式切换 → 前缀输入框显隐；开奖模式切换 → 单人上限显隐 */
+  $('#raf-fmt').addEventListener('change', () => { $('#raf-prefix-row').style.display = $('#raf-fmt').value === '3' ? 'block' : 'none'; });
+  $('#raf-mode').addEventListener('change', () => { $('#raf-maxwins-row').style.display = $('#raf-mode').value === '2' ? 'block' : 'none'; });
   /* 必中人数 ≤ 中签名额 实时校验提示（借鉴司南：必中人数不得超过抽签名额） */
   const updWlHint = () => {
     const hint = $('#raf-wl-hint');
@@ -2896,6 +3122,14 @@ function openRafForm(r) {
   $('#raf-wl').addEventListener('input', updWlHint);
   ['raf-total', 'raf-limit'].forEach(id2 => $(`#${id2}`).addEventListener('input', updWlHint));
   updWlHint();
+}
+/* 抽签码生成（借鉴司南 DrawCodeService）：字符集去掉易混淆的 0/O/1/I */
+const CODE_ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+function genRaffleCode(fmt, prefix) {
+  const core = () => Array.from({ length: 8 }, () => CODE_ALPHA[Math.floor(Math.random() * CODE_ALPHA.length)]).join('');
+  if (fmt === 2) return String(Math.floor(Math.random() * 9e9) + 1e9);
+  if (fmt === 3) return (prefix || 'CODE').toUpperCase() + '-' + core();
+  return core();
 }
 ACT['raf-form-ok'] = el => {
   const id = +el.dataset.arg;
@@ -2920,8 +3154,19 @@ ACT['raf-form-ok'] = el => {
   if (S.db.raffles.some(x => x.collection_id === cid && x.status < 3 && x.id !== id)) return toast('该藏品已存在进行中的抽签活动（一物一活动），请先处理已有活动', 'err');
   const col = S.db.collections.find(x => x.id === cid);
   if (col && col.pre_rule_type > 0) return toast(`藏品「${col.name}」已启用优先购，优先购与抽签发售互斥；如需抽签请先在藏品中关闭优先购`, 'err');
+  /* 抽签码配置 */
+  const baseMode = +$('#raf-base').value, codeFmt = +$('#raf-fmt').value;
+  let prefix = $('#raf-prefix').value.trim().toUpperCase();
+  if (codeFmt === 3) {
+    if (!/^[A-Z0-9]{2,6}$/.test(prefix)) return toast('码前缀需 2-6 位字母或数字', 'err');
+  } else prefix = '';
+  const invOn = +$('#raf-inv').value, invPer = Math.max(1, +$('#raf-inv-per').value || 3), invCap = Math.max(0, +$('#raf-inv-cap').value || 0);
+  /* 凭码参与模式：码池必须非空——需开启邀请得码，或已有后台发码 */
+  if (baseMode === 2 && !invOn && !S.db.raffleCodes.some(c => c.raffle_id == id && c.status === 0))
+    return toast('「凭码参与」模式要求码池非空：请开启邀请得码，或先保存（选报名自动得码）后在抽签码弹窗手动发码再改为凭码参与', 'err');
+  const drawMode = +$('#raf-mode').value, maxWins = Math.max(0, +$('#raf-maxwins').value || 0);
   const now = NOW, aS = new Date(as).getTime() / 1000 | 0, aE = new Date(ae).getTime() / 1000 | 0;
-  const data = { collection_id: cid, total, per_limit: +$('#raf-limit').value || 1, apply_start: aS, apply_end: aE, buy_deadline: new Date(bd).getTime() / 1000 | 0, status: now < aS ? 0 : (now <= aE ? 1 : 2), whitelist: whitelist.join(',') };
+  const data = { collection_id: cid, total, per_limit: perLimit, apply_start: aS, apply_end: aE, buy_deadline: new Date(bd).getTime() / 1000 | 0, status: now < aS ? 0 : (now <= aE ? 1 : 2), whitelist: whitelist.join(','), base_mode: baseMode, code_fmt: codeFmt, code_prefix: prefix, invite_on: invOn, invite_per: invPer, invite_cap: invCap, invite_new: +$('#raf-inv-new').value, draw_mode: drawMode, max_wins: drawMode === 2 ? maxWins : 0 };
   if (id) {
     const old = S.db.raffles.find(x => x.id === id);
     if (old.status >= 3) return toast('已抽签的活动不可修改', 'err');
@@ -3201,19 +3446,85 @@ ACT['ros-detail'] = el => {
   <table class="tbl"><thead><tr><th>用户 ID</th><th>昵称</th><th>手机号</th><th>命中原因</th></tr></thead><tbody>
   ${items.map(i => { const u = S.db.users.find(x => x.id === i.user_id) || {}; return `<tr><td class="serif-num">${i.user_id}</td><td class="cell-main">${u.nickname || '-'}</td><td class="serif-num">${i.mobile}</td><td class="cell-sub">${i.reason}</td></tr>`; }).join('')}
   </tbody></table></div>
-  <div class="modal-foot"><button class="btn btn-ghost" data-act="modal-close">关闭</button></div>`);
+  <div class="modal-foot"><button class="btn btn-ghost" data-act="ros-detail-export" data-arg="${r.id}">导出明细</button><button class="btn btn-ghost" data-act="modal-close">关闭</button></div>`);
 };
 ACT['ros-del'] = el => {
   const r = S.db.rosters.find(x => x.id == el.dataset.arg);
   confirmBox(`确认删除名单「${r.name}」？快照明细将一并删除`, 'ros-del-ok', r.id);
 };
 ACT['ros-del-ok'] = el => {
-  S.db.rosters = S.db.rosters.filter(x => x.id != el.dataset.arg);
+  const items = S.db.rosterItems.filter(i => i.roster_id == el.dataset.arg);
   S.db.rosterItems = S.db.rosterItems.filter(i => i.roster_id != el.dataset.arg);
-  closeModal(); toast('删除成功', 'ok'); renderPage(); logOp('名单管理', '删除名单', '#' + el.dataset.arg, '');
+  softDel('roster', [el.dataset.arg], () => ({ rosterItems: items }));
+  closeModal(); toast(`已移入回收站（含 ${items.length} 条明细）`, 'ok'); renderPage(); logOp('名单管理', '删除名单', '#' + el.dataset.arg, `软删除，含明细 ${items.length} 条`);
 };
 ACT['ol-search'] = () => { S.q.operlog.keyword = $('#ol-kw').value; S.q.operlog.page = 1; renderPage(); };
 ACT['ol-reset'] = () => { S.q.operlog = { keyword: '', page: 1 }; renderPage(); };
+/* 回收站 */
+ACT['tr-search'] = () => { S.q.trash.keyword = ($('#tr-kw').value || '').trim(); S.q.trash.type = $('#tr-type').value; renderPage(); };
+ACT['trash-restore'] = el => { trashRestore(el.dataset.arg); };
+ACT['trash-purge'] = el => {
+  const t = S.db.trash.find(x => x.id == el.dataset.arg);
+  confirmBox(`确认彻底删除「${esc(t.name)}」？<b>彻底删除后不可恢复</b>`, 'trash-purge-ok', el.dataset.arg);
+};
+ACT['trash-purge-ok'] = el => { closeModal(); trashPurge(el.dataset.arg); };
+ACT['tr-clear'] = () => { confirmBox(`确认清空回收站全部 <b>${S.db.trash.length}</b> 条记录？<b>彻底删除后不可恢复</b>`, 'tr-clear-ok'); };
+ACT['tr-clear-ok'] = () => {
+  const n = S.db.trash.length;
+  S.db.trash = [];
+  closeModal(); toast(`已清空回收站（${n} 条）`, 'ok');
+  logOp('回收站', '清空', `${n} 条`, '');
+  renderPage();
+};
+/* 数据导出 */
+ACT['user-export'] = () => {
+  const q = S.q.user;
+  const list = S.db.users.filter(u => (!q.keyword || (u.nickname + u.username + u.mobile).includes(q.keyword)) && (q.status < 0 || u.status === q.status));
+  exportCsv('用户列表', ['ID', '昵称', '账号', '手机号', '实名', '邀请码', '余额(元)', '冻结(元)', '持仓数', '订单数', '状态', '注册时间'],
+    list.map(u => [u.id, u.nickname, u.username, u.mobile, u.real_name || '未实名', u.invite_code, (u.balance / 100).toFixed(2), (u.frozen / 100).toFixed(2), u.hold_count, u.order_count, u.status ? '正常' : '已冻结', fmtT(u.createtime)]));
+};
+ACT['order-export'] = () => {
+  const q = S.q.order;
+  const list = S.db.orders.filter(o => (!q.keyword || o.order_no.includes(q.keyword) || o.pay_no.includes(q.keyword)) && (!q.type || o.type === q.type) && (q.status < 0 || o.status === q.status));
+  const stCn = { 0: '待支付', 1: '已支付', 2: '已取消', 3: '已退款' };
+  const payCn = { wechat: '微信支付', alipay: '支付宝', balance: '余额支付' };
+  const typeCn = { 1: '一级购', 2: '市场购' };
+  exportCsv('订单列表', ['订单号', '用户', '藏品', '类型', '数量', '金额(元)', '支付方式', '状态', '下单时间'],
+    list.map(o => [o.order_no, o.nickname, o.collection_name, typeCn[o.type] || o.type, o.num, (o.amount / 100).toFixed(2), payCn[o.pay_type] || o.pay_type, stCn[o.status] ?? o.status, fmtT(o.createtime)]));
+};
+ACT['hold-export'] = () => {
+  const q = S.q.hold;
+  const list = S.db.holds.filter(h => (!q.keyword || h.sn.toLowerCase().includes(q.keyword.toLowerCase()) || h.user.includes(q.keyword)) && (q.status < 0 || h.status === q.status));
+  const srcCn = ['一级购', '市场购', '定向发放', '抽奖', '合成', '邀请奖励', '置换'];
+  const stCn = ['持有', '寄售中', '已锁定', '已回收'];
+  exportCsv('持仓明细', ['编号', '所属藏品', '持有人', '来源', '状态', '回收原因', '铸造时间', '获得时间'],
+    list.map(h => [h.sn, h.collection_name, h.user, srcCn[h.source - 1] || '-', stCn[h.status] ?? h.status, (h.recycle_info || {}).reason || '', fmtT(h.mint_time), fmtT(h.createtime)]));
+};
+ACT['wl-export'] = () => {
+  const q = S.q.whitelist;
+  const list = S.db.whitelists.filter(w => !q.keyword || w.mobile.includes(q.keyword) || (w.remark || '').includes(q.keyword));
+  exportCsv('白名单明细', ['ID', '手机号', '适用藏品', '限购份数', '有效期', '状态', '备注', '添加时间'],
+    list.map(w => [w.id, w.mobile, w.collection_id === 0 ? '全部藏品' : COL_NAME(w.collection_id), w.max_qty || 1, w.expires ? fmtT(w.expires) : '长期有效', w.status ? '启用' : '停用', w.remark || '-', fmtT(w.createtime)]));
+};
+ACT['raf-applys-export'] = el => {
+  const r = S.db.raffles.find(x => x.id == el.dataset.arg);
+  const list = S.db.raffleApplys.filter(a => a.raffle_id == r.id);
+  const stCn = { 1: '已中签', 2: '未中签' };
+  exportCsv(`报名记录_藏品${r.collection_id}`, ['ID', '用户', '用户ID', '抽签状态', '可购数量', '是否已购', '报名时间'],
+    list.map(a => [a.id, a.user, a.user_id, stCn[a.status] || '待抽签', a.win_num || '-', a.paid ? '已购' : '未购', fmtT(a.createtime)]));
+};
+ACT['air-detail-export'] = el => {
+  const t = S.db.airdrops.find(x => x.id == el.dataset.arg);
+  const items = S.db.airdropItems.filter(i => i.task_id == el.dataset.arg);
+  exportCsv(`发放明细_${t.name}`, ['用户ID', '昵称', '手机号', '份数', '状态', '发放时间', '撤销时间'],
+    items.map(i => [i.user_id, i.nickname, i.mobile, i.num, i.status === 1 ? '已发放' : '已撤销', fmtT(i.grant_time), i.revoke_time ? fmtT(i.revoke_time) : '-']));
+};
+ACT['ros-detail-export'] = el => {
+  const r = S.db.rosters.find(x => x.id == el.dataset.arg);
+  const items = S.db.rosterItems.filter(i => i.roster_id == el.dataset.arg);
+  exportCsv(`名单明细_${r.name}`, ['用户ID', '昵称', '手机号', '命中原因'],
+    items.map(i => { const u = S.db.users.find(x => x.id === i.user_id) || {}; return [i.user_id, u.nickname || '-', i.mobile, i.reason]; }));
+};
 ACT['ol-page'] = el => { S.q.operlog.page = +el.dataset.arg; renderPage(); };
 ACT['not-reset'] = () => { S.q.notice = { keyword: '', status: -1 }; renderPage(); };
 
