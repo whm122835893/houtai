@@ -671,6 +671,8 @@ function trashRestore(id) {
   if (S.db[key].some(x => x.id == t.ref_id)) return toast(`恢复失败：${t.type_name}列表已存在 ID ${t.ref_id}，请先处理冲突`, 'err');
   S.db[key].push(t.data);
   Object.entries(t.extra || {}).forEach(([k, arr]) => S.db[k].push(...arr));
+  /* 盲盒空投任务恢复：净发放份额加回盲盒累计空投数 */
+  if (t.type === 'airdrop' && t.data && t.data.target_type === 'box') { const bx = S.db.blindboxes.find(x => x.id === t.data.box_id); if (bx) bx.airdropped = (bx.airdropped || 0) + (t.data.success_num - t.data.revoke_num); }
   S.db.trash = S.db.trash.filter(x => x.id != id);
   toast(`「${t.name}」已恢复到${t.type_name}列表`, 'ok');
   logOp('回收站', '恢复', `${t.type_name}「${t.name}」`, '');
@@ -808,6 +810,8 @@ function openSwapDetail(p) {
 /* 空投规则字典 + 规则摘要（列表页与发放确认页共用） */
 const AIR_RULES = { 1: ['指定用户', 'tag-blue'], 2: ['全部用户', 'tag-green'], 3: ['按邀请数', 'tag-orange'], 4: ['持有藏品', 'tag-orange'], 5: ['持仓门槛', 'tag-blue'], 6: ['白名单', 'tag-green'], 7: ['按消费', 'tag-blue'], 8: ['老用户', 'tag-gray'], 9: ['随机抽样', 'tag-orange'], 10: ['按标签', 'tag-green'], 11: ['邀请排行', 'tag-orange'], 13: ['按名单', 'tag-green'] };
 const AIR_DUP = { 1: '跳过（已拥有计跳过）', 2: '换发抽奖次数', 3: '强制叠加' };
+/* 空投对象名称：藏品任务取 collection_name，盲盒任务取 box_name（tag 区分） */
+const AIR_TARGET = t => t.target_type === 'box' ? `盲盒 · ${t.box_name || ''}` : (t.collection_name || COL_NAME(t.collection_id));
 const airBrief = t => {
   const v = t.rule_value || '';
   if (t.rule_type === 13) { const r = S.db.rosters.find(x => x.id === +v); return r ? `${r.name}（${r.user_count} 人）` : '名单已删除'; }
@@ -833,13 +837,15 @@ function openAirConfirm(tid) {
   if (!t) return;
   const est = airEstimate(t);
   const estText = est === null ? '<b>以实际执行为准</b>（条件型规则，执行时按条件实时圈人）' : `<b>${est.toLocaleString()}</b> 人`;
-  const warn = t.claim_mode === 1
+  const warn = t.target_type === 'box'
+    ? '本任务发放的是<b>盲盒开盒资格</b>：用户到账后可开启该盲盒（按盲盒奖池概率产出藏品）；如投错，可整批撤销或按用户回收资格，盲盒剩余可投量即时回补。'
+    : t.claim_mode === 1
     ? '本任务为<b>需领取</b>模式：用户领取后才真正到账，投错时可先作废任务，未领取份额不会进入用户账户。'
     : '本任务为<b>直接到账</b>模式：确认后立即进入用户账户；如投错，可在「明细」中按用户回收或整批撤销（已转赠/寄售的部分不可回收）。';
   openModal(`
   <div class="modal-head"><h3>发放确认 · ${esc(t.name)}</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
   <div class="modal-body">
-    <div class="form-row"><label>发放藏品</label><div>${esc(t.collection_name)} · <b class="serif-num">${t.num.toLocaleString()}</b> 份</div></div>
+    <div class="form-row"><label>发放对象</label><div>${t.target_type === 'box' ? '<span class="tag tag-purple" style="margin-right:4px">盲盒</span>' : ''}${esc(AIR_TARGET(t))} · <b class="serif-num">${t.num.toLocaleString()}</b> 份</div></div>
     <div class="form-row"><label>目标规则</label><div>${airBrief(t) || '-'}</div></div>
     <div class="form-row"><label>预计命中</label><div>${estText}${est !== null && est !== t.num ? ` <span class="cell-sub">（计划 ${t.num.toLocaleString()} 份，实际以执行结果为准）</span>` : ''}</div></div>
     <div class="form-row"><label>到账方式</label><div>${t.claim_mode === 1 ? '需领取' : '直接到账'} · 重复拥有：${AIR_DUP[t.dup_policy] || '-'}</div></div>
@@ -854,7 +860,7 @@ PAGES.airdrop = () => {
     const remain = t.success_num - t.revoke_num;
     return `<tr>
     <td><div class="cell-main">${t.name}</div><div class="cell-sub">任务#${t.id}${t.reason ? ' · 凭证：' + t.reason : ''}</div></td>
-    <td>${t.collection_name}</td><td class="serif-num">${t.num.toLocaleString()} 份</td>
+    <td>${t.target_type === 'box' ? '<span class="tag tag-purple" style="margin-right:4px">盲盒</span>' : ''}${AIR_TARGET(t)}</td><td class="serif-num">${t.num.toLocaleString()} 份</td>
     <td><span class="tag ${rc}">${rt}</span><div class="cell-sub">${airBrief(t)}</div></td>
     <td><span class="tag ${t.claim_mode === 1 ? 'tag-orange' : 'tag-green'}">${t.claim_mode === 1 ? '需领取' : '直接到账'}</span></td>
     <td><span class="serif-num amount-in">${t.success_num}</span>${t.fail_num ? ` <span class="serif-num amount-out">+${t.fail_num}跳过</span>` : ''}${t.revoke_num ? ` <span class="serif-num amount-out">−${t.revoke_num}撤销</span>` : ''}<span class="cell-sub"> / ${t.num}</span></td>
@@ -1383,7 +1389,7 @@ PAGES.blindbox = () => {
     <td><div class="cell-main">${b.name}</div><div class="cell-sub">#${b.id}</div></td>
     <td class="serif-num">${fmtY(b.price)}</td>
     <td class="serif-num">${b.total_supply.toLocaleString()}</td>
-    <td class="serif-num">${b.sold_count.toLocaleString()}</td>
+    <td class="serif-num">${b.sold_count.toLocaleString()}<div class="cell-sub">已空投 ${(b.airdropped || 0).toLocaleString()}</div></td>
     <td>${b.prizes.length ? b.prizes.map(p => `<span class="tag tag-blue" style="margin:2px">${p.name} ${bbProbTxt(p.probability)}</span>`).join('') : '<span class="tag tag-orange">奖池未配置</span>'}</td>
     <td><span class="tag ${b.status ? 'tag-green' : 'tag-gray'}">${b.status ? '在售' : '停售'}</span></td>
     <td style="white-space:nowrap">${W(`<button class="btn btn-ghost btn-sm" data-act="bb-edit" data-arg="${b.id}">配置</button>
@@ -1921,27 +1927,41 @@ const ACT = {
     if (!t) return;
     closeModal();
     const first = t.status === 0;
-    t.status = 1; renderPage(); toast(`任务「${t.name}」开始发放…`, 'ok');
+    /* 补发差额：撤销过的份额真正重发——重置撤销计数并激活已撤销明细（藏品回池份额重新占池 / 盲盒资格重新占量） */
+    const resend = !first && t.revoke_num > 0;
+    const resendN = resend ? t.revoke_num : 0;
+    if (resend) {
+      S.db.airdropItems.forEach(i => { if (i.task_id == t.id && i.status === 0) { i.status = 1; i.revoke_time = 0; i.grant_time = NOW; } });
+      t.revoke_num = 0;
+    }
+    t.status = 1; renderPage(); toast(`任务「${t.name}」开始${resend ? '补发' : '发放'}…`, 'ok');
     setTimeout(() => {
       const oldSuccess = t.success_num;
-      const fail = first ? Math.floor(t.num * 0.02) : Math.min(t.fail_num, 5);
-      t.success_num = t.num - fail; t.fail_num = fail; t.status = 2; renderPage();
-      airGenItems(t, t.success_num - oldSuccess);
-      toast(`发放完成：入仓 ${t.success_num}，跳过 ${t.fail_num}；可在「明细」中查看记录`, 'ok');
-      logOp('定向发放', '执行发放', '任务#' + t.id, `${t.num} 份${t.plan_time ? '（提前执行）' : ''}`);
+      if (resend) { /* success_num 不变（明细重新激活而非新增） */ }
+      else { const fail = first ? Math.floor(t.num * 0.02) : Math.min(t.fail_num, 5); t.success_num = t.num - fail; t.fail_num = fail; }
+      t.status = 2; renderPage();
+      const delta = t.success_num - oldSuccess;
+      if (t.target_type === 'box') { const bx = S.db.blindboxes.find(x => x.id === t.box_id); if (bx) bx.airdropped = (bx.airdropped || 0) + delta + resendN; }
+      if (delta > 0) airGenItems(t, delta);
+      toast(`${resend ? '补发' : '发放'}完成：入仓 ${t.success_num}，跳过 ${t.fail_num}；可在「明细」中查看记录`, 'ok');
+      logOp('定向发放', resend ? '补发差额' : '执行发放', '任务#' + t.id, `${t.target_type === 'box' ? '盲盒「' + t.box_name + '」' : AIR_TARGET(t)}${t.num} 份${t.plan_time ? '（提前执行）' : ''}`);
     }, 1400);
   },
   'air-revoke'(el) {
     const t = S.db.airdrops.find(x => x.id == el.dataset.arg);
-    confirmBox(`确认撤销任务「${t.name}」的发放批次？仍处于持有状态的持仓将被回收（已寄售/锁定的不可回收），撤销后可补发`, 'air-revoke-ok', t.id);
+    const tip = t.target_type === 'box'
+      ? `确认撤销任务「${t.name}」的发放批次？用户的开盒资格将被回收，盲盒剩余可投量即时回补，撤销后可补发`
+      : `确认撤销任务「${t.name}」的发放批次？仍处于持有状态的持仓将被回收（已寄售/锁定的不可回收），撤销后可补发`;
+    confirmBox(tip, 'air-revoke-ok', t.id);
   },
   'air-revoke-ok'(el) {
     const t = S.db.airdrops.find(x => x.id == el.dataset.arg);
     const revoked = t.success_num - t.revoke_num;
     S.db.airdropItems.forEach(i => { if (i.task_id == t.id && i.status === 1) { i.status = 0; i.revoke_time = NOW; } });
     t.revoke_num = t.success_num;
-    closeModal(); toast(`撤销完成：回收 ${revoked} 份，可点「补发差额」重新发放`, 'ok'); renderPage();
-    logOp('定向发放', '撤销批次', '任务#' + t.id, `回收 ${revoked} 份`);
+    if (t.target_type === 'box') { const bx = S.db.blindboxes.find(x => x.id === t.box_id); if (bx) bx.airdropped = Math.max(0, (bx.airdropped || 0) - revoked); }
+    closeModal(); toast(`撤销完成：回收 ${revoked} 份${t.target_type === 'box' ? '，盲盒可投量已回补' : '，可点「补发差额」重新发放'}`, 'ok'); renderPage();
+    logOp('定向发放', '撤销批次', '任务#' + t.id, `回收 ${revoked} 份${t.target_type === 'box' ? '（盲盒资格）' : ''}`);
   },
   'air-detail'(el) { openAirDetail(+el.dataset.arg); },
   'air-it-ck'(el) {
@@ -1963,12 +1983,21 @@ const ACT = {
     let n = 0;
     S.db.airdropItems.forEach(i => { if (i.task_id == t.id && ids.has(i.id) && i.status === 1) { i.status = 0; i.revoke_time = NOW; n++; } });
     t.revoke_num += n;
+    if (t.target_type === 'box') { const bx = S.db.blindboxes.find(x => x.id === t.box_id); if (bx) bx.airdropped = Math.max(0, (bx.airdropped || 0) - n); }
     closeModal(); renderPage();
-    toast(`已按用户回收 ${n} 份，库存已回池`, 'ok');
-    logOp('定向发放', '按用户回收', `任务#${t.id} ${t.name}`, `回收 ${n} 份`);
+    toast(`已按用户回收 ${n} 份${t.target_type === 'box' ? '，盲盒可投量已回补' : '，库存已回池'}`, 'ok');
+    logOp('定向发放', '按用户回收', `任务#${t.id} ${t.name}`, `回收 ${n} 份${t.target_type === 'box' ? '（盲盒资格）' : ''}`);
   },
   'air-del'(el) { const t = S.db.airdrops.find(x => x.id == el.dataset.arg); confirmBox(`确认删除任务「${t.name}」？`, 'air-del-ok', t.id); },
-  'air-del-ok'(el) { softDel('airdrop', [el.dataset.arg]); closeModal(); toast('已移入回收站（发放明细保留，恢复后自动关联）', 'ok'); renderPage(); logOp('定向发放', '删除任务', '#' + el.dataset.arg, '软删除'); },
+  'air-del-ok'(el) {
+    const t = S.db.airdrops.find(x => x.id == el.dataset.arg);
+    /* 盲盒任务软删：净发放份额从盲盒累计空投数中扣回，账目还原（恢复时再加回） */
+    if (t && t.target_type === 'box') { const bx = S.db.blindboxes.find(x => x.id === t.box_id); if (bx) bx.airdropped = Math.max(0, (bx.airdropped || 0) - (t.success_num - t.revoke_num)); }
+    const items = S.db.airdropItems.filter(i => i.task_id == el.dataset.arg);
+    S.db.airdropItems = S.db.airdropItems.filter(i => i.task_id != el.dataset.arg);
+    softDel('airdrop', [el.dataset.arg], () => ({ airdropItems: items }));
+    closeModal(); toast('已移入回收站（发放明细保留，恢复后自动关联）', 'ok'); renderPage(); logOp('定向发放', '删除任务', '#' + el.dataset.arg, '软删除');
+  },
 
   /* 活动中心 */
   'act-toggle'(el) {
@@ -3003,7 +3032,7 @@ function openAirDetail(tid) {
   openModal(`
   <div class="modal-head"><h3>发放明细 · ${esc(t.name)}</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
   <div class="modal-body" style="max-height:58vh;overflow:auto">
-    <div class="cell-sub" style="margin-bottom:10px">计划 <b>${t.num.toLocaleString()}</b> 份 · 已发放 ${t.success_num - t.revoke_num} · 撤销 ${t.revoke_num} · 跳过 ${t.fail_num}；勾选记录可<b>按用户回收</b>（回收后库存回池）${t.num > items.length ? '，下表为明细样本' : ''}</div>
+    <div class="cell-sub" style="margin-bottom:10px">计划 <b>${t.num.toLocaleString()}</b> 份 · 已发放 ${t.success_num - t.revoke_num} · 撤销 ${t.revoke_num} · 跳过 ${t.fail_num}；勾选记录可<b>按用户回收</b>（${t.target_type === 'box' ? '回收开盒资格，盲盒可投量回补' : '回收后库存回池'}）${t.num > items.length ? '，下表为明细样本' : ''}</div>
     ${items.length ? `<table class="tbl"><thead><tr><th></th><th>用户</th><th>份数</th><th>状态</th><th>发放时间</th><th>撤销时间</th></tr></thead><tbody>${rows}</tbody></table>` : '<div class="cell-sub" style="padding:20px 0;text-align:center">该任务暂无发放明细</div>'}
   </div>
   <div class="modal-foot"><span class="cell-sub" id="air-sel-tip">未勾选记录</span><span style="flex:1"></span>
@@ -3020,19 +3049,23 @@ function airGenItems(t, count) {
   }
 }
 function openAirForm() {
-  const colOpts = S.db.collections.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  const colOpts = '<optgroup label="藏品">' + S.db.collections.map(c => `<option value="c${c.id}">${c.name}</option>`).join('') + '</optgroup>'
+    + '<optgroup label="盲盒（发放开盒资格）">' + S.db.blindboxes.map(b => {
+      const left = Math.max(0, b.total_supply - b.sold_count - (b.airdropped || 0));
+      return `<option value="b${b.id}" ${b.status !== 1 ? 'data-off="1"' : ''}>${b.name}（剩 ${left.toLocaleString()} 可投${b.status !== 1 ? ' · 停售中' : ''}）</option>`;
+    }).join('') + '</optgroup>';
   const RULE_OPTS = { 1: '指定用户（输入用户 ID）', 2: '全部用户', 3: '按邀请数（邀请 ≥ N 人）', 4: '持有指定藏品（凭证空投，持有 N 份投 N 份）', 5: '持仓门槛（持仓 ≥ N 份）', 6: '白名单导入（用户 ID / 手机号）', 7: '按消费金额（累计消费 ≥ N 元）', 8: '按注册时间（某日期前注册）', 9: '随机抽样（全体用户随机抽）', 10: '按用户标签（含指定标签）', 11: '邀请排行（邀请数 Top N）', 13: '按名单（选择名单管理中已生成的快照名单）' };
   const ruleOpts = Object.entries(RULE_OPTS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
   openModal(`<div class="modal-head"><h3>创建空投任务</h3><span class="close" data-act="modal-close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
   <div class="modal-body">
     <div class="form-row"><label>任务名称 *</label><input class="input" id="air-name" placeholder="如：九色鹿持有者空投"></div>
     <div class="form-grid">
-      <div class="form-row"><label>发放藏品 *</label><select class="select" id="air-col">${colOpts}</select></div>
+      <div class="form-row"><label>发放对象 *</label><select class="select" id="air-col">${colOpts}</select><span class="cell-sub">选盲盒 = 发放开盒资格（用户到账后按奖池概率开盒）；选藏品 = 直接发放藏品</span></div>
       <div class="form-row"><label>发放份数 *</label><input class="input" id="air-num" type="number" placeholder="1000"></div>
     </div>
     <div class="form-row"><label>目标规则 *</label><select class="select" id="air-rule">${ruleOpts}</select></div>
     <div class="form-row" id="air-val-row"><label>用户 ID / 白名单（每行一个，支持手机号）*</label><textarea class="input" id="air-val" rows="5" placeholder="每行一个，如：&#10;10001&#10;10002&#10;13800138000"></textarea></div>
-    <div class="form-row" id="air-col-row" style="display:none"><label>凭证藏品 *（持有即可空投，持有 N 份投 N 份）</label><select class="select" id="air-val-col">${colOpts}</select></div>
+    <div class="form-row" id="air-col-row" style="display:none"><label>凭证藏品 *（持有即可空投，持有 N 份投 N 份）</label><select class="select" id="air-val-col">${S.db.collections.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
     <div class="form-row" id="air-num-row" style="display:none"><label class="air-num-label">门槛数量 *</label><input class="input" id="air-val-num" type="number" min="0"></div>
     <div class="form-row" id="air-date-row" style="display:none"><label>注册早于日期 *</label><input class="input" id="air-val-date" type="date"></div>
     <div class="form-row" id="air-tag-row" style="display:none"><label>标签名 *（用户管理中维护）</label><input class="input" id="air-val-tag" placeholder="如：vip"></div>
@@ -3078,16 +3111,26 @@ ACT['air-form-ok'] = () => {
   else if (ruleType === 13) ruleValue = $('#air-ros').value;
   if ([1, 3, 4, 5, 6, 7, 8, 10, 11, 13].includes(ruleType) && !ruleValue) return toast('请填写规则参数', 'err');
   if (ruleType === 13 && !S.db.rosters.some(r => r.id === +ruleValue)) return toast('名单不存在或已被删除', 'err');
-  // 库存池硬约束：发放份数不得超过该藏品库存池
-  const airCol = S.db.collections.find(x => x.id === +$('#air-col').value);
-  if (airCol) {
+  // 发放对象解析：c{id}=藏品 / b{id}=盲盒；盲盒走剩余可投校验（≠藏品库存池）
+  const tv = String($('#air-col').value);
+  const isBox = tv.startsWith('b');
+  let box = null, airCol = null;
+  if (isBox) {
+    box = S.db.blindboxes.find(x => x.id === +tv.slice(1));
+    if (!box) return toast('盲盒不存在或已被删除', 'err');
+    if (box.status !== 1) return toast(`盲盒「${box.name}」未上架，请先在盲盒管理中开启再空投`, 'err');
+    const left = box.total_supply - box.sold_count - (box.airdropped || 0);
+    if (num > left) return toast(`盲盒剩余可投不足：「${box.name}」仅剩 ${Math.max(0, left).toLocaleString()} 份（总量 ${box.total_supply.toLocaleString()} − 已售 ${box.sold_count.toLocaleString()} − 已空投 ${(box.airdropped || 0).toLocaleString()}）`, 'err');
+  } else {
+    airCol = S.db.collections.find(x => x.id === +tv.slice(1));
+    if (!airCol) return toast('请选择发放藏品', 'err');
     const pool = POOL(airCol);
     if (num > pool.remain) return toast(`库存池不足：${airCol.name} 库存池仅剩 ${pool.remain.toLocaleString()} 份（发行量 ${airCol.stock.toLocaleString()} − 已售 ${pool.sold.toLocaleString()} − 空投 ${pool.airdropped.toLocaleString()} − 盲盒 ${pool.bbin.toLocaleString()}）`, 'err');
   }
   const dup = +$('#air-dup').value;
   const reward = +$('#air-reward').value || 0;
   if (dup === 2 && !reward) return toast('换发抽奖次数策略需填写换发次数', 'err');
-  S.db.airdrops.unshift({ id: Date.now() % 10000, name, collection_id: +$('#air-col').value, collection_name: COL_NAME(+$('#air-col').value), num, rule_type: ruleType, rule_value: ruleValue, success_num: 0, fail_num: 0, revoke_num: 0, claim_mode: +$('#air-claim').value, dup_policy: dup, dup_reward: reward, plan_time: $('#air-plan').value ? new Date($('#air-plan').value).getTime() / 1000 : null, reason: $('#air-reason').value.trim(), claim_pending: 0, status: 0, createtime: NOW });
+  S.db.airdrops.unshift({ id: Date.now() % 10000, name, target_type: isBox ? 'box' : 'col', collection_id: isBox ? 0 : airCol.id, collection_name: isBox ? '' : COL_NAME(airCol.id), box_id: isBox ? box.id : 0, box_name: isBox ? box.name : '', num, rule_type: ruleType, rule_value: ruleValue, success_num: 0, fail_num: 0, revoke_num: 0, claim_mode: +$('#air-claim').value, dup_policy: dup, dup_reward: reward, plan_time: $('#air-plan').value ? new Date($('#air-plan').value).getTime() / 1000 : null, reason: $('#air-reason').value.trim(), claim_pending: 0, status: 0, createtime: NOW });
   closeModal(); toast('任务已创建，可点击「执行发放」或等待定时执行', 'ok'); renderPage(); logOp('定向发放', '创建任务', name, num + ' 份');
 };
 
@@ -3654,8 +3697,8 @@ ACT['raf-applys-export'] = el => {
 ACT['air-detail-export'] = el => {
   const t = S.db.airdrops.find(x => x.id == el.dataset.arg);
   const items = S.db.airdropItems.filter(i => i.task_id == el.dataset.arg);
-  exportCsv(`发放明细_${t.name}`, ['用户ID', '昵称', '手机号', '份数', '状态', '发放时间', '撤销时间'],
-    items.map(i => [i.user_id, i.nickname, i.mobile, i.num, i.status === 1 ? '已发放' : '已撤销', fmtT(i.grant_time), i.revoke_time ? fmtT(i.revoke_time) : '-']));
+  exportCsv(`发放明细_${t.name}`, ['用户ID', '昵称', '手机号', '对象', '份数', '状态', '发放时间', '撤销时间'],
+    items.map(i => [i.user_id, i.nickname, i.mobile, AIR_TARGET(t), i.num, i.status === 1 ? '已发放' : '已撤销', fmtT(i.grant_time), i.revoke_time ? fmtT(i.revoke_time) : '-']));
 };
 ACT['ros-detail-export'] = el => {
   const r = S.db.rosters.find(x => x.id == el.dataset.arg);

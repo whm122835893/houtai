@@ -174,7 +174,7 @@ function buildDB() {
     ],
     lotteryRecords: Array.from({ length: 8 }, (_, i) => ({ id: 900 + i, activity_id: 1, user_id: 10001 + i, user: mkUsers()[i].nickname, prize_name: ['再抽 1 次', '谢谢参与', '锦鲤剪纸', '谢谢参与', '再抽 1 次', '谢谢参与', '再抽 1 次', '敦煌九色鹿'][i], createtime: NOW - i * 5400 })),
     blindboxes: [
-      { id: 1, name: '国风幸运福袋', price: 6900, total_supply: 10000, sold_count: 3210, status: 1, createtime: NOW - 12 * 86400,
+      { id: 1, name: '国风幸运福袋', price: 6900, total_supply: 10000, sold_count: 3210, airdropped: 120, status: 1, createtime: NOW - 12 * 86400,
         prizes: [
           { collection_id: 5, name: '千里江山 · 数字卷', probability: 40, quantity: 60, sent: 19 },
           { collection_id: 3, name: '山海经 · 白泽', probability: 25, quantity: 800, sent: 262 },
@@ -184,8 +184,8 @@ function buildDB() {
           { collection_id: 1, name: '敦煌飞天 · 壹', probability: 3, quantity: 60, sent: 18 },
           { collection_id: 2, name: '敦煌飞天 · 贰', probability: 2, quantity: 40, sent: 11 },
         ] },
-      { id: 2, name: '元旦新岁盒', price: 19900, total_supply: 5000, sold_count: 0, status: 0, createtime: NOW - 2 * 86400, prizes: [] },
-      { id: 3, name: '城市记忆 · 快闪盒', price: 3900, total_supply: 2000, sold_count: 1866, status: 1, createtime: NOW - 20 * 86400,
+      { id: 2, name: '元旦新岁盒', price: 19900, total_supply: 5000, sold_count: 0, airdropped: 0, status: 0, createtime: NOW - 2 * 86400, prizes: [] },
+      { id: 3, name: '城市记忆 · 快闪盒', price: 3900, total_supply: 2000, sold_count: 1866, airdropped: 80, status: 1, createtime: NOW - 20 * 86400,
         prizes: [
           { collection_id: 8, name: '城市记忆 · 老街', probability: 70, quantity: 1400, sent: 1306 },
           { collection_id: 4, name: '非遗剪纸 · 锦鲤', probability: 30, quantity: 600, sent: 560 },
