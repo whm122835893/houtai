@@ -120,12 +120,20 @@ function pagerHtml(page, total, limit, act) {
 const pager = (act, page, total, limit = 10) => pagerHtml(page, total, limit, act);
 const emptyBox = (t = '暂无数据') => `<div class="empty"><span class="glyph"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="9" cy="10" r="5.2"/><circle cx="16.8" cy="15.8" r="3.4"/><circle cx="6.8" cy="6.4" r="1.2" fill="currentColor" stroke="none"/></svg></span>${t}</div>`;
 
+/* 品牌 Logo：后台「上传 Logo」后侧边栏/登录页同步显示；未上传时回退站名首字色块 */
+const brandLogoHtml = cls => {
+  const s = S.db.settings.brand;
+  return s.site_logo
+    ? `<div class="${cls}"><img src="${s.site_logo}" alt="logo"></div>`
+    : `<div class="${cls}">${esc(s.site_name[0] || '灵')}</div>`;
+};
+
 /* ---------- 页面：登录 ---------- */
 function renderLogin() {
   document.body.innerHTML = `
   <div id="login-view">
     <div class="login-card glass pop">
-      <div class="login-logo">灵</div>
+      ${brandLogoHtml('login-logo')}
       <h1>${esc(S.db.settings.brand.site_name)}</h1>
       <div class="en">ADMIN CONSOLE</div>
       <div class="form-row"><label>账号</label><input id="lg-user" class="input" placeholder="admin" value="admin"></div>
@@ -152,7 +160,7 @@ function renderShell() {
   <div class="layout">
     <aside id="sidebar" class="glass ${S.collapsed ? 'collapsed' : ''}">
       <button class="collapse-btn" data-act="collapse">‹</button>
-      <div class="brand"><div class="logo">${esc(S.db.settings.brand.site_name[0] || '灵')}</div>
+      <div class="brand">${brandLogoHtml('logo')}
         <div class="brand-text"><b>${esc(S.db.settings.brand.site_name)}</b><span>ADMIN CONSOLE</span></div></div>
       ${nav}
       <div class="user-chip"><div class="avatar">管</div>
@@ -2510,7 +2518,7 @@ const ACT = {
   },
 
   /* 运营参数 */
-  'set-logo'() { pickImage(d => { S.db.settings.brand.site_logo = d; renderPage(); toast('Logo 已上传并生效', 'ok'); logOp('运营参数', '上传Logo', 'brand', ''); }); },
+  'set-logo'() { pickImage(d => { S.db.settings.brand.site_logo = d; renderShell(); renderPage(); toast('Logo 已上传，侧边栏与登录页同步生效', 'ok'); logOp('运营参数', '上传Logo', 'brand', ''); }); },
   /* 藏品封面 */
   'cf-cover-pick'() {
     pickImage(d => { $('#cf-cover').value = d; $('#cf-cover-box').innerHTML = boxImg(d); toast('封面已选择，保存后生效', 'ok'); });
