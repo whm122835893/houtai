@@ -359,7 +359,7 @@ function buildDB() {
       },
     ],
     settings: {
-      brand: { site_logo: '', site_name: '灵境数藏' },
+      brand: { site_logo: '', site_name: '灵境数藏', theme_color: '#4a8ff7' },
       trade: [
         { name: 'sell_fee_rate', title: '寄售手续费率(%)', value: '5' },
         { name: 'order_auto_cancel', title: '订单自动取消(分钟)', value: '15' },

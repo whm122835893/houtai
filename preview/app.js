@@ -128,6 +128,40 @@ const brandLogoHtml = cls => {
     : `<div class="${cls}">${esc(s.site_name[0] || '灵')}</div>`;
 };
 
+/* ---------- C 端主题色引擎：后台全站颜色跟随 C 端主色 ----------
+   预设色板 = 常见 C 端主色；也可自定义任意色值（与 C 端取色一致即可）。
+   从主色派生：深色(hover/文字)、渐变(按钮/高亮)、光晕(页面背景)、背景色调。
+   低饱和色（白/灰主题）自动将光晕与背景中性化，避免大面积发灰发脏。 */
+const THEME_PRESETS = [
+  ['#4a8ff7', '科技蓝'], ['#e0343c', '中国红'], ['#18b566', '翡翠绿'], ['#ff7d1f', '活力橙'],
+  ['#7c4dff', '典雅紫'], ['#00b8d4', '青碧'], ['#3a4356', '石墨黑'], ['#8a94a6', '象牙白'],
+];
+const hx = rgb => '#' + rgb.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+const hex2rgb = h => { h = (h || '').replace('#', ''); if (h.length === 3) h = [...h].map(c => c + c).join(''); if (!/^[0-9a-f]{6}$/i.test(h)) return null; const n = parseInt(h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+const mix = (rgb, t, to = [255, 255, 255]) => rgb.map((v, i) => v + (to[i] - v) * t);
+function applyTheme(hex) {
+  const rgb = hex2rgb(hex);
+  if (!rgb) return;
+  const mx = Math.max(...rgb), mn = Math.min(...rgb);
+  const soft = mx === 0 ? true : (mx - mn) / mx < .18; /* 白/灰主题：光晕去色 */
+  const deep = mix(rgb, .18, [0, 0, 0]);
+  const light = mix(rgb, .14);
+  const s1 = soft ? [176, 184, 197] : mix(rgb, .42);
+  const s2 = soft ? [204, 210, 220] : mix(rgb, .6);
+  const V = document.documentElement.style;
+  V.setProperty('--blue', hx(rgb));
+  V.setProperty('--blue-deep', hx(deep));
+  V.setProperty('--blue-grad', `linear-gradient(135deg,${hx(light)} 0%,${hx(rgb)} 100%)`);
+  V.setProperty('--acc-rgb', rgb.map(Math.round).join(','));
+  V.setProperty('--acc-deep-rgb', deep.map(Math.round).join(','));
+  V.setProperty('--acc-light-rgb', light.map(Math.round).join(','));
+  V.setProperty('--acc-soft1-rgb', s1.map(Math.round).join(','));
+  V.setProperty('--acc-soft2-rgb', s2.map(Math.round).join(','));
+  V.setProperty('--bg-tint1', soft ? '#e3e6eb' : hx(mix(rgb, .72)));
+  V.setProperty('--bg-tint2', soft ? '#eff1f4' : hx(mix(rgb, .87)));
+}
+applyTheme(S.db.settings.brand.theme_color || '#4a8ff7');
+
 /* ---------- 页面：登录 ---------- */
 function renderLogin() {
   document.body.innerHTML = `
@@ -295,7 +329,7 @@ PAGES.wallet = () => {
   const rows = list.map(u => {
     const logs = u.id === S.expandedWallet ? S.db.walletLogs : [];
     const logRows = logs.map(l => { const [cn, cls] = typeTag(l.type); return `<tr>
-      <td></td><td colspan="4" style="background:rgba(74,143,247,.04)">
+      <td></td><td colspan="4" style="background:rgba(var(--acc-rgb),.04)">
       <span class="tag ${cls}">${cn}</span> <span class="cell-sub">${l.related_no || '-'}</span> ${l.remark}</td>
       <td class="serif-num ${l.amount >= 0 ? 'amount-in' : 'amount-out'}">${l.amount >= 0 ? '+' : ''}${fmtY(l.amount)}</td>
       <td colspan="2" class="cell-sub">余额 ${fmtY(l.after)}</td><td colspan="3" class="cell-sub">${fmtT(l.createtime)}</td></tr>`; }).join('');
@@ -1418,7 +1452,14 @@ PAGES.setting = () => {
       <div class="upload-box" data-act="set-logo">${s.brand.site_logo ? '<img src="' + s.brand.site_logo + '">' : '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m5 19 5.5-5.5L14 17l3-3 4 4"/></svg><span>上传 Logo</span>'}</div>
       <div style="flex:1;min-width:200px"><div class="form-row"><label>平台名称（保存后登录页、侧栏、C 端即时同步）</label>
         <input class="input" id="brand-name" value="${esc(s.brand.site_name)}"></div>
-        ${W('<button class="btn btn-primary" data-act="set-brand">保存品牌</button>')}</div></div></div>
+        ${W('<button class="btn btn-primary" data-act="set-brand">保存品牌</button>')}</div></div>
+    <div class="card-pad" style="border-top:1px solid rgba(126,139,155,.15)">
+      <div class="form-row"><label>C 端主题色（后台全站颜色跟随 C 端：主色 / 渐变 / 光晕 / 阴影一并切换；点色块即时预览，保存后持久生效）</label>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          ${THEME_PRESETS.map(([c, n]) => `<button class="theme-dot${(s.brand.theme_color || '#4a8ff7').toLowerCase() === c ? ' active' : ''}" data-act="theme-preview" data-arg="${c}" title="${n}" style="background:${c}"></button>`).join('')}
+          <input type="color" id="theme-custom" value="${esc(s.brand.theme_color || '#4a8ff7')}" data-act="theme-preview" style="width:34px;height:34px;border:none;background:none;cursor:pointer;padding:0" title="自定义色值（与 C 端取色一致）">
+          <span class="cell-sub" id="theme-now">${esc((s.brand.theme_color || '#4a8ff7').toUpperCase())}</span>
+        </div></div></div></div>
   ${groupCard('trade', '交易参数', 'Trade')}
   ${groupCard('activity', '活动参数', 'Activity')}
   ${groupCard('reward', '奖励参数', 'Reward')}`;
@@ -2001,7 +2042,7 @@ const ACT = {
     ${logs.map(l => `<tr><td class="serif-num">${l.id}</td><td>${l.user}</td><td><span class="serif-num ${l.num > 0 ? 'amount-in' : 'amount-out'}">${l.num > 0 ? '+' : ''}${l.num}</span></td>
     <td><span class="tag ${CHANCE_CLS[l.source] || 'tag-gray'}">${CHANCE_SRC[l.source] || '未知'}</span></td><td class="cell-sub">${l.ref || '-'}</td><td class="cell-sub">${fmtT(l.createtime)}</td></tr>`).join('')}
     </tbody></table>
-    ${W(`<div class="grant-box" style="margin-top:12px;padding-top:10px;border-top:1px dashed #3d7ff040">
+    ${W(`<div class="grant-box" style="margin-top:12px;padding-top:10px;border-top:1px dashed rgba(var(--acc-rgb),.25)">
       <div class="form-row"><label>手动补发次数（客服补偿等）</label>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><input class="input" id="g-user" type="number" placeholder="用户ID" style="flex:1;min-width:120px">
       <input class="input" id="g-num" type="number" placeholder="次数" style="width:90px" value="1"></div>
@@ -2525,8 +2566,17 @@ const ACT = {
   },
   'set-brand'() {
     S.db.settings.brand.site_name = $('#brand-name').value || S.db.settings.brand.site_name;
+    S.db.settings.brand.theme_color = ($('#theme-custom') && $('#theme-custom').value) || S.db.settings.brand.theme_color;
+    applyTheme(S.db.settings.brand.theme_color);
     document.title = S.db.settings.brand.site_name + ' · 管理后台';
-    toast('品牌已保存，全站即时生效', 'ok'); renderShell(); renderPage(); logOp('运营参数', '修改品牌', 'brand', S.db.settings.brand.site_name);
+    toast('品牌已保存，主色 / Logo 全站同步生效', 'ok'); renderShell(); renderPage(); logOp('运营参数', '修改品牌', 'brand', S.db.settings.brand.site_name + ' · ' + S.db.settings.brand.theme_color);
+  },
+  'theme-preview'(el) {
+    applyTheme(el.dataset.arg);
+    const now = $('#theme-now'); if (now) now.textContent = el.dataset.arg.toUpperCase();
+    document.querySelectorAll('.theme-dot').forEach(d => d.classList.toggle('active', d.dataset.arg === el.dataset.arg));
+    const ci = $('#theme-custom'); if (ci) ci.value = el.dataset.arg;
+    toast('预览中：点「保存品牌」后持久生效', 'ok');
   },
   'set-save'(el) {
     const key = el.dataset.arg;
@@ -3492,6 +3542,7 @@ document.addEventListener('input', e => {
   if (e.target.id === 'clean-confirm') { const b = $('#clean-btn'); if (b) b.disabled = e.target.value !== '清空'; }
   if (e.target.id === 'u-kw' && e.key === 'Enter') ACT['user-search']();
   if (e.target.id === 'h-sn-list' || e.target.id === 'h-sn-col') renderSnResult();
+  if (e.target.id === 'theme-custom') { applyTheme(e.target.value); const now = $('#theme-now'); if (now) now.textContent = e.target.value.toUpperCase(); document.querySelectorAll('.theme-dot').forEach(d => d.classList.remove('active')); }
 });
 document.addEventListener('change', e => {
   const id = e.target?.id || '';
