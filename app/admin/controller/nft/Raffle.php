@@ -5,7 +5,7 @@ namespace app\admin\controller\nft;
 use Throwable;
 use think\facade\Db;
 use app\common\controller\Backend;
-use app\admin\model\nft\Raffle as RaffleModel;
+use app\admin\model\nft\Raffle;
 use app\admin\model\nft\OperLog;
 
 /**
@@ -21,7 +21,7 @@ class Raffle extends Backend
     public function initialize(): void
     {
         parent::initialize();
-        $this->model = new RaffleModel();
+        $this->model = new Raffle();
     }
 
     /**
