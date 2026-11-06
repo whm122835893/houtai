@@ -10,5 +10,5 @@ use think\Model;
 class RegisterLog extends Model
 {
     protected $autoWriteTimestamp = true;
-    protected $name = 'nft_register_log';
+    protected $name = 'register_log';
 }

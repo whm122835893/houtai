@@ -10,7 +10,7 @@ use think\Model;
 class User extends Model
 {
     protected $autoWriteTimestamp = true;
-    protected $name = 'nft_user';
+    protected $name = 'user';
 
     /**
      * 关联钱包流水

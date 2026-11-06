@@ -34,7 +34,7 @@ class Invite extends Backend
         $rules = $this->model->order('invite_num', 'asc')->select();
         $ruleArr      = $rules->toArray();
         $collectionIds = array_values(array_unique(array_filter(array_merge(array_column($ruleArr, 'collection_id'), array_column($ruleArr, 'pre_collection_id')))));
-        $collections   = $collectionIds ? Db::name('nft_collection')->where('id', 'in', $collectionIds)->column('name', 'id') : [];
+        $collections   = $collectionIds ? Db::name('collection')->where('id', 'in', $collectionIds)->column('name', 'id') : [];
         foreach ($rules as $rule) {
             $rule->collection_name       = $collections[$rule->collection_id] ?? '';
             $rule->pre_collection_name   = $collections[$rule->pre_collection_id] ?? '';
@@ -46,7 +46,7 @@ class Invite extends Backend
         $records     = $recordModel->order('id', 'desc')->page($page, $limit)->select()->toArray();
 
         $userIds = array_values(array_unique(array_merge(array_column($records, 'inviter_id'), array_column($records, 'invitee_id'))));
-        $users   = $userIds ? Db::name('nft_user')->where('id', 'in', $userIds)->column('nickname', 'id') : [];
+        $users   = $userIds ? Db::name('user')->where('id', 'in', $userIds)->column('nickname', 'id') : [];
         foreach ($records as &$row) {
             $row['inviter_nickname'] = $users[$row['inviter_id']] ?? ('用户#' . $row['inviter_id']);
             $row['invitee_nickname'] = $users[$row['invitee_id']] ?? ('用户#' . $row['invitee_id']);
@@ -57,7 +57,7 @@ class Invite extends Backend
             'rules'          => $rules,
             'records'        => $records,
             'total'          => $total,
-            'invite_enabled' => (int) Db::name('nft_setting')->where('name', 'invite_reward_enable')->value('value') ?: 0,
+            'invite_enabled' => (int) Db::name('setting')->where('name', 'invite_reward_enable')->value('value') ?: 0,
         ]);
     }
 
@@ -100,7 +100,7 @@ class Invite extends Backend
                 if ($preCollectionId <= 0) {
                     $this->error('优先购资格需选择目标藏品（未发售藏品可预配置）');
                 }
-                if (!Db::name('nft_collection')->where('id', $preCollectionId)->find()) {
+                if (!Db::name('collection')->where('id', $preCollectionId)->find()) {
                     $this->error('优先购目标藏品不存在');
                 }
                 $data['pre_collection_id'] = $preCollectionId;

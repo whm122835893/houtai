@@ -11,7 +11,7 @@ use app\admin\library\Auth;
 class OperLog extends Model
 {
     protected $autoWriteTimestamp = true;
-    protected $name = 'nft_oper_log';
+    protected $name = 'oper_log';
 
     /**
      * 记录一条管理员操作日志（供各控制器写操作时调用）

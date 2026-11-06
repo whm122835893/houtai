@@ -125,7 +125,7 @@ const runClean = async (group: string) => {
     try {
         await ElMessageBox.confirm(
             group === 'user'
-                ? '即将清空全体用户数据（ba_nft_user），硬删除不可恢复，确定继续？'
+                ? '即将清空全体用户数据（user），硬删除不可恢复，确定继续？'
                 : `即将清空「${selectedTitle.value}」分组全部数据表，硬删除不可恢复，确定继续？`,
             '二次确认 · 危险操作',
             { type: 'error', confirmButtonText: '确认清空', cancelButtonText: '取消' }

@@ -2,7 +2,8 @@
 -- 数字藏品平台 · BuildAdmin 业务扩展 SQL
 -- 适用：BuildAdmin v2.x（ThinkPHP8 + Vue3 + Element Plus）
 -- 说明：
---   1. 默认表前缀为 ba_，如果你的项目使用了其它前缀，请全局替换。
+--   1. 表前缀：本次约定安装 BuildAdmin 时表前缀留空，业务表全部无前缀（裸表名）；
+--      若安装时使用了其它前缀，请全局替换本脚本中的 admin_rule 等系统表名。
 --   2. 本脚本包含：业务数据表 + 后台菜单/权限规则(admin_rule)。
 --   3. 金额字段一律以「分」落库，前端展示与输入均使用「元」。
 --   4. 时间字段沿用 BuildAdmin 惯例（bigint Unix 时间戳）。
@@ -13,7 +14,7 @@
 -- ------------------------------------------------------------
 
 -- 平台会员（C端用户）
-CREATE TABLE IF NOT EXISTS `ba_nft_user` (
+CREATE TABLE IF NOT EXISTS `user` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `nickname` varchar(50) NOT NULL DEFAULT '' COMMENT '昵称',
   `username` varchar(50) NOT NULL DEFAULT '' COMMENT '账号',
@@ -43,7 +44,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_user` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='平台会员表';
 
 -- 钱包流水
-CREATE TABLE IF NOT EXISTS `ba_nft_wallet_log` (
+CREATE TABLE IF NOT EXISTS `wallet_log` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `user_id` int unsigned NOT NULL DEFAULT 0 COMMENT '会员ID',
   `type` enum('recharge','consume','income','expense','freeze','unfreeze','refund','admin_adjust') NOT NULL DEFAULT 'income' COMMENT '类型:recharge=充值,consume=消费,income=收款,expense=支出,freeze=冻结,unfreeze=解冻,refund=退款,admin_adjust=后台调整',
@@ -59,7 +60,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_wallet_log` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='钱包流水表';
 
 -- 藏品分类
-CREATE TABLE IF NOT EXISTS `ba_nft_category` (
+CREATE TABLE IF NOT EXISTS `category` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `name` varchar(50) NOT NULL DEFAULT '' COMMENT '分类名称',
   `weigh` int NOT NULL DEFAULT 0 COMMENT '排序(越大越前)',
@@ -70,7 +71,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_category` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='藏品分类表';
 
 -- 藏品
-CREATE TABLE IF NOT EXISTS `ba_nft_collection` (
+CREATE TABLE IF NOT EXISTS `collection` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `name` varchar(100) NOT NULL DEFAULT '' COMMENT '藏品名称',
   `category_id` int unsigned NOT NULL DEFAULT 0 COMMENT '分类ID',
@@ -98,7 +99,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_collection` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='藏品表';
 
 -- 订单（一级购/市场购）
-CREATE TABLE IF NOT EXISTS `ba_nft_order` (
+CREATE TABLE IF NOT EXISTS `order` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `order_no` varchar(50) NOT NULL DEFAULT '' COMMENT '订单号',
   `user_id` int unsigned NOT NULL DEFAULT 0 COMMENT '买家会员ID',
@@ -121,7 +122,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_order` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单表';
 
 -- NFT 持仓（每一个数字藏品凭证）
-CREATE TABLE IF NOT EXISTS `ba_nft_hold` (
+CREATE TABLE IF NOT EXISTS `hold` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `sn` varchar(30) NOT NULL DEFAULT '' COMMENT '藏品编号',
   `collection_id` int unsigned NOT NULL DEFAULT 0 COMMENT '所属藏品ID',
@@ -142,7 +143,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_hold` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='NFT持仓表';
 
 -- 市场寄售挂单
-CREATE TABLE IF NOT EXISTS `ba_nft_market_order` (
+CREATE TABLE IF NOT EXISTS `market_order` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `order_no` varchar(50) NOT NULL DEFAULT '' COMMENT '挂单号',
   `seller_id` int unsigned NOT NULL DEFAULT 0 COMMENT '卖家会员ID',
@@ -162,7 +163,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_market_order` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='市场寄售挂单表';
 
 -- 市场求购单
-CREATE TABLE IF NOT EXISTS `ba_nft_market_buy` (
+CREATE TABLE IF NOT EXISTS `market_buy` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `user_id` int unsigned NOT NULL DEFAULT 0 COMMENT '求购人ID',
   `collection_id` int unsigned NOT NULL DEFAULT 0 COMMENT '藏品ID',
@@ -175,7 +176,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_market_buy` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='市场求购单表';
 
 -- 定向发放任务
-CREATE TABLE IF NOT EXISTS `ba_nft_airdrop_task` (
+CREATE TABLE IF NOT EXISTS `airdrop_task` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `name` varchar(100) NOT NULL DEFAULT '' COMMENT '任务名称',
   `collection_id` int unsigned NOT NULL DEFAULT 0 COMMENT '藏品ID',
@@ -200,7 +201,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_airdrop_task` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='定向发放任务表';
 
 -- 抽奖活动
-CREATE TABLE IF NOT EXISTS `ba_nft_lottery_activity` (
+CREATE TABLE IF NOT EXISTS `lottery_activity` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `title` varchar(100) NOT NULL DEFAULT '' COMMENT '活动名称',
   `chance_rules` text NULL COMMENT '次数获取配置(JSON): daily_free签到/register注册/hold持有/invite邀请/consume消耗藏品',
@@ -213,7 +214,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_lottery_activity` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='抽奖活动表';
 
 -- 抽奖次数流水
-CREATE TABLE IF NOT EXISTS `ba_nft_lottery_chance` (
+CREATE TABLE IF NOT EXISTS `lottery_chance` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `user_id` int unsigned NOT NULL DEFAULT 0 COMMENT '用户ID',
   `activity_id` int unsigned NOT NULL DEFAULT 0 COMMENT '活动ID(0=通用)',
@@ -227,7 +228,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_lottery_chance` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='抽奖次数流水表';
 
 -- 抽奖奖池
-CREATE TABLE IF NOT EXISTS `ba_nft_lottery_prize` (
+CREATE TABLE IF NOT EXISTS `lottery_prize` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `activity_id` int unsigned NOT NULL DEFAULT 0 COMMENT '活动ID',
   `name` varchar(100) NOT NULL DEFAULT '' COMMENT '奖品名称',
@@ -244,7 +245,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_lottery_prize` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='抽奖奖池表';
 
 -- 抽奖中奖记录
-CREATE TABLE IF NOT EXISTS `ba_nft_lottery_record` (
+CREATE TABLE IF NOT EXISTS `lottery_record` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `activity_id` int unsigned NOT NULL DEFAULT 0 COMMENT '活动ID',
   `user_id` int unsigned NOT NULL DEFAULT 0 COMMENT '用户ID',
@@ -256,7 +257,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_lottery_record` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='抽奖记录表';
 
 -- 合成活动
-CREATE TABLE IF NOT EXISTS `ba_nft_synthesis` (
+CREATE TABLE IF NOT EXISTS `synthesis` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `name` varchar(100) NOT NULL DEFAULT '' COMMENT '活动名称',
   `target_collection_id` int unsigned NOT NULL DEFAULT 0 COMMENT '目标藏品ID',
@@ -273,7 +274,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_synthesis` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='合成活动表';
 
 -- 合成记录
-CREATE TABLE IF NOT EXISTS `ba_nft_synthesis_record` (
+CREATE TABLE IF NOT EXISTS `synthesis_record` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `synthesis_id` int unsigned NOT NULL DEFAULT 0 COMMENT '活动ID',
   `user_id` int unsigned NOT NULL DEFAULT 0 COMMENT '用户ID',
@@ -285,7 +286,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_synthesis_record` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='合成记录表';
 
 -- 邀请奖励规则
-CREATE TABLE IF NOT EXISTS `ba_nft_invite_rule` (
+CREATE TABLE IF NOT EXISTS `invite_rule` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `invite_num` int unsigned NOT NULL DEFAULT 0 COMMENT '邀请人数门槛',
   `reward_type` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '奖励类型:1=藏品,2=抽奖次数,3=优先购资格',
@@ -299,7 +300,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_invite_rule` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='邀请奖励规则表';
 
 -- 邀请记录
-CREATE TABLE IF NOT EXISTS `ba_nft_invite_record` (
+CREATE TABLE IF NOT EXISTS `invite_record` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `inviter_id` int unsigned NOT NULL DEFAULT 0 COMMENT '邀请人ID',
   `invitee_id` int unsigned NOT NULL DEFAULT 0 COMMENT '被邀请人ID',
@@ -311,7 +312,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_invite_record` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='邀请记录表';
 
 -- 公告
-CREATE TABLE IF NOT EXISTS `ba_nft_notice` (
+CREATE TABLE IF NOT EXISTS `notice` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `title` varchar(200) NOT NULL DEFAULT '' COMMENT '标题',
   `category` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '分类:1=公告,2=活动,3=系统',
@@ -326,7 +327,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_notice` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='公告表';
 
 -- 轮播
-CREATE TABLE IF NOT EXISTS `ba_nft_banner` (
+CREATE TABLE IF NOT EXISTS `banner` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `title` varchar(100) NOT NULL DEFAULT '' COMMENT '标题',
   `image` varchar(255) NOT NULL DEFAULT '' COMMENT '图片',
@@ -339,7 +340,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_banner` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='轮播表';
 
 -- 运营参数（键值对，分组存储；品牌信息也在此表）
-CREATE TABLE IF NOT EXISTS `ba_nft_setting` (
+CREATE TABLE IF NOT EXISTS `setting` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `name` varchar(50) NOT NULL DEFAULT '' COMMENT '参数名',
   `group` varchar(30) NOT NULL DEFAULT 'base' COMMENT '分组:brand=品牌,trade=交易,activity=活动,reward=奖励',
@@ -352,7 +353,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_setting` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='运营参数表';
 
 -- 管理员操作日志（业务审计）
-CREATE TABLE IF NOT EXISTS `ba_nft_oper_log` (
+CREATE TABLE IF NOT EXISTS `oper_log` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `admin_id` int unsigned NOT NULL DEFAULT 0 COMMENT '操作管理员ID',
   `admin_name` varchar(50) NOT NULL DEFAULT '' COMMENT '操作人',
@@ -368,7 +369,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_oper_log` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员操作日志表';
 
 -- ------------------------------------------------------------
--- 二、后台菜单与权限规则（ba_admin_rule）
+-- 二、后台菜单与权限规则（admin_rule）
 -- 说明：ID 从 200 开始，避免与 BuildAdmin 安装数据冲突。
 --   type: menu_dir=菜单目录 menu=菜单项 button=页面按钮
 --   name: 权限规则名（控制器路径/动作），同时也是前端路由名
@@ -377,12 +378,12 @@ CREATE TABLE IF NOT EXISTS `ba_nft_oper_log` (
 -- ------------------------------------------------------------
 
 -- 顶级目录：概览
-INSERT INTO `ba_admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
+INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
 (200,0,'menu_dir','概览','nft','nft','fa fa-home',NULL,'','',0,'none','',100,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (201,200,'menu','数据仪表盘','nft/dashboard','nft/dashboard','fa fa-dashboard','tab','','/src/views/backend/nft/dashboard/index.vue',1,'none','平台核心数据概览',99,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 顶级目录：业务管理
-INSERT INTO `ba_admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
+INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
 (210,0,'menu_dir','业务管理','nft/business','nft/business','fa fa-briefcase',NULL,'','',0,'none','',98,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (211,210,'menu','用户管理','nft/user','nft/user','fa fa-user','tab','','/src/views/backend/nft/user/index.vue',1,'none','',90,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (212,210,'menu','钱包流水','nft/wallet','nft/wallet','fa fa-money','tab','','/src/views/backend/nft/wallet/index.vue',1,'none','',89,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
@@ -394,27 +395,27 @@ INSERT INTO `ba_admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`men
 (218,210,'menu','定向发放','nft/airdrop','nft/airdrop','fa fa-send-o','tab','','/src/views/backend/nft/airdrop/index.vue',1,'none','',83,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 顶级目录：活动运营
-INSERT INTO `ba_admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
+INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
 (230,0,'menu_dir','活动运营','nft/activity','nft/activity','fa fa-magic',NULL,'','',0,'none','',97,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (231,230,'menu','抽奖活动','nft/lottery','nft/lottery','fa fa-gift','tab','','/src/views/backend/nft/lottery/index.vue',1,'none','',80,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (232,230,'menu','合成活动','nft/synthesis','nft/synthesis','fa fa-flask','tab','','/src/views/backend/nft/synthesis/index.vue',1,'none','',79,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (233,230,'menu','邀请有礼','nft/invite','nft/invite','fa fa-handshake-o','tab','','/src/views/backend/nft/invite/index.vue',1,'none','',78,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 顶级目录：内容运营
-INSERT INTO `ba_admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
+INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
 (240,0,'menu_dir','内容运营','nft/content','nft/content','fa fa-newspaper-o',NULL,'','',0,'none','',96,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (241,240,'menu','公告管理','nft/notice','nft/notice','fa fa-bullhorn','tab','','/src/views/backend/nft/notice/index.vue',1,'none','',75,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (242,240,'menu','轮播管理','nft/banner','nft/banner','fa fa-image','tab','','/src/views/backend/nft/banner/index.vue',1,'none','',74,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 顶级目录：系统
-INSERT INTO `ba_admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
+INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
 (250,0,'menu_dir','系统','nft/system','nft/system','fa fa-cog',NULL,'','',0,'none','',95,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (251,250,'menu','运营参数','nft/setting','nft/setting','fa fa-sliders','tab','','/src/views/backend/nft/setting/index.vue',1,'none','',70,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (252,250,'menu','数据清理','nft/cleanup','nft/cleanup','fa fa-trash-o','tab','','/src/views/backend/nft/cleanup/index.vue',1,'none','',69,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (253,250,'menu','日志审计','nft/operlog','nft/operlog','fa fa-shield','tab','','/src/views/backend/nft/operlog/index.vue',1,'none','',68,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 页面按钮权限（各页面通用 index + 写操作按钮）
-INSERT INTO `ba_admin_rule` (`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
+INSERT INTO `admin_rule` (`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
 -- 用户管理
 (211,'button','查看','nft/user/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (211,'button','添加','nft/user/add','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
@@ -497,7 +498,7 @@ INSERT INTO `ba_admin_rule` (`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_typ
 -- ------------------------------------------------------------
 -- 三、运营参数初始数据
 -- ------------------------------------------------------------
-INSERT INTO `ba_nft_setting` (`name`,`group`,`title`,`value`,`createtime`,`updatetime`) VALUES
+INSERT INTO `setting` (`name`,`group`,`title`,`value`,`createtime`,`updatetime`) VALUES
 ('site_logo','brand','平台Logo','/static/images/logo.png',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 ('site_name','brand','平台名称','灵境数藏',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 ('sell_fee_rate','trade','寄售手续费率(%)','5',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
@@ -513,7 +514,7 @@ INSERT INTO `ba_nft_setting` (`name`,`group`,`title`,`value`,`createtime`,`updat
 -- ------------------------------------------------------------
 
 -- 签到阶梯奖励规则
-CREATE TABLE IF NOT EXISTS `ba_nft_checkin_rule` (
+CREATE TABLE IF NOT EXISTS `checkin_rule` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `day_num` int unsigned NOT NULL DEFAULT 0 COMMENT '连续签到天数',
   `reward_type` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '奖励类型:1=抽奖次数,2=藏品,3=优先购资格',
@@ -527,7 +528,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_checkin_rule` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='签到阶梯奖励规则表';
 
 -- 签到记录
-CREATE TABLE IF NOT EXISTS `ba_nft_checkin_record` (
+CREATE TABLE IF NOT EXISTS `checkin_record` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `user_id` int unsigned NOT NULL DEFAULT 0 COMMENT '用户ID',
   `checkin_date` date NOT NULL COMMENT '签到日期',
@@ -541,7 +542,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_checkin_record` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='签到记录表';
 
 -- 注册奖励发放记录
-CREATE TABLE IF NOT EXISTS `ba_nft_register_log` (
+CREATE TABLE IF NOT EXISTS `register_log` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `user_id` int unsigned NOT NULL DEFAULT 0 COMMENT '新用户ID',
   `reward` varchar(200) NOT NULL DEFAULT '' COMMENT '新人礼包快照(如: 1次抽奖+锦鲤剪纸x1+优先购2次)',
@@ -556,18 +557,18 @@ CREATE TABLE IF NOT EXISTS `ba_nft_register_log` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='注册奖励发放记录表';
 
 -- 菜单（挂载在 230 活动运营目录下）
-INSERT INTO `ba_admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
+INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
 (234,230,'menu','签到活动','nft/checkin','nft/checkin','fa fa-calendar-check-o','tab','','/src/views/backend/nft/checkin/index.vue',1,'none','',82,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (235,230,'menu','注册活动','nft/register','nft/register','fa fa-user-plus','tab','','/src/views/backend/nft/register/index.vue',1,'none','',81,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
-INSERT INTO `ba_admin_rule` (`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
+INSERT INTO `admin_rule` (`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
 (234,'button','查看','nft/checkin/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (234,'button','保存规则','nft/checkin/save','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (235,'button','查看','nft/register/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (235,'button','保存配置','nft/register/save','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 签到/注册参数初始数据
-INSERT INTO `ba_nft_setting` (`name`,`group`,`title`,`value`,`createtime`,`updatetime`) VALUES
+INSERT INTO `setting` (`name`,`group`,`title`,`value`,`createtime`,`updatetime`) VALUES
 ('ck_enabled','checkin','签到活动开关','1',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 ('ck_daily_type','checkin','每日签到奖励类型:1=抽奖次数,2=藏品,3=优先购资格','1',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 ('ck_daily_num','checkin','每日签到奖励数量','1',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
@@ -590,7 +591,7 @@ INSERT INTO `ba_nft_setting` (`name`,`group`,`title`,`value`,`createtime`,`updat
 -- ------------------------------------------------------------
 
 -- 抽签发售活动
-CREATE TABLE IF NOT EXISTS `ba_nft_raffle` (
+CREATE TABLE IF NOT EXISTS `raffle` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `collection_id` int unsigned NOT NULL DEFAULT 0 COMMENT '藏品ID',
   `total` int unsigned NOT NULL DEFAULT 0 COMMENT '发售数量',
@@ -609,7 +610,7 @@ CREATE TABLE IF NOT EXISTS `ba_nft_raffle` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='抽签发售活动表';
 
 -- 抽签报名/中签记录
-CREATE TABLE IF NOT EXISTS `ba_nft_raffle_apply` (
+CREATE TABLE IF NOT EXISTS `raffle_apply` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `raffle_id` int unsigned NOT NULL DEFAULT 0 COMMENT '抽签活动ID',
   `user_id` int unsigned NOT NULL DEFAULT 0 COMMENT '用户ID',
@@ -623,10 +624,10 @@ CREATE TABLE IF NOT EXISTS `ba_nft_raffle_apply` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='抽签报名记录表';
 
 -- 菜单（业务管理组 210 下）
-INSERT INTO `ba_admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
+INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
 (219,210,'menu','抽签发售','nft/raffle','nft/raffle','fa fa-ticket','tab','','/src/views/backend/nft/raffle/index.vue',1,'none','',82,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
-INSERT INTO `ba_admin_rule` (`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
+INSERT INTO `admin_rule` (`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
 (219,'button','查看','nft/raffle/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (219,'button','保存活动','nft/raffle/save','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (219,'button','删除活动','nft/raffle/del','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),

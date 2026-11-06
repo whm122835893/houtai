@@ -201,36 +201,36 @@ class Collection extends Backend
             $cid  = (int) $cid;
             $name = $this->model->where('id', $cid)->value('name') ?: ('藏品#' . $cid);
             $refs = [];
-            if (Db::name('nft_order')->where('collection_id', $cid)->count()) {
+            if (Db::name('order')->where('collection_id', $cid)->count()) {
                 $refs[] = '订单';
             }
-            if (Db::name('nft_hold')->where('collection_id', $cid)->count()) {
+            if (Db::name('hold')->where('collection_id', $cid)->count()) {
                 $refs[] = '持仓';
             }
-            if (Db::name('nft_market_order')->where('collection_id', $cid)->count()) {
+            if (Db::name('market_order')->where('collection_id', $cid)->count()) {
                 $refs[] = '市场挂单';
             }
-            if (Db::name('nft_raffle')->where('collection_id', $cid)->count()) {
+            if (Db::name('raffle')->where('collection_id', $cid)->count()) {
                 $refs[] = '抽签发售';
             }
-            if (Db::name('nft_airdrop_task')->where('collection_id', $cid)->count()) {
+            if (Db::name('airdrop_task')->where('collection_id', $cid)->count()) {
                 $refs[] = '定向发放';
             }
-            if (Db::name('nft_lottery_prize')->where('collection_id', $cid)->count()
-                || Db::name('nft_lottery_activity')->whereLike('chance_rules', '%"collection_id":' . $cid . '%')->count()) {
+            if (Db::name('lottery_prize')->where('collection_id', $cid)->count()
+                || Db::name('lottery_activity')->whereLike('chance_rules', '%"collection_id":' . $cid . '%')->count()) {
                 $refs[] = '抽奖活动';
             }
-            if (Db::name('nft_synthesis')->where('target_collection_id', $cid)->count()
-                || Db::name('nft_synthesis')->whereLike('materials', '%"collection_id":' . $cid . '%')->count()) {
+            if (Db::name('synthesis')->where('target_collection_id', $cid)->count()
+                || Db::name('synthesis')->whereLike('materials', '%"collection_id":' . $cid . '%')->count()) {
                 $refs[] = '合成活动';
             }
-            if (Db::name('nft_setting')->where('name', 'in', ['rg_collection_id', 'rg_pre_collection_id'])->where('value', (string) $cid)->count()) {
+            if (Db::name('setting')->where('name', 'in', ['rg_collection_id', 'rg_pre_collection_id'])->where('value', (string) $cid)->count()) {
                 $refs[] = '注册活动';
             }
-            if (Db::name('nft_invite_rule')->where('collection_id|pre_collection_id', $cid)->count()) {
+            if (Db::name('invite_rule')->where('collection_id|pre_collection_id', $cid)->count()) {
                 $refs[] = '邀请有礼';
             }
-            if (Db::name('nft_checkin_rule')->where('collection_id|pre_collection_id', $cid)->count()) {
+            if (Db::name('checkin_rule')->where('collection_id|pre_collection_id', $cid)->count()) {
                 $refs[] = '签到活动';
             }
             if (count($refs)) {

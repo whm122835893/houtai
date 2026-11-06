@@ -47,7 +47,7 @@ class Synthesis extends Backend
             ->select();
 
         $collectionIds = array_values(array_unique(array_column($list->toArray(), 'target_collection_id')));
-        $collections   = $collectionIds ? Db::name('nft_collection')->where('id', 'in', $collectionIds)->column('name', 'id') : [];
+        $collections   = $collectionIds ? Db::name('collection')->where('id', 'in', $collectionIds)->column('name', 'id') : [];
         foreach ($list as $row) {
             $row->target_collection_name = $collections[$row->target_collection_id] ?? '';
         }
@@ -140,8 +140,8 @@ class Synthesis extends Backend
         // 两次查询拼装
         $userIds       = array_values(array_unique(array_column($list, 'user_id')));
         $synthesisIds  = array_values(array_unique(array_column($list, 'synthesis_id')));
-        $users         = $userIds ? Db::name('nft_user')->where('id', 'in', $userIds)->column('nickname', 'id') : [];
-        $syntheses     = $synthesisIds ? Db::name('nft_synthesis')->where('id', 'in', $synthesisIds)->column('name', 'id') : [];
+        $users         = $userIds ? Db::name('user')->where('id', 'in', $userIds)->column('nickname', 'id') : [];
+        $syntheses     = $synthesisIds ? Db::name('synthesis')->where('id', 'in', $synthesisIds)->column('name', 'id') : [];
         foreach ($list as &$row) {
             $row['nickname']      = $users[$row['user_id']] ?? ('用户#' . $row['user_id']);
             $row['synthesis_name'] = $syntheses[$row['synthesis_id']] ?? '-';

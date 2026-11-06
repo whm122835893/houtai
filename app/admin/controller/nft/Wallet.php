@@ -35,8 +35,8 @@ class Wallet extends Backend
             $where[] = ['nickname|username|mobile', 'like', '%' . str_replace('%', '\%', $keyword) . '%'];
         }
 
-        $total = Db::name('nft_user')->where($where)->count();
-        $list  = Db::name('nft_user')->where($where)
+        $total = Db::name('user')->where($where)->count();
+        $list  = Db::name('user')->where($where)
             ->field(['id', 'nickname', 'username', 'mobile', 'balance', 'frozen', 'total_income', 'total_expense', 'createtime'])
             ->order('id', 'desc')
             ->page($page, $limit)
@@ -86,7 +86,7 @@ class Wallet extends Backend
             $this->error('调整金额不能为 0');
         }
 
-        $user = Db::name('nft_user')->where('id', $id)->find();
+        $user = Db::name('user')->where('id', $id)->find();
         if (!$user) {
             $this->error(__('Record not found'));
         }
@@ -98,7 +98,7 @@ class Wallet extends Backend
         try {
             $before = (int) $user['balance'];
             $after  = $before + $fen;
-            Db::name('nft_user')->where('id', $id)->update([
+            Db::name('user')->where('id', $id)->update([
                 'balance'       => $after,
                 'total_income'  => $fen > 0 ? $user['total_income'] + $fen : $user['total_income'],
                 'total_expense' => $fen < 0 ? $user['total_expense'] + abs($fen) : $user['total_expense'],

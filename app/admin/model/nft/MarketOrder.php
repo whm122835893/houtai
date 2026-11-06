@@ -10,5 +10,5 @@ use think\Model;
 class MarketOrder extends Model
 {
     protected $autoWriteTimestamp = true;
-    protected $name = 'nft_market_order';
+    protected $name = 'market_order';
 }

@@ -13,14 +13,14 @@ use app\admin\model\nft\OperLog;
 class Register extends Backend
 {
     /**
-     * 无需模型（配置存 ba_nft_setting，记录走 Db 查询）
+     * 无需模型（配置存 setting，记录走 Db 查询）
      */
     protected object $model;
 
     public function index(): void
     {
         $configNames = ['rg_enabled', 'rg_chance', 'rg_lot_activity_id', 'rg_collection_id', 'rg_pre_num', 'rg_pre_collection_id', 'rg_inviter_type', 'rg_inviter_num', 'rg_inviter_collection_id', 'rg_inviter_pre_collection_id'];
-        $config      = Db::name('nft_setting')->whereIn('name', $configNames)->column('value', 'name');
+        $config      = Db::name('setting')->whereIn('name', $configNames)->column('value', 'name');
 
         $keyword = $this->request->get('keyword/s', '');
         $status  = $this->request->get('status/d', -1);
@@ -29,17 +29,17 @@ class Register extends Backend
 
         $where = [];
         if ($keyword !== '') {
-            $userIds = Db::name('nft_user')->where('nickname|username', 'like', "%{$keyword}%")->column('id');
+            $userIds = Db::name('user')->where('nickname|username', 'like', "%{$keyword}%")->column('id');
             $where[] = ['user_id', 'in', $userIds ?: [0]];
         }
         if ($status >= 0) {
             $where[] = ['status', '=', $status];
         }
 
-        $total = Db::name('nft_register_log')->where($where)->count();
-        $logs  = Db::name('nft_register_log')->where($where)->order('id', 'desc')->page($page, $limit)->select()->toArray();
-        $users = Db::name('nft_user')->whereIn('id', array_unique(array_column($logs, 'user_id')))->column('nickname', 'id');
-        $invi  = Db::name('nft_user')->whereIn('id', array_unique(array_filter(array_column($logs, 'inviter_id'))))->column('nickname', 'id');
+        $total = Db::name('register_log')->where($where)->count();
+        $logs  = Db::name('register_log')->where($where)->order('id', 'desc')->page($page, $limit)->select()->toArray();
+        $users = Db::name('user')->whereIn('id', array_unique(array_column($logs, 'user_id')))->column('nickname', 'id');
+        $invi  = Db::name('user')->whereIn('id', array_unique(array_filter(array_column($logs, 'inviter_id'))))->column('nickname', 'id');
         foreach ($logs as &$log) {
             $log['nickname']      = $users[$log['user_id']] ?? '';
             $log['inviter_nickname'] = $invi[$log['inviter_id']] ?? '';
@@ -77,7 +77,7 @@ class Register extends Backend
             }
             foreach ($allow as $name) {
                 if (!isset($data[$name])) continue;
-                Db::name('nft_setting')->where('name', $name)->update([
+                Db::name('setting')->where('name', $name)->update([
                     'value'      => (string) intval($data[$name]),
                     'updatetime' => time(),
                 ]);

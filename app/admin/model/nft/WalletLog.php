@@ -10,5 +10,5 @@ use think\Model;
 class WalletLog extends Model
 {
     protected $autoWriteTimestamp = true;
-    protected $name = 'nft_wallet_log';
+    protected $name = 'wallet_log';
 }

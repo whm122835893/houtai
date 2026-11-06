@@ -10,5 +10,5 @@ use think\Model;
 class Setting extends Model
 {
     protected $autoWriteTimestamp = true;
-    protected $name = 'nft_setting';
+    protected $name = 'setting';
 }

@@ -10,5 +10,5 @@ use think\Model;
 class InviteRecord extends Model
 {
     protected $autoWriteTimestamp = true;
-    protected $name = 'nft_invite_record';
+    protected $name = 'invite_record';
 }

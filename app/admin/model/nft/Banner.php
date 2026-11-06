@@ -10,5 +10,5 @@ use think\Model;
 class Banner extends Model
 {
     protected $autoWriteTimestamp = true;
-    protected $name = 'nft_banner';
+    protected $name = 'banner';
 }

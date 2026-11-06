@@ -10,5 +10,5 @@ use think\Model;
 class AirdropTask extends Model
 {
     protected $autoWriteTimestamp = true;
-    protected $name = 'nft_airdrop_task';
+    protected $name = 'airdrop_task';
 }

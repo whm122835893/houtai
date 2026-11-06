@@ -10,8 +10,8 @@ use app\admin\model\nft\OperLog;
 /**
  * 活动中心
  * 统一管理四类活动的开启/关闭：
- * - 邀请有礼 / 签到活动 / 注册活动：系统唯一活动，开关存于 nft_setting
- * - 抽奖活动：可创建多场次，开关存于 nft_lottery_activity.status；
+ * - 邀请有礼 / 签到活动 / 注册活动：系统唯一活动，开关存于 setting
+ * - 抽奖活动：可创建多场次，开关存于 lottery_activity.status；
  *   次数获取规则（chance_rules：签到/注册/持有藏品/邀请/消耗藏品）绑定到每个抽奖场次
  */
 class Activity extends Backend

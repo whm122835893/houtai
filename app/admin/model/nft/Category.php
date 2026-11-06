@@ -10,5 +10,5 @@ use think\Model;
 class Category extends Model
 {
     protected $autoWriteTimestamp = true;
-    protected $name = 'nft_category';
+    protected $name = 'category';
 }

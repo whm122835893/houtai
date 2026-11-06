@@ -37,7 +37,7 @@ class Raffle extends Backend
         $where = [];
         if ($keyword !== '') {
             // 按藏品名关联筛选
-            $cids = Db::name('nft_collection')
+            $cids = Db::name('collection')
                 ->where('name', 'like', '%' . str_replace('%', '\%', $keyword) . '%')
                 ->column('id');
             $where[] = ['collection_id', 'in', $cids ?: [0]];
@@ -55,7 +55,7 @@ class Raffle extends Backend
 
         // 拼装藏品名 + 实时阶段
         $cids = array_values(array_unique(array_column($list, 'collection_id')));
-        $cols = $cids ? Db::name('nft_collection')->where('id', 'in', $cids)->column('name', 'id') : [];
+        $cols = $cids ? Db::name('collection')->where('id', 'in', $cids)->column('name', 'id') : [];
         $now  = time();
         foreach ($list as &$row) {
             $row['collection_name'] = $cols[$row['collection_id']] ?? ('藏品#' . $row['collection_id']);
@@ -96,7 +96,7 @@ class Raffle extends Backend
         $data = $this->request->only(['collection_id', 'total', 'per_limit', 'apply_start', 'apply_end', 'buy_deadline'], 'post');
 
         $cid = (int) ($data['collection_id'] ?? 0);
-        if ($cid <= 0 || !Db::name('nft_collection')->where('id', $cid)->find()) {
+        if ($cid <= 0 || !Db::name('collection')->where('id', $cid)->find()) {
             $this->error('请选择发售藏品');
         }
         if ((int) ($data['total'] ?? 0) <= 0) {
@@ -159,7 +159,7 @@ class Raffle extends Backend
         Db::startTrans();
         try {
             $count = $this->model->where('id', 'in', $ids)->delete();
-            Db::name('nft_raffle_apply')->where('raffle_id', 'in', $ids)->delete();
+            Db::name('raffle_apply')->where('raffle_id', 'in', $ids)->delete();
             Db::commit();
         } catch (Throwable $e) {
             Db::rollback();
@@ -198,7 +198,7 @@ class Raffle extends Backend
 
         Db::startTrans();
         try {
-            $applyIds = Db::name('nft_raffle_apply')
+            $applyIds = Db::name('raffle_apply')
                 ->where('raffle_id', $id)
                 ->where('status', 0)
                 ->column('id');
@@ -212,12 +212,12 @@ class Raffle extends Backend
             $loseIds = array_diff($applyIds, $winIds);
 
             if ($winIds) {
-                Db::name('nft_raffle_apply')
+                Db::name('raffle_apply')
                     ->where('id', 'in', $winIds)
                     ->update(['status' => 1, 'win_num' => $row->per_limit]);
             }
             if ($loseIds) {
-                Db::name('nft_raffle_apply')
+                Db::name('raffle_apply')
                     ->where('id', 'in', array_values($loseIds))
                     ->update(['status' => 2]);
             }
@@ -250,22 +250,22 @@ class Raffle extends Backend
             $where[] = ['a.status', '=', $status];
         }
         if ($keyword !== '') {
-            $userIds = Db::name('nft_user')
+            $userIds = Db::name('user')
                 ->where('id', $keyword)
                 ->whereOr('nickname', 'like', '%' . str_replace('%', '\%', $keyword) . '%')
                 ->column('id');
             $where[] = ['a.user_id', 'in', $userIds ?: [0]];
         }
 
-        $total = Db::name('nft_raffle_apply')->alias('a')->where($where)->count();
-        $list  = Db::name('nft_raffle_apply')->alias('a')->where($where)
+        $total = Db::name('raffle_apply')->alias('a')->where($where)->count();
+        $list  = Db::name('raffle_apply')->alias('a')->where($where)
             ->order('a.id', 'desc')
             ->page($page, $limit)
             ->select()
             ->toArray();
 
         $userIds = array_values(array_unique(array_column($list, 'user_id')));
-        $users   = $userIds ? Db::name('nft_user')->where('id', 'in', $userIds)->column('nickname', 'id') : [];
+        $users   = $userIds ? Db::name('user')->where('id', 'in', $userIds)->column('nickname', 'id') : [];
         foreach ($list as &$row) {
             $row['nickname'] = $users[$row['user_id']] ?? ('用户#' . $row['user_id']);
         }

@@ -10,5 +10,5 @@ use think\Model;
 class CheckinRecord extends Model
 {
     protected $autoWriteTimestamp = true;
-    protected $name = 'nft_checkin_record';
+    protected $name = 'checkin_record';
 }

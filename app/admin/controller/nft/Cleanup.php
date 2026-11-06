@@ -18,14 +18,14 @@ class Cleanup extends Backend
      * 清理分组 => 数据表（前缀 ba_）
      */
     protected array $groupTables = [
-        'notice'   => ['nft_notice'],
-        'content'  => ['nft_notice', 'nft_banner'],
-        'trade'    => ['nft_order', 'nft_market_order', 'nft_market_buy', 'nft_wallet_log', 'nft_hold'],
+        'notice'   => ['notice'],
+        'content'  => ['notice', 'banner'],
+        'trade'    => ['order', 'market_order', 'market_buy', 'wallet_log', 'hold'],
         'activity' => [
-            'nft_airdrop_task', 'nft_lottery_record', 'nft_lottery_prize', 'nft_lottery_activity',
-            'nft_synthesis_record', 'nft_synthesis', 'nft_invite_record', 'nft_invite_rule',
+            'airdrop_task', 'lottery_record', 'lottery_prize', 'lottery_activity',
+            'synthesis_record', 'synthesis', 'invite_record', 'invite_rule',
         ],
-        'user'     => ['nft_user'],
+        'user'     => ['user'],
     ];
 
     public function initialize(): void
@@ -59,7 +59,7 @@ class Cleanup extends Backend
 
         $this->success('', [
             'groups' => $groups,
-            'users'  => Db::name('nft_user')->count(),
+            'users'  => Db::name('user')->count(),
         ]);
     }
 

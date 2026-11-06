@@ -10,5 +10,5 @@ use think\Model;
 class LotteryChance extends Model
 {
     protected $autoWriteTimestamp = true;
-    protected $name = 'nft_lottery_chance';
+    protected $name = 'lottery_chance';
 }

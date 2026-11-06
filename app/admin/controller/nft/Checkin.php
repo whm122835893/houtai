@@ -28,7 +28,7 @@ class Checkin extends Backend
     public function index(): void
     {
         $configNames = ['ck_enabled', 'ck_daily_type', 'ck_daily_num', 'ck_daily_collection_id', 'ck_daily_pre_collection_id', 'ck_repair_limit'];
-        $config      = Db::name('nft_setting')->whereIn('name', $configNames)->column('value', 'name');
+        $config      = Db::name('setting')->whereIn('name', $configNames)->column('value', 'name');
 
         $keyword = $this->request->get('keyword/s', '');
         $limit   = $this->request->get('limit/d', 10);
@@ -36,13 +36,13 @@ class Checkin extends Backend
 
         $where = [];
         if ($keyword !== '') {
-            $userIds = Db::name('nft_user')->where('nickname|username', 'like', "%{$keyword}%")->column('id');
+            $userIds = Db::name('user')->where('nickname|username', 'like', "%{$keyword}%")->column('id');
             $where[] = ['user_id', 'in', $userIds ?: [0]];
         }
 
-        $total  = Db::name('nft_checkin_record')->where($where)->count();
-        $logs   = Db::name('nft_checkin_record')->where($where)->order('id', 'desc')->page($page, $limit)->select()->toArray();
-        $users  = Db::name('nft_user')->whereIn('id', array_unique(array_column($logs, 'user_id')))->column('nickname', 'id');
+        $total  = Db::name('checkin_record')->where($where)->count();
+        $logs   = Db::name('checkin_record')->where($where)->order('id', 'desc')->page($page, $limit)->select()->toArray();
+        $users  = Db::name('user')->whereIn('id', array_unique(array_column($logs, 'user_id')))->column('nickname', 'id');
         foreach ($logs as &$log) {
             $log['nickname'] = $users[$log['user_id']] ?? '';
         }
@@ -52,7 +52,7 @@ class Checkin extends Backend
         $rules      = $this->model->order('day_num', 'asc')->select();
         $ruleArr    = $rules->toArray();
         $ruleColIds = array_values(array_unique(array_filter(array_merge(array_column($ruleArr, 'collection_id'), array_column($ruleArr, 'pre_collection_id')))));
-        $ruleCols   = $ruleColIds ? Db::name('nft_collection')->whereIn('id', $ruleColIds)->column('name', 'id') : [];
+        $ruleCols   = $ruleColIds ? Db::name('collection')->whereIn('id', $ruleColIds)->column('name', 'id') : [];
         foreach ($rules as $rule) {
             $rule->collection_name     = $ruleCols[$rule->collection_id] ?? '';
             $rule->pre_collection_name = $ruleCols[$rule->pre_collection_id] ?? '';
@@ -89,7 +89,7 @@ class Checkin extends Backend
                 if ($name != 'ck_enabled') {
                     $val = (string) intval($val);
                 }
-                Db::name('nft_setting')->where('name', $name)->update(['value' => $val, 'updatetime' => time()]);
+                Db::name('setting')->where('name', $name)->update(['value' => $val, 'updatetime' => time()]);
             }
             // 阶梯整体重建
             // 奖励类型：1=抽奖次数 2=藏品(reward_num=份数+collection_id) 3=优先购资格(reward_num=可用次数+pre_collection_id=目标藏品，未发售可预配置)
@@ -108,7 +108,7 @@ class Checkin extends Backend
                 if ($rewardType == 3 && $preCollectionId <= 0) {
                     throw new \Exception("连续签到 {$dayNum} 天的阶梯：优先购资格需选择目标藏品（未发售藏品可预配置）");
                 }
-                if ($rewardType == 3 && !Db::name('nft_collection')->where('id', $preCollectionId)->find()) {
+                if ($rewardType == 3 && !Db::name('collection')->where('id', $preCollectionId)->find()) {
                     throw new \Exception("连续签到 {$dayNum} 天的阶梯：优先购目标藏品不存在");
                 }
                 CheckinRule::create([

@@ -13,7 +13,7 @@ class User extends Validate
 
     protected $rule = [
         'nickname' => 'require|max:50',
-        'username' => 'require|max:50|unique:nft_user',
+        'username' => 'require|max:50|unique:user',
         'mobile'   => 'mobile',
         'email'    => 'email',
     ];

@@ -10,7 +10,7 @@ use app\common\controller\Backend;
  */
 class OperLog extends Backend
 {
-    protected string $table = 'nft_oper_log';
+    protected string $table = 'oper_log';
 
     public function initialize(): void
     {

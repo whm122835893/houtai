@@ -69,11 +69,11 @@ class Airdrop extends Backend
             ->select();
 
         $collectionIds = array_values(array_unique(array_column($list->toArray(), 'collection_id')));
-        $collections   = $collectionIds ? Db::name('nft_collection')->where('id', 'in', $collectionIds)->column('name', 'id') : [];
+        $collections   = $collectionIds ? Db::name('collection')->where('id', 'in', $collectionIds)->column('name', 'id') : [];
 
         // 各任务待领取数（领取式空投）
         $taskIds   = array_column($list->toArray(), 'id');
-        $claimMap  = $taskIds ? Db::name('nft_hold')
+        $claimMap  = $taskIds ? Db::name('hold')
             ->where('source', 3)
             ->where('claim_status', 0)
             ->where('status', 0)
@@ -115,7 +115,7 @@ class Airdrop extends Backend
             }
             if ($ruleType == 4) {
                 // 凭证藏品必须存在
-                $exists = Db::name('nft_collection')->where('id', (int) $ruleValue)->count();
+                $exists = Db::name('collection')->where('id', (int) $ruleValue)->count();
                 if (!$exists) {
                     $this->error('凭证藏品不存在');
                 }
@@ -157,7 +157,7 @@ class Airdrop extends Backend
         }
 
         // 续发偏移 = 本任务现存（未被撤销的）持仓数：撤销后重跑可自动补发被回收的份额
-        $done      = (int) Db::name('nft_hold')->where('source', 3)->where('ref_id', $id)->count();
+        $done      = (int) Db::name('hold')->where('source', 3)->where('ref_id', $id)->count();
         $num       = (int) $task->num;
         $ruleType  = (int) $task->rule_type;
         $ruleValue = (string) $task->rule_value;
@@ -185,7 +185,7 @@ class Airdrop extends Backend
                     continue;
                 }
                 // 重复拥有处理
-                $has = Db::name('nft_hold')
+                $has = Db::name('hold')
                     ->where('user_id', $uid)
                     ->where('collection_id', $task->collection_id)
                     ->count();
@@ -196,7 +196,7 @@ class Airdrop extends Backend
                 }
                 if ($has > 0 && $dupPolicy == 2) {
                     // 换发抽奖次数：写入抽奖次数流水（来源 7 后台发放）
-                    Db::name('nft_lottery_chance')->insert([
+                    Db::name('lottery_chance')->insert([
                         'user_id'     => $uid,
                         'activity_id' => 0,
                         'num'         => $dupReward,
@@ -210,11 +210,11 @@ class Airdrop extends Backend
                 // 铸造持仓（dup_policy=3 强制叠加时即使已拥有也铸造）
                 $seq = 1;
                 $sn  = 'A' . $task->id . 'U' . $uid . 'N' . $seq;
-                while (Db::name('nft_hold')->where('sn', $sn)->count() > 0) {
+                while (Db::name('hold')->where('sn', $sn)->count() > 0) {
                     $seq++;
                     $sn = 'A' . $task->id . 'U' . $uid . 'N' . $seq;
                 }
-                Db::name('nft_hold')->insert([
+                Db::name('hold')->insert([
                     'sn'            => $sn,
                     'collection_id' => (int) $task->collection_id,
                     'user_id'       => $uid,
@@ -259,7 +259,7 @@ class Airdrop extends Backend
             $this->error('仅完成的任务可撤销');
         }
 
-        $holds = Db::name('nft_hold')
+        $holds = Db::name('hold')
             ->where('source', 3)
             ->where('ref_id', $id)
             ->where('status', 0) // 仅持有中（未寄售、未锁定）
@@ -273,7 +273,7 @@ class Airdrop extends Backend
         Db::startTrans();
         try {
             $ids = array_column($holds, 'id');
-            Db::name('nft_hold')->where('id', 'in', $ids)->delete();
+            Db::name('hold')->where('id', 'in', $ids)->delete();
             $task->revoke_num = (int) $task->revoke_num + count($ids);
             $task->save();
             Db::commit();
@@ -313,7 +313,7 @@ class Airdrop extends Backend
      */
     private function resolveUsers(int $ruleType, string $ruleValue, int $num, int $remain, int $done): array
     {
-        $enabled = fn () => Db::name('nft_user')->where('status', 1);
+        $enabled = fn () => Db::name('user')->where('status', 1);
 
         switch ($ruleType) {
             case 1: // 指定用户（支持换行 / 逗号分隔）
@@ -325,7 +325,7 @@ class Airdrop extends Backend
 
             case 3: // 按邀请数门槛
             case 11: // 邀请排行 Top N
-                $query = Db::name('nft_invite_record')
+                $query = Db::name('invite_record')
                     ->field('inviter_id, count(*) as invite_count')
                     ->group('inviter_id');
                 if ($ruleType == 3) {
@@ -341,7 +341,7 @@ class Airdrop extends Backend
                 return array_slice($ids, $done, $remain);
 
             case 4: // 持有指定藏品：持有 N 份投 N 份（列表按持有件数展开）
-                $holders = Db::name('nft_hold')
+                $holders = Db::name('hold')
                     ->where('collection_id', (int) $ruleValue)
                     ->where('status', '<>', 3)
                     ->field('user_id, count(*) as c')
@@ -356,7 +356,7 @@ class Airdrop extends Backend
                 return array_slice($list, $done, $remain);
 
             case 5: // 持仓门槛：持仓 >= N
-                $holders = Db::name('nft_hold')
+                $holders = Db::name('hold')
                     ->field('user_id, count(*) as c')
                     ->group('user_id')
                     ->having('c >= ' . (int) $ruleValue)

@@ -10,5 +10,5 @@ use think\Model;
 class SynthesisRecord extends Model
 {
     protected $autoWriteTimestamp = true;
-    protected $name = 'nft_synthesis_record';
+    protected $name = 'synthesis_record';
 }

@@ -10,5 +10,5 @@ use think\Model;
 class MarketBuy extends Model
 {
     protected $autoWriteTimestamp = true;
-    protected $name = 'nft_market_buy';
+    protected $name = 'market_buy';
 }

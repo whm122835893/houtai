@@ -57,7 +57,7 @@ class Lottery extends Backend
         $ids = array_column($list->toArray(), 'id');
         $map = [];
         if ($ids) {
-            $stats = Db::name('nft_lottery_prize')
+            $stats = Db::name('lottery_prize')
                 ->field('activity_id, count(*) as prize_count, sum(stock) as total_stock')
                 ->where('activity_id', 'in', $ids)
                 ->group('activity_id')
@@ -128,7 +128,7 @@ class Lottery extends Backend
 
         // 开启校验：奖池非空且概率合计 > 0（奖池在 prizes 端点维护，本表单不影响奖池）
         if ((int) ($data['status'] ?? 0) === 1) {
-            $prizeQuery = Db::name('nft_lottery_prize')->where('activity_id', $id > 0 ? $id : 0);
+            $prizeQuery = Db::name('lottery_prize')->where('activity_id', $id > 0 ? $id : 0);
             if ($prizeQuery->count() <= 0 || (int) $prizeQuery->sum('probability') <= 0) {
                 $this->error('开启活动前请先在「奖池配置」中添加奖品并设置概率');
             }
@@ -160,8 +160,8 @@ class Lottery extends Backend
         Db::startTrans();
         try {
             $count = $this->model->where('id', 'in', $ids)->delete();
-            Db::name('nft_lottery_prize')->where('activity_id', 'in', $ids)->delete();
-            Db::name('nft_lottery_chance')->where('activity_id', 'in', $ids)->delete();
+            Db::name('lottery_prize')->where('activity_id', 'in', $ids)->delete();
+            Db::name('lottery_chance')->where('activity_id', 'in', $ids)->delete();
             Db::commit();
         } catch (Throwable $e) {
             Db::rollback();
@@ -186,17 +186,17 @@ class Lottery extends Backend
             $prizes = $this->request->post('prizes/a', []);
             // 保留已发放数：按奖品名匹配旧奖池（重建奖池不重置 sent，避免库存凭空回补）
             $oldSent = [];
-            foreach (Db::name('nft_lottery_prize')->where('activity_id', $activityId)->field('name, sent')->select() as $old) {
+            foreach (Db::name('lottery_prize')->where('activity_id', $activityId)->field('name, sent')->select() as $old) {
                 if (!isset($oldSent[$old['name']])) {
                     $oldSent[$old['name']] = (int) $old['sent'];
                 }
             }
             Db::startTrans();
             try {
-                Db::name('nft_lottery_prize')->where('activity_id', $activityId)->delete();
+                Db::name('lottery_prize')->where('activity_id', $activityId)->delete();
                 foreach ($prizes as $p) {
                     $name = (string) ($p['name'] ?? '');
-                    Db::name('nft_lottery_prize')->insert([
+                    Db::name('lottery_prize')->insert([
                         'activity_id'   => $activityId,
                         'name'          => $name,
                         'type'          => (int) ($p['type'] ?? 1),
@@ -218,7 +218,7 @@ class Lottery extends Backend
             $this->success();
         }
 
-        $list = Db::name('nft_lottery_prize')->where('activity_id', $activityId)->order('id', 'asc')->select();
+        $list = Db::name('lottery_prize')->where('activity_id', $activityId)->order('id', 'asc')->select();
         $this->success('', ['list' => $list]);
     }
 
@@ -247,8 +247,8 @@ class Lottery extends Backend
         // 两次查询拼装
         $userIds  = array_values(array_unique(array_column($list, 'user_id')));
         $prizeIds = array_values(array_unique(array_column($list, 'prize_id')));
-        $users    = $userIds ? Db::name('nft_user')->where('id', 'in', $userIds)->column('nickname', 'id') : [];
-        $prizes   = $prizeIds ? Db::name('nft_lottery_prize')->where('id', 'in', $prizeIds)->column('name', 'id') : [];
+        $users    = $userIds ? Db::name('user')->where('id', 'in', $userIds)->column('nickname', 'id') : [];
+        $prizes   = $prizeIds ? Db::name('lottery_prize')->where('id', 'in', $prizeIds)->column('name', 'id') : [];
         foreach ($list as &$row) {
             $row['nickname']   = $users[$row['user_id']] ?? ('用户#' . $row['user_id']);
             $row['prize_name'] = $prizes[$row['prize_id']] ?? '-';
@@ -281,7 +281,7 @@ class Lottery extends Backend
         $query = $chanceModel->alias('c');
         if ($keyword !== '') {
             // 按用户昵称/ID 关联筛选
-            $userIds = Db::name('nft_user')
+            $userIds = Db::name('user')
                 ->where('id', $keyword)
                 ->whereOr('nickname', 'like', '%' . str_replace('%', '\%', $keyword) . '%')
                 ->column('id');
@@ -296,7 +296,7 @@ class Lottery extends Backend
             ->toArray();
 
         $userIds = array_values(array_unique(array_column($list, 'user_id')));
-        $users   = $userIds ? Db::name('nft_user')->where('id', 'in', $userIds)->column('nickname', 'id') : [];
+        $users   = $userIds ? Db::name('user')->where('id', 'in', $userIds)->column('nickname', 'id') : [];
         foreach ($list as &$row) {
             $row['nickname'] = $users[$row['user_id']] ?? ('用户#' . $row['user_id']);
         }
@@ -323,7 +323,7 @@ class Lottery extends Backend
         if ($num <= 0) {
             $this->error('补发次数必须大于 0');
         }
-        $user = Db::name('nft_user')->where('id', $userId)->find();
+        $user = Db::name('user')->where('id', $userId)->find();
         if (!$user) {
             $this->error('用户不存在');
         }
@@ -331,7 +331,7 @@ class Lottery extends Backend
             $this->error('活动不存在');
         }
 
-        Db::name('nft_lottery_chance')->insert([
+        Db::name('lottery_chance')->insert([
             'user_id'     => $userId,
             'activity_id' => $activityId,
             'num'         => $num,
