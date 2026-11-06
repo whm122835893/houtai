@@ -173,17 +173,6 @@ textarea.input{height:auto;min-height:80px;padding:10px 12px;resize:vertical}
 
 /* 移动端 */
 @media(max-width:768px){
-main{padding:0 12px 16px}
-.filter-bar .input,.filter-bar .select{width:100%}
-.filter-bar .btn{flex:1}
-.stat-card .num{font-size:24px}
-.form-grid{grid-template-columns:1fr}
-.tb-left h1{font-size:17px}
-.modal{width:100%!important;max-height:94vh}
-}
-
-/* 小屏（手机级）：侧边栏才改抽屉式；桌面宽度侧边栏永不自动收起，仅点折叠按钮收起 */
-@media(max-width:520px){
 #sidebar{position:fixed;left:-270px;margin:12px 0 12px 12px;box-shadow:20px 0 60px rgba(31,59,104,.2)}
 #sidebar.mobile-open{left:12px}
 #sidebar.collapsed{width:var(--sidebar-w);padding:18px 12px}
@@ -191,6 +180,13 @@ main{padding:0 12px 16px}
 #sidebar.collapsed .nav-item{justify-content:flex-start;padding:9px 12px}
 .collapse-btn{display:none}
 #hamburger{display:block}
+main{padding:0 12px 16px}
+.filter-bar .input,.filter-bar .select{width:100%}
+.filter-bar .btn{flex:1}
+.stat-card .num{font-size:24px}
+.form-grid{grid-template-columns:1fr}
+.tb-left h1{font-size:17px}
+.modal{width:100%!important;max-height:94vh}
 }
 
 /* 抽奖次数获取配置 */
