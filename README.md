@@ -1,5 +1,7 @@
 # 数字藏品平台管理后台（BuildAdmin 版）
 
+> **本地运行**：见 [docs/本地运行.md](docs/本地运行.md)（框架装配完成，`php think run` 即可启动，admin/123456）。
+
 基于 **BuildAdmin v2.x**（ThinkPHP8 + Vue3 setup + TypeScript + Vite + Pinia + Element Plus）实现的数字藏品平台管理后台，共 **19 个页面**，采用「液态玻璃」设计系统（天空蓝画布 + 白色磨砂玻璃 + 主蓝强调 + 衬线斜体数字），**自适应 PC / 平板 / 手机**。
 
 ## 一、功能清单

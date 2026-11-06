@@ -5,7 +5,7 @@ namespace app\admin\controller\nft;
 use Throwable;
 use think\facade\Db;
 use app\common\controller\Backend;
-use app\admin\model\nft\Synthesis;
+use app\admin\model\nft\Synthesis as SynthesisModel;
 use app\admin\model\nft\SynthesisRecord;
 use app\admin\model\nft\OperLog;
 
@@ -19,7 +19,7 @@ class Synthesis extends Backend
     public function initialize(): void
     {
         parent::initialize();
-        $this->model = new Synthesis();
+        $this->model = new SynthesisModel();
     }
 
     /**
