@@ -378,12 +378,12 @@ CREATE TABLE IF NOT EXISTS `oper_log` (
 -- ------------------------------------------------------------
 
 -- 顶级目录：概览
-INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
+INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
 (200,0,'menu_dir','概览','nft','nft','fa fa-home',NULL,'','',0,'none','',100,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (201,200,'menu','数据仪表盘','nft/dashboard','nft/dashboard','fa fa-dashboard','tab','','/src/views/backend/nft/dashboard/index.vue',1,'none','平台核心数据概览',99,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 顶级目录：业务管理
-INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
+INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
 (210,0,'menu_dir','业务管理','nft/business','nft/business','fa fa-briefcase',NULL,'','',0,'none','',98,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (211,210,'menu','用户管理','nft/user','nft/user','fa fa-user','tab','','/src/views/backend/nft/user/index.vue',1,'none','',90,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (212,210,'menu','钱包流水','nft/wallet','nft/wallet','fa fa-money','tab','','/src/views/backend/nft/wallet/index.vue',1,'none','',89,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
@@ -395,105 +395,105 @@ INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_t
 (218,210,'menu','定向发放','nft/airdrop','nft/airdrop','fa fa-send-o','tab','','/src/views/backend/nft/airdrop/index.vue',1,'none','',83,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 顶级目录：活动运营
-INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
+INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
 (230,0,'menu_dir','活动运营','nft/activity','nft/activity','fa fa-magic',NULL,'','',0,'none','',97,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (231,230,'menu','抽奖活动','nft/lottery','nft/lottery','fa fa-gift','tab','','/src/views/backend/nft/lottery/index.vue',1,'none','',80,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (232,230,'menu','合成活动','nft/synthesis','nft/synthesis','fa fa-flask','tab','','/src/views/backend/nft/synthesis/index.vue',1,'none','',79,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (233,230,'menu','邀请有礼','nft/invite','nft/invite','fa fa-handshake-o','tab','','/src/views/backend/nft/invite/index.vue',1,'none','',78,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 顶级目录：内容运营
-INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
+INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
 (240,0,'menu_dir','内容运营','nft/content','nft/content','fa fa-newspaper-o',NULL,'','',0,'none','',96,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (241,240,'menu','公告管理','nft/notice','nft/notice','fa fa-bullhorn','tab','','/src/views/backend/nft/notice/index.vue',1,'none','',75,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (242,240,'menu','轮播管理','nft/banner','nft/banner','fa fa-image','tab','','/src/views/backend/nft/banner/index.vue',1,'none','',74,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 顶级目录：系统
-INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
+INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
 (250,0,'menu_dir','系统','nft/system','nft/system','fa fa-cog',NULL,'','',0,'none','',95,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (251,250,'menu','运营参数','nft/setting','nft/setting','fa fa-sliders','tab','','/src/views/backend/nft/setting/index.vue',1,'none','',70,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (252,250,'menu','数据清理','nft/cleanup','nft/cleanup','fa fa-trash-o','tab','','/src/views/backend/nft/cleanup/index.vue',1,'none','',69,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (253,250,'menu','日志审计','nft/operlog','nft/operlog','fa fa-shield','tab','','/src/views/backend/nft/operlog/index.vue',1,'none','',68,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 页面按钮权限（各页面通用 index + 写操作按钮）
-INSERT INTO `admin_rule` (`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
+INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
 -- 用户管理
-(211,'button','查看','nft/user/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(211,'button','添加','nft/user/add','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(211,'button','编辑','nft/user/edit','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(211,'button','删除','nft/user/del','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(211,'button','禁用/启用','nft/user/status','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(300,211,'button','查看','nft/user/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(301,211,'button','添加','nft/user/add','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(302,211,'button','编辑','nft/user/edit','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(303,211,'button','删除','nft/user/del','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(304,211,'button','禁用/启用','nft/user/status','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 -- 钱包流水
-(212,'button','查看','nft/wallet/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(212,'button','查看流水明细','nft/wallet/logs','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(212,'button','余额调整','nft/wallet/adjust','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(305,212,'button','查看','nft/wallet/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(306,212,'button','查看流水明细','nft/wallet/logs','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(307,212,'button','余额调整','nft/wallet/adjust','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 -- 藏品管理
-(213,'button','查看','nft/collection/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(213,'button','添加','nft/collection/add','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(213,'button','编辑','nft/collection/edit','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(213,'button','删除','nft/collection/del','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(213,'button','开售','nft/collection/sale','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(213,'button','下架','nft/collection/off','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(213,'button','停止发售','nft/collection/soldout','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(308,213,'button','查看','nft/collection/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(309,213,'button','添加','nft/collection/add','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(310,213,'button','编辑','nft/collection/edit','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(311,213,'button','删除','nft/collection/del','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(312,213,'button','开售','nft/collection/sale','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(313,213,'button','下架','nft/collection/off','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(314,213,'button','停止发售','nft/collection/soldout','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 -- 分类管理
-(214,'button','查看','nft/category/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(214,'button','添加','nft/category/add','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(214,'button','编辑','nft/category/edit','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(214,'button','删除','nft/category/del','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(315,214,'button','查看','nft/category/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(316,214,'button','添加','nft/category/add','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(317,214,'button','编辑','nft/category/edit','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(318,214,'button','删除','nft/category/del','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 -- 订单管理
-(215,'button','查看','nft/order/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(215,'button','详情','nft/order/detail','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(319,215,'button','查看','nft/order/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(320,215,'button','详情','nft/order/detail','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 -- 市场寄售
-(216,'button','查看','nft/market/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(216,'button','下架','nft/market/off','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(216,'button','查看求购单','nft/market/buys','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(321,216,'button','查看','nft/market/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(322,216,'button','下架','nft/market/off','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(323,216,'button','查看求购单','nft/market/buys','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 -- 持仓查询
-(217,'button','查看','nft/hold/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(324,217,'button','查看','nft/hold/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 -- 定向发放
-(218,'button','查看','nft/airdrop/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(218,'button','创建任务','nft/airdrop/add','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(218,'button','执行/重试','nft/airdrop/retry','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(218,'button','撤销批次','nft/airdrop/revoke','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(218,'button','删除任务','nft/airdrop/del','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(325,218,'button','查看','nft/airdrop/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(326,218,'button','创建任务','nft/airdrop/add','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(327,218,'button','执行/重试','nft/airdrop/retry','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(328,218,'button','撤销批次','nft/airdrop/revoke','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(329,218,'button','删除任务','nft/airdrop/del','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 -- 抽奖活动
-(231,'button','查看','nft/lottery/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(231,'button','添加/编辑活动','nft/lottery/save','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(231,'button','删除活动','nft/lottery/del','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(231,'button','奖池配置','nft/lottery/prizes','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(231,'button','中奖记录','nft/lottery/records','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(231,'button','次数流水','nft/lottery/chances','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(231,'button','手动补发次数','nft/lottery/grant','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(330,231,'button','查看','nft/lottery/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(331,231,'button','添加/编辑活动','nft/lottery/save','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(332,231,'button','删除活动','nft/lottery/del','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(333,231,'button','奖池配置','nft/lottery/prizes','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(334,231,'button','中奖记录','nft/lottery/records','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(335,231,'button','次数流水','nft/lottery/chances','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(336,231,'button','手动补发次数','nft/lottery/grant','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 -- 合成活动
-(232,'button','查看','nft/synthesis/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(232,'button','添加/编辑活动','nft/synthesis/save','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(232,'button','删除活动','nft/synthesis/del','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(232,'button','合成记录','nft/synthesis/records','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(337,232,'button','查看','nft/synthesis/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(338,232,'button','添加/编辑活动','nft/synthesis/save','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(339,232,'button','删除活动','nft/synthesis/del','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(340,232,'button','合成记录','nft/synthesis/records','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 -- 邀请有礼
-(233,'button','查看','nft/invite/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(233,'button','规则保存','nft/invite/save','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(233,'button','删除规则','nft/invite/del','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(233,'button','邀请记录','nft/invite/records','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(341,233,'button','查看','nft/invite/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(342,233,'button','规则保存','nft/invite/save','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(343,233,'button','删除规则','nft/invite/del','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(344,233,'button','邀请记录','nft/invite/records','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 -- 活动中心
-(236,230,'menu','活动中心','nft/activity','nft/activity','fa fa-flag','tab','','/src/views/backend/nft/activity/index.vue',1,'none','',83,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(236,'button','查看','nft/activity/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(236,'button','开启/关闭活动','nft/activity/toggle','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(345,230,'menu','活动中心','nft/activity','nft/activity','fa fa-flag','tab','','/src/views/backend/nft/activity/index.vue',1,'none','',83,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(346,236,'button','查看','nft/activity/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(347,236,'button','开启/关闭活动','nft/activity/toggle','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 -- 公告管理
-(241,'button','查看','nft/notice/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(241,'button','添加','nft/notice/add','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(241,'button','编辑','nft/notice/edit','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(241,'button','删除','nft/notice/del','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(348,241,'button','查看','nft/notice/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(349,241,'button','添加','nft/notice/add','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(350,241,'button','编辑','nft/notice/edit','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(351,241,'button','删除','nft/notice/del','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 -- 轮播管理
-(242,'button','查看','nft/banner/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(242,'button','添加','nft/banner/add','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(242,'button','编辑','nft/banner/edit','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(242,'button','删除','nft/banner/del','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(352,242,'button','查看','nft/banner/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(353,242,'button','添加','nft/banner/add','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(354,242,'button','编辑','nft/banner/edit','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(355,242,'button','删除','nft/banner/del','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 -- 运营参数
-(251,'button','查看','nft/setting/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(251,'button','保存','nft/setting/save','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(356,251,'button','查看','nft/setting/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(357,251,'button','保存','nft/setting/save','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 -- 数据清理
-(252,'button','查看','nft/cleanup/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(252,'button','清理','nft/cleanup/clean','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(358,252,'button','查看','nft/cleanup/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(359,252,'button','清理','nft/cleanup/clean','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 -- 日志审计
-(253,'button','查看','nft/operlog/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+(360,253,'button','查看','nft/operlog/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- ------------------------------------------------------------
 -- 三、运营参数初始数据
@@ -557,15 +557,15 @@ CREATE TABLE IF NOT EXISTS `register_log` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='注册奖励发放记录表';
 
 -- 菜单（挂载在 230 活动运营目录下）
-INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
+INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
 (234,230,'menu','签到活动','nft/checkin','nft/checkin','fa fa-calendar-check-o','tab','','/src/views/backend/nft/checkin/index.vue',1,'none','',82,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (235,230,'menu','注册活动','nft/register','nft/register','fa fa-user-plus','tab','','/src/views/backend/nft/register/index.vue',1,'none','',81,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
-INSERT INTO `admin_rule` (`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
-(234,'button','查看','nft/checkin/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(234,'button','保存规则','nft/checkin/save','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(235,'button','查看','nft/register/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(235,'button','保存配置','nft/register/save','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
+(361,234,'button','查看','nft/checkin/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(362,234,'button','保存规则','nft/checkin/save','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(363,235,'button','查看','nft/register/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(364,235,'button','保存配置','nft/register/save','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 签到/注册参数初始数据
 INSERT INTO `setting` (`name`,`group`,`title`,`value`,`createtime`,`updatetime`) VALUES
@@ -624,15 +624,15 @@ CREATE TABLE IF NOT EXISTS `raffle_apply` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='抽签报名记录表';
 
 -- 菜单（业务管理组 210 下）
-INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
+INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
 (219,210,'menu','抽签发售','nft/raffle','nft/raffle','fa fa-ticket','tab','','/src/views/backend/nft/raffle/index.vue',1,'none','',82,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
-INSERT INTO `admin_rule` (`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
-(219,'button','查看','nft/raffle/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(219,'button','保存活动','nft/raffle/save','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(219,'button','删除活动','nft/raffle/del','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(219,'button','执行抽签','nft/raffle/draw','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(219,'button','报名记录','nft/raffle/applys','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
+(365,219,'button','查看','nft/raffle/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(366,219,'button','保存活动','nft/raffle/save','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(367,219,'button','删除活动','nft/raffle/del','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(368,219,'button','执行抽签','nft/raffle/draw','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(369,219,'button','报名记录','nft/raffle/applys','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- ============================================================
 -- v4 增量（2026-11-05）：抽签码 / 多场次 / 盲盒 / 空投明细 / 名录 /
@@ -641,7 +641,7 @@ INSERT INTO `admin_rule` (`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,
 -- ============================================================
 
 -- ------------------------------------------------------------
-一、存量表扩展（v1~v3 已建表的补列）
+-- 一、存量表扩展（v1~v3 已建表的补列）
 -- ------------------------------------------------------------
 
 -- 1) 抽签活动：补齐码配置三组参数（发码模式/码格式/邀请得码/开奖模式，原型已锁定）
@@ -671,7 +671,7 @@ ALTER TABLE `invite_record` ADD COLUMN `activity_id` int unsigned NOT NULL DEFAU
 ALTER TABLE `register_log`  ADD COLUMN `activity_id` int unsigned NOT NULL DEFAULT 0 COMMENT '活动场次ID(0=常驻)' AFTER `id`;
 
 -- ------------------------------------------------------------
-二、v4 新增表（共 14 张）
+-- 二、v4 新增表（共 14 张）
 -- ------------------------------------------------------------
 
 -- 1) 抽签码
@@ -938,7 +938,7 @@ INSERT INTO `setting` (`name`,`group`,`title`,`value`,`createtime`,`updatetime`)
 -- ------------------------------------------------------------
 -- 四、新增后台菜单与按钮（admin_rule，ID 从 260 起避免冲突）
 -- ------------------------------------------------------------
-INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
+INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
 (220,210,'menu','盲盒管理','nft/blindbox','nft/blindbox','fa fa-cube','tab','','/src/views/backend/nft/blindbox/index.vue',1,'none','',84,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (221,210,'menu','发放名录','nft/roster','nft/roster','fa fa-list-ul','tab','','/src/views/backend/nft/roster/index.vue',1,'none','',82,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (222,210,'menu','白名单','nft/whitelist','nft/whitelist','fa fa-id-card-o','tab','','/src/views/backend/nft/whitelist/index.vue',1,'none','',81,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
@@ -947,25 +947,94 @@ INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_t
 (256,250,'menu','第三方渠道','nft/thirdparty','nft/thirdparty','fa fa-plug','tab','','/src/views/backend/nft/thirdparty/index.vue',1,'none','',67,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (257,250,'menu','协议管理','nft/agreement','nft/agreement','fa fa-file-text','tab','','/src/views/backend/nft/agreement/index.vue',1,'none','',66,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
-INSERT INTO `admin_rule` (`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
-(220,'button','查看','nft/blindbox/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(220,'button','添加/编辑','nft/blindbox/save','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(220,'button','上架/下架','nft/blindbox/status','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(220,'button','奖池配置','nft/blindbox/prizes','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(220,'button','开盒记录','nft/blindbox/records','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(221,'button','查看','nft/roster/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(221,'button','生成名录','nft/roster/save','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(222,'button','查看','nft/whitelist/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(222,'button','导入/添加','nft/whitelist/save','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(224,'button','查看','nft/transfer/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(225,'button','查看','nft/swap/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(256,'button','查看','nft/thirdparty/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(256,'button','保存渠道','nft/thirdparty/save','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(257,'button','查看','nft/agreement/index','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(257,'button','保存协议','nft/agreement/save','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
+(370,220,'button','查看','nft/blindbox/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(371,220,'button','添加/编辑','nft/blindbox/save','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(372,220,'button','上架/下架','nft/blindbox/status','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(373,220,'button','奖池配置','nft/blindbox/prizes','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(374,220,'button','开盒记录','nft/blindbox/records','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(375,221,'button','查看','nft/roster/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(376,221,'button','生成名录','nft/roster/save','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(377,222,'button','查看','nft/whitelist/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(378,222,'button','导入/添加','nft/whitelist/save','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(379,224,'button','查看','nft/transfer/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(380,225,'button','查看','nft/swap/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(381,256,'button','查看','nft/thirdparty/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(382,256,'button','保存渠道','nft/thirdparty/save','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(383,257,'button','查看','nft/agreement/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(384,257,'button','保存协议','nft/agreement/save','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 抽签发售页面追加：码管理按钮（挂现有 219 抽签发售）
-INSERT INTO `admin_rule` (`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`updatetime`,`createtime`) VALUES
-(219,'button','码管理','nft/raffle/codes','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(219,'button','手动发码','nft/raffle/grantcode','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(219,'button','作废码','nft/raffle/voidcode','','','',NULL,'',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
+(385,219,'button','码管理','nft/raffle/codes','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(386,219,'button','手动发码','nft/raffle/grantcode','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(387,219,'button','作废码','nft/raffle/voidcode','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+
+-- ------------------------------------------------------------
+-- 六、C 端开放 API：框架 user 表业务列补齐
+-- 框架 migrate 已建 user 表（password/salt/status 等鉴权列），
+-- 本章在其上补齐业务列（与第一章业务建表口径一致），并镜像时间列。
+-- 幂等说明：一次性部署脚本，重复执行会报 Duplicate column，属正常。
+-- ------------------------------------------------------------
+ALTER TABLE `user`
+  ADD COLUMN `real_name` varchar(50) NOT NULL DEFAULT '' COMMENT '实名姓名' AFTER `mobile`,
+  ADD COLUMN `idcard` varchar(30) NOT NULL DEFAULT '' COMMENT '身份证号' AFTER `real_name`,
+  ADD COLUMN `invite_code` varchar(20) NOT NULL DEFAULT '' COMMENT '我的邀请码' AFTER `idcard`,
+  ADD COLUMN `inviter_id` int unsigned NOT NULL DEFAULT 0 COMMENT '邀请人ID' AFTER `invite_code`,
+  ADD COLUMN `balance` bigint NOT NULL DEFAULT 0 COMMENT '钱包余额(分)' AFTER `inviter_id`,
+  ADD COLUMN `frozen` bigint NOT NULL DEFAULT 0 COMMENT '冻结金额(分)' AFTER `balance`,
+  ADD COLUMN `total_income` bigint NOT NULL DEFAULT 0 COMMENT '累计收入(分)' AFTER `frozen`,
+  ADD COLUMN `total_expense` bigint NOT NULL DEFAULT 0 COMMENT '累计支出(分)' AFTER `total_income`,
+  ADD COLUMN `order_count` int unsigned NOT NULL DEFAULT 0 COMMENT '订单数' AFTER `total_expense`,
+  ADD COLUMN `hold_count` int unsigned NOT NULL DEFAULT 0 COMMENT '持仓数' AFTER `order_count`,
+  ADD COLUMN `tags` varchar(255) NOT NULL DEFAULT '' COMMENT '用户标签(逗号分隔)' AFTER `hold_count`,
+  ADD COLUMN `createtime` bigint GENERATED ALWAYS AS (`create_time`) VIRTUAL COMMENT '注册时间(镜像create_time)',
+  ADD COLUMN `updatetime` bigint GENERATED ALWAYS AS (`update_time`) VIRTUAL COMMENT '更新时间(镜像update_time)';
+ALTER TABLE `user`
+  ADD INDEX `idx_invite_code` (`invite_code`),
+  ADD INDEX `idx_inviter_id` (`inviter_id`);
+-- 状态列口径（框架 status 列为字符串，业务侧沿用同列）：
+-- 'enable'/'1' = 启用，'disable'/'0' = 禁用。
+-- 框架鉴权仅拦截 'disable'；C 端 UserService 登录时额外拦截 '0'（业务禁用）。
+UPDATE `user` SET `status` = 'enable' WHERE `status` = '';
+
+-- ------------------------------------------------------------
+-- 七、C 端开放 API：二级市场与基础运营
+-- 复用既有表：market_order(寄售单) / notice(公告) / banner(轮播) / order(全部订单)。
+-- 寄售单状态口径：0=在售 1=已售 2=已下架 3=已锁定(下单占单)；
+-- hold.status 增加 3=已转出（市场卖出后原持仓凭证关闭，买入方生成新凭证）。
+-- 幂等说明：一次性部署脚本，重复执行会报 Duplicate column，属正常。
+-- ------------------------------------------------------------
+ALTER TABLE `user`
+  ADD COLUMN `second_password` varchar(255) NOT NULL DEFAULT '' COMMENT '二级密码(md5)' AFTER `password`;
+ALTER TABLE `order`
+  ADD COLUMN `done_num` int unsigned NOT NULL DEFAULT 0 COMMENT '求购/委托已完成数量' AFTER `num`,
+  ADD COLUMN `remark` varchar(500) NOT NULL DEFAULT '' COMMENT '订单备注' AFTER `pay_no`;
+ALTER TABLE `market_order`
+  ADD COLUMN `order_id` int unsigned NOT NULL DEFAULT 0 COMMENT '锁定/成交的C端订单ID' AFTER `status`;
+ALTER TABLE `notice`
+  ADD COLUMN `iid` int unsigned NOT NULL DEFAULT 0 COMMENT '关联藏品ID(0=全站)' AFTER `category`;
+
+CREATE TABLE IF NOT EXISTS `user_follow` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int unsigned NOT NULL DEFAULT 0 COMMENT '会员ID',
+  `iid` int unsigned NOT NULL DEFAULT 0 COMMENT '藏品ID',
+  `createtime` bigint DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_user_iid` (`user_id`,`iid`),
+  KEY `idx_iid` (`iid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='藏品关注';
+
+CREATE TABLE IF NOT EXISTS `notice_category` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) NOT NULL DEFAULT '' COMMENT '分类名',
+  `weigh` int NOT NULL DEFAULT 0 COMMENT '权重',
+  `status` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '1启用 0禁用',
+  `createtime` bigint DEFAULT NULL,
+  `updatetime` bigint DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='公告分类';
+
+-- 订单 type 口径（order.type，与源站 order_type 对应）：
+--   1=一级购(源站10) 2=市场买入(20) 3=批量买入(21) 4=求购(22) 5=委托(23)
+-- 求购/委托支付后金额进入 user.frozen 托管，成交按件释放给卖方（扣 6% 综合服务费）。

@@ -5,7 +5,6 @@ namespace app\admin\controller\nft;
 use Throwable;
 use app\common\controller\Backend;
 use app\admin\model\nft\User as UserModel;
-use app\admin\model\nft\WalletLog;
 use app\admin\model\nft\OperLog;
 
 /**
@@ -139,7 +138,7 @@ class User extends Backend
     }
 
     /**
-     * 钱包调整（充值/扣减）
+     * 钱包调整（充值/扣减）—— 事务逻辑收敛至 WalletService
      */
     public function adjust(): void
     {
@@ -154,31 +153,9 @@ class User extends Backend
         if ($fen == 0) {
             $this->error('调整金额不能为 0');
         }
-        if ($fen < 0 && $row->balance + $fen < 0) {
-            $this->error('余额不足');
-        }
-        $row->startTrans();
         try {
-            $before = $row->balance;
-            $row->balance = $before + $fen;
-            if ($fen > 0) {
-                $row->total_income = $row->total_income + $fen;
-            } else {
-                $row->total_expense = $row->total_expense + abs($fen);
-            }
-            $row->save();
-            WalletLog::create([
-                'user_id'    => $id,
-                'type'       => 'admin_adjust',
-                'related_no' => '',
-                'amount'     => $fen,
-                'before'     => $before,
-                'after'      => $row->balance,
-                'remark'     => $remark ?: '管理员调整',
-            ]);
-            $row->commit();
-        } catch (Throwable $e) {
-            $row->rollback();
+            (new \app\common\service\nft\WalletService())->adjust($id, $fen, $remark);
+        } catch (\Throwable $e) {
             $this->error($e->getMessage());
         }
         OperLog::record('用户管理', '钱包调整', '用户#' . $id, $amount . ' 元，' . $remark);

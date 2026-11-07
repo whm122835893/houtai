@@ -73,7 +73,7 @@ class Wallet extends Backend
     }
 
     /**
-     * 余额调整（事务内更新余额与累计收支，并写入流水）
+     * 余额调整 —— 事务逻辑收敛至 WalletService（与会员管理 adjust 共用）
      */
     public function adjust(): void
     {
@@ -86,35 +86,9 @@ class Wallet extends Backend
             $this->error('调整金额不能为 0');
         }
 
-        $user = Db::name('user')->where('id', $id)->find();
-        if (!$user) {
-            $this->error(__('Record not found'));
-        }
-        if ($fen < 0 && $user['balance'] + $fen < 0) {
-            $this->error('余额不足');
-        }
-
-        Db::startTrans();
         try {
-            $before = (int) $user['balance'];
-            $after  = $before + $fen;
-            Db::name('user')->where('id', $id)->update([
-                'balance'       => $after,
-                'total_income'  => $fen > 0 ? $user['total_income'] + $fen : $user['total_income'],
-                'total_expense' => $fen < 0 ? $user['total_expense'] + abs($fen) : $user['total_expense'],
-            ]);
-            $this->model->create([
-                'user_id'    => $id,
-                'type'       => 'admin_adjust',
-                'related_no' => '',
-                'amount'     => $fen,
-                'before'     => $before,
-                'after'      => $after,
-                'remark'     => $remark ?: '管理员调整',
-            ]);
-            Db::commit();
+            (new \app\common\service\nft\WalletService())->adjust($id, $fen, $remark);
         } catch (Throwable $e) {
-            Db::rollback();
             $this->error($e->getMessage());
         }
 
