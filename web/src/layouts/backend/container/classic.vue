@@ -1,32 +1,27 @@
 <template>
-    <el-container class="layout-container">
-        <Aside />
-        <el-container class="content-wrapper">
-            <Header />
+    <!-- 原型壳层 1:1 移植：.layout / #sidebar / .topbar 结构与 preview 完全一致 -->
+    <div class="layout layout-container">
+        <PrototypeAside />
+        <div id="shade" v-show="shell.mobileOpen" @click="closeMobile()"></div>
+        <main>
+            <PrototypeHeader />
             <Main />
-        </el-container>
+        </main>
         <CloseFullScreen v-if="navTabs.state.tabFullScreen" />
-    </el-container>
+    </div>
 </template>
 
 <script setup lang="ts">
-import Aside from '/@/layouts/backend/components/aside.vue'
+import PrototypeAside from '/@/layouts/backend/components/prototype-aside.vue'
+import PrototypeHeader from '/@/layouts/backend/components/prototype-header.vue'
 import CloseFullScreen from '/@/layouts/backend/components/closeFullScreen.vue'
-import Header from '/@/layouts/backend/components/header.vue'
 import Main from '/@/layouts/backend/router-view/main.vue'
 import { useNavTabs } from '/@/stores/navTabs'
+import { prototypeShell as shell, closeMobile } from '/@/layouts/backend/components/prototypeShell'
+
+defineOptions({
+    name: 'layout/container/classic',
+})
 
 const navTabs = useNavTabs()
 </script>
-
-<style scoped>
-.layout-container {
-    height: 100%;
-    width: 100%;
-}
-.content-wrapper {
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
-}
-</style>

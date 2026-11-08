@@ -1,71 +1,25 @@
 <template>
     <div>
-        <div class="switch-language">
-            <el-dropdown size="large" :hide-timeout="50" placement="bottom-end" :hide-on-click="true">
-                <Icon name="fa fa-globe" color="var(--el-text-color-secondary)" size="28" />
-                <template #dropdown>
-                    <el-dropdown-menu class="chang-lang">
-                        <el-dropdown-item v-for="item in config.lang.langArray" :key="item.name" @click="editDefaultLang(item.name)">
-                            {{ item.value }}
-                        </el-dropdown-item>
-                    </el-dropdown-menu>
-                </template>
-            </el-dropdown>
-        </div>
-        <div @contextmenu.stop="" id="bubble" class="bubble">
-            <canvas id="bubble-canvas" class="bubble-canvas"></canvas>
-        </div>
-        <div class="login">
-            <div class="login-box">
-                <div class="head">
-                    <img src="~assets/login-header.png" alt="" />
-                </div>
-                <div class="form">
-                    <img class="profile-avatar" :src="fullUrl('/static/images/avatar.png')" alt="" />
-                    <div class="content">
-                        <el-form @keyup.enter="onSubmitPre()" ref="formRef" :rules="rules" size="large" :model="form">
-                            <el-form-item prop="username">
-                                <el-input
-                                    ref="usernameRef"
-                                    type="text"
-                                    clearable
-                                    v-model="form.username"
-                                    :placeholder="t('login.Please enter an account')"
-                                >
-                                    <template #prefix>
-                                        <Icon name="fa fa-user" class="form-item-icon" size="16" color="var(--el-input-icon-color)" />
-                                    </template>
-                                </el-input>
-                            </el-form-item>
-                            <el-form-item prop="password">
-                                <el-input
-                                    ref="passwordRef"
-                                    v-model="form.password"
-                                    type="password"
-                                    :placeholder="t('login.Please input a password')"
-                                    show-password
-                                >
-                                    <template #prefix>
-                                        <Icon name="fa fa-unlock-alt" class="form-item-icon" size="16" color="var(--el-input-icon-color)" />
-                                    </template>
-                                </el-input>
-                            </el-form-item>
-                            <el-checkbox v-model="form.keep" :label="t('login.Hold session')" size="default"></el-checkbox>
-                            <el-form-item>
-                                <el-button
-                                    :loading="state.submitLoading"
-                                    class="submit-button"
-                                    round
-                                    type="primary"
-                                    size="large"
-                                    @click="onSubmitPre()"
-                                >
-                                    {{ t('login.Sign in') }}
-                                </el-button>
-                            </el-form-item>
-                        </el-form>
-                    </div>
-                </div>
+        <!-- 原型登录页 1:1 移植（preview renderLogin） -->
+        <div id="login-view">
+            <div class="login-card glass pop">
+                <div class="login-logo">灵</div>
+                <h1>灵境数藏</h1>
+                <div class="en">ADMIN CONSOLE</div>
+                <el-form @keyup.enter="onSubmitPre()" ref="formRef" :rules="rules" :model="form" label-position="top" class="login-form">
+                    <el-form-item prop="username" label="账号">
+                        <el-input ref="usernameRef" type="text" clearable v-model="form.username" placeholder="admin" />
+                    </el-form-item>
+                    <el-form-item prop="password" label="密码">
+                        <el-input ref="passwordRef" v-model="form.password" type="password" show-password placeholder="123456" />
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button :loading="state.submitLoading" class="submit-button" type="primary" @click="onSubmitPre()">
+                            登 录
+                        </el-button>
+                    </el-form-item>
+                </el-form>
+                <div class="login-tip">灵境数藏 · 数字藏品管理后台</div>
             </div>
         </div>
     </div>
@@ -73,7 +27,6 @@
 
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, reactive, nextTick, useTemplateRef } from 'vue'
-import * as pageBubble from '/@/utils/pageBubble'
 import { useI18n } from 'vue-i18n'
 import { editDefaultLang } from '/@/lang/index'
 import { useConfig } from '/@/stores/config'
@@ -83,14 +36,9 @@ import { uuid } from '/@/utils/random'
 import { buildValidatorData } from '/@/utils/validate'
 import router from '/@/router'
 import clickCaptcha from '/@/components/clickCaptcha'
-import toggleDark from '/@/utils/useDark'
 import { fullUrl } from '/@/utils/common'
 import { adminBaseRoutePath } from '/@/router/static/adminBase'
-let timer: number
-
-const config = useConfig()
 const adminInfo = useAdminInfo()
-toggleDark(config.layout.isDark)
 
 const formRef = useTemplateRef('formRef')
 const usernameRef = useTemplateRef('usernameRef')
@@ -103,7 +51,7 @@ const state = reactive({
 const form = reactive({
     username: '',
     password: '',
-    keep: false,
+    keep: true,
     captchaId: uuid(),
     captchaInfo: '',
 })
@@ -125,10 +73,6 @@ const focusInput = () => {
 }
 
 onMounted(() => {
-    timer = window.setTimeout(() => {
-        pageBubble.init()
-    }, 1000)
-
     login('get')
         .then((res) => {
             state.showCaptcha = res.data.captcha
@@ -137,11 +81,6 @@ onMounted(() => {
         .catch((err) => {
             console.log(err)
         })
-})
-
-onBeforeUnmount(() => {
-    clearTimeout(timer)
-    pageBubble.removeListeners()
 })
 
 const onSubmitPre = () => {

@@ -54,43 +54,6 @@ class ExceptionHandle extends Handle
     {
         // 添加自定义异常处理机制
 
-        // C 端开放 API（api 应用）：异常统一渲染为 JSON 包络（恒 HTTP 200）
-        // 说明：路由/控制器内抛出的异常由 TP8 Pipeline 在 $next 内渲染后作为普通响应
-        // 返回，仍会穿过 CStyleResponse 完成包络转换；本分支兜底的是路由管线之外的
-        // 异常（全局中间件阶段、应用级 404、非业务 Throwable 等），按
-        // config('nft.c_end_style') 自行完成风格适配。
-        if ($this->app->exists('http') && $this->app->http->getName() === 'api') {
-            if ($e instanceof HttpResponseException) {
-                return $e->getResponse();
-            }
-
-            $code = \app\common\service\nft\CException::SYSTEM_ERROR;
-            $msg  = $this->getMessage($e);
-            if ($e instanceof \app\common\service\nft\CException) {
-                $code = $e->getCode() ?: \app\common\service\nft\CException::SYSTEM_ERROR;
-            } elseif ($e instanceof HttpException) {
-                $code = $e->getStatusCode() == 404
-                    ? \app\common\service\nft\CException::NOT_FOUND
-                    : \app\common\service\nft\CException::SYSTEM_ERROR;
-            } elseif ($e instanceof ValidateException) {
-                $code = \app\common\service\nft\CException::PARAM_TYPE;
-            }
-            if (!$e instanceof \app\common\service\nft\CException && !$this->app->isDebug()) {
-                // 非业务异常不泄露细节
-                $msg = $this->app->config->get('app.error_message', '系统错误');
-            }
-
-            if (config('nft.c_end_style', 'zhenhai') === 'zhenhai') {
-                return json([
-                    'status'  => false,
-                    'code'    => $code,
-                    'message' => $msg !== '' ? $msg : '系统错误',
-                    'data'    => null,
-                ]);
-            }
-            return json(['code' => $code, 'msg' => $msg, 'time' => time(), 'data' => null]);
-        }
-
         // 其他错误交给系统处理
         return parent::render($request, $e);
     }

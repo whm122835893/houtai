@@ -8,6 +8,15 @@
         <link rel="icon" href="/favicon.ico" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Loading...</title>
+        <script>
+            // 空路径直接进后台登录，避免落在框架门户页
+            (function () {
+                var h = location.hash;
+                if (!h || h === '#' || h === '#/' || h === '#/index') {
+                    location.replace(location.pathname + location.search + '#/admin');
+                }
+            })();
+        </script>
     </head>
     <body>
         <div id="app"></div>

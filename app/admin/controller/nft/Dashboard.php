@@ -78,6 +78,7 @@ class Dashboard extends Backend
                 'latest_orders'    => $orders,
             ]);
         } catch (\Throwable $e) {
+            if ($e instanceof \think\exception\HttpResponseException) throw $e; // success()/error() 靠该异常短路返回，不能吞
             $this->error($e->getMessage());
         }
     }
