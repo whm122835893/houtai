@@ -56,7 +56,11 @@ abstract class Cbase extends Frontend
         if ($private !== '') {
             $key   = openssl_pkey_get_private($this->normalizePem($private));
             $plain = '';
-            if ($key && openssl_private_decrypt(base64_decode($encrypted), $plain, $key, OPENSSL_PKCS1_PADDING)) {
+            // 兜底校验明文不含控制字符：防止"合法 base64 的短字节数据"被 RSA 解成乱码后流入登录比对
+            if ($key
+                && openssl_private_decrypt(base64_decode($encrypted), $plain, $key, OPENSSL_PKCS1_PADDING)
+                && $plain !== '' && !preg_match('/[\x00-\x1f]/', $plain)
+            ) {
                 return $plain;
             }
         }
@@ -69,13 +73,17 @@ abstract class Cbase extends Frontend
         throw new CException('密码解密失败', CException::PARAM_TYPE);
     }
 
-    /** 把裸 base64 密钥规范化为 PEM */
-    private function normalizePem(string $raw): string
+    /**
+     * 把裸 base64 密钥规范化为 PEM
+     *
+     * @param string $type PEM 头类型：PRIVATE KEY（解密侧默认）| PUBLIC KEY（下发公钥）
+     */
+    protected function normalizePem(string $raw, string $type = 'PRIVATE KEY'): string
     {
         if (str_contains($raw, '-----BEGIN')) {
             return $raw;
         }
         $body = wordwrap(preg_replace('/\s+/', '', $raw) ?: $raw, 64, "\n", true);
-        return "-----BEGIN PRIVATE KEY-----\n" . $body . "\n-----END PRIVATE KEY-----";
+        return "-----BEGIN {$type}-----\n" . $body . "\n-----END {$type}-----";
     }
 }

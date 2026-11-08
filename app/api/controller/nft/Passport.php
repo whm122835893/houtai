@@ -93,7 +93,7 @@ class Passport extends Cbase
         $this->success('', [
             'key'       => '',
             'image'     => '',
-            'publicKey' => (string) config('nft.rsa_public_key', ''),
+            'publicKey' => $this->normalizePem((string) config('nft.rsa_public_key', ''), 'PUBLIC KEY'),
         ]);
     }
 
