@@ -3,16 +3,19 @@
 namespace app\api\controller\nft;
 
 use app\common\service\nft\HoldService;
+use app\common\service\nft\MergeService;
 use app\common\service\nft\MarketService;
 
 /**
- * 我的持仓 + 二级市场（对齐源站 nft 分包契约）
+ * 我的持仓 + 二级市场 + 盲盒/合成（对齐源站 nft 分包契约）
  *
  * 持仓：GET /nft  GET /nft/{nftId}
  * 寄售：POST /nft/sell/up  POST /nft/sell/up/batch  PUT /nft/sell/down
  *       GET /nft/sell/sold  POST /nft/sell/apply
  * 市场：GET /nft/secondary  GET /nft/secondary/{iid}
  *       GET /nft/secondary/sell|sold|apply|trust|follow
+ * 盲盒：POST /nft/box/open
+ * 合成：POST /nft/merge/v1
  */
 class Nft extends Cbase
 {
@@ -181,5 +184,26 @@ class Nft extends Cbase
             (int) $this->auth->id,
             $this->pageNo()
         ));
+    }
+
+    /* ==================== 盲盒 / 合成 ==================== */
+
+    /**
+     * POST nft/box/open —— 盲盒开启 {nftId}（原凭证消耗，按概率发新藏品凭证）
+     */
+    public function boxOpen(): void
+    {
+        $nftId = (int) $this->request->param('nftId/d', 0);
+        $this->success('', (new HoldService())->openBox((int) $this->auth->id, $nftId));
+    }
+
+    /**
+     * POST nft/merge/v1 —— 合成兑换 {mergeId, nftIds}
+     */
+    public function mergeV1(): void
+    {
+        $mergeId = (int) $this->request->param('mergeId/d', 0);
+        $nftIds  = array_map('intval', (array) $this->request->param('nftIds/a', []));
+        $this->success('', (new MergeService())->merge((int) $this->auth->id, $mergeId, $nftIds));
     }
 }

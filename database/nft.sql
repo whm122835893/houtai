@@ -1038,3 +1038,131 @@ CREATE TABLE IF NOT EXISTS `notice_category` (
 -- 订单 type 口径（order.type，与源站 order_type 对应）：
 --   1=一级购(源站10) 2=市场买入(20) 3=批量买入(21) 4=求购(22) 5=委托(23)
 -- 求购/委托支付后金额进入 user.frozen 托管，成交按件释放给卖方（扣 6% 综合服务费）。
+
+-- ------------------------------------------------------------
+-- 八、C 端开放 API：活动（签到/积分/抽奖）+ 合成 + 盲盒 + IM 群组
+--   签到：activity_sign 按日记录，积分累计到 user.points；
+--         签到口径：每日 10 分（activity_sign.points 留当日快照）。
+--   抽奖：activity_lottery_prize.probability 为百分比（前端展示「中奖率: x%」），
+--         加权随机取万分比权重；prize.collection_id>0 中奖自动发藏品凭证。
+--   合成：item_merge 场次（output_collection_id=产出物藏品）+ item_merge_need
+--         材料条件 + item_merge_log 记录；材料凭证消耗置 hold.status=5。
+--   盲盒：collection.type=2 的藏品持有凭证可直接开启（POST /nft/box/open），
+--         奖池复用 blindbox_prize（box_id=collection.id），开启消耗原凭证
+--         （hold.status=4）并按概率发新藏品新凭证（hold.source=7）。
+--   IM：im_group 群组 + im_group_member 群成员（版权页群列表/加入）。
+-- 幂等说明：一次性部署脚本，重复执行会报 Duplicate column，属正常。
+-- ------------------------------------------------------------
+ALTER TABLE `user`
+  ADD COLUMN `points` int unsigned NOT NULL DEFAULT 0 COMMENT '活动积分' AFTER `balance`;
+ALTER TABLE `collection`
+  ADD COLUMN `type` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '类型:1=普通,2=盲盒' AFTER `category_id`;
+
+-- hold.status 口径追加：4=已开启(盲盒原凭证) 5=已合成(材料凭证消耗)
+-- hold.source 口径追加：7=盲盒开启
+
+CREATE TABLE IF NOT EXISTS `activity_sign` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int unsigned NOT NULL DEFAULT 0 COMMENT '会员ID',
+  `sign_date` varchar(10) NOT NULL DEFAULT '' COMMENT '签到日(YYYY-MM-DD)',
+  `day` int unsigned NOT NULL DEFAULT 0 COMMENT '累计签到天数',
+  `points` int unsigned NOT NULL DEFAULT 0 COMMENT '当日获得积分',
+  `createtime` bigint NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_user_date` (`user_id`,`sign_date`),
+  KEY `idx_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='每日签到';
+
+CREATE TABLE IF NOT EXISTS `activity_lottery` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL DEFAULT '' COMMENT '活动名',
+  `points` int unsigned NOT NULL DEFAULT 0 COMMENT '单次抽奖消耗积分',
+  `content` text NULL COMMENT '活动规则(HTML)',
+  `status` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '1启用 0停用',
+  `createtime` bigint NULL DEFAULT NULL,
+  `updatetime` bigint NULL DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='抽奖活动';
+
+CREATE TABLE IF NOT EXISTS `activity_lottery_prize` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `lottery_id` int unsigned NOT NULL DEFAULT 0 COMMENT '活动ID',
+  `name` varchar(100) NOT NULL DEFAULT '' COMMENT '奖品名',
+  `image` varchar(255) NOT NULL DEFAULT '' COMMENT '奖品图',
+  `probability` decimal(6,2) NOT NULL DEFAULT 0.00 COMMENT '中奖率(百分比)',
+  `collection_id` int unsigned NOT NULL DEFAULT 0 COMMENT '中奖发放藏品ID(0=不发凭证)',
+  `status` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '1启用 0停用',
+  `createtime` bigint NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_lottery` (`lottery_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='抽奖奖品';
+
+CREATE TABLE IF NOT EXISTS `activity_lottery_log` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int unsigned NOT NULL DEFAULT 0 COMMENT '会员ID',
+  `lottery_id` int unsigned NOT NULL DEFAULT 0 COMMENT '活动ID',
+  `prize_id` int unsigned NOT NULL DEFAULT 0 COMMENT '奖品ID',
+  `prize_name` varchar(100) NOT NULL DEFAULT '' COMMENT '奖品名快照',
+  `prize_image` varchar(255) NOT NULL DEFAULT '' COMMENT '奖品图快照',
+  `hold_id` int unsigned NOT NULL DEFAULT 0 COMMENT '中奖发放的持仓ID',
+  `createtime` bigint NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_user` (`user_id`),
+  KEY `idx_lottery` (`lottery_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='抽奖记录';
+
+CREATE TABLE IF NOT EXISTS `item_merge` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `cover` varchar(255) NOT NULL DEFAULT '' COMMENT '封面图',
+  `name` varchar(100) NOT NULL DEFAULT '' COMMENT '活动名',
+  `remark` varchar(500) NOT NULL DEFAULT '' COMMENT '活动说明',
+  `total` int unsigned NOT NULL DEFAULT 0 COMMENT '发行总量',
+  `surplus` int unsigned NOT NULL DEFAULT 0 COMMENT '剩余可合成数',
+  `output_collection_id` int unsigned NOT NULL DEFAULT 0 COMMENT '产出物藏品ID(0=不产出)',
+  `merge_time` bigint NULL DEFAULT NULL COMMENT '开始时间',
+  `end_time` bigint NULL DEFAULT NULL COMMENT '结束时间',
+  `status` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '1启用 0停用',
+  `createtime` bigint NULL DEFAULT NULL,
+  `updatetime` bigint NULL DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='合成活动';
+
+CREATE TABLE IF NOT EXISTS `item_merge_need` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `merge_id` int unsigned NOT NULL DEFAULT 0 COMMENT '活动ID',
+  `collection_id` int unsigned NOT NULL DEFAULT 0 COMMENT '材料藏品ID',
+  `quantity` int unsigned NOT NULL DEFAULT 1 COMMENT '需要数量',
+  PRIMARY KEY (`id`),
+  KEY `idx_merge` (`merge_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='合成材料条件';
+
+CREATE TABLE IF NOT EXISTS `item_merge_log` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int unsigned NOT NULL DEFAULT 0 COMMENT '会员ID',
+  `merge_id` int unsigned NOT NULL DEFAULT 0 COMMENT '活动ID',
+  `hold_id` int unsigned NOT NULL DEFAULT 0 COMMENT '产出持仓ID',
+  `createtime` bigint NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_user` (`user_id`),
+  KEY `idx_merge` (`merge_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='合成记录';
+
+CREATE TABLE IF NOT EXISTS `im_group` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL DEFAULT '' COMMENT '群名',
+  `avatar` varchar(255) NOT NULL DEFAULT '' COMMENT '群头像',
+  `status` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '1显示 0隐藏',
+  `createtime` bigint NULL DEFAULT NULL,
+  `updatetime` bigint NULL DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='IM 群组';
+
+CREATE TABLE IF NOT EXISTS `im_group_member` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `group_id` int unsigned NOT NULL DEFAULT 0 COMMENT '群ID',
+  `user_id` int unsigned NOT NULL DEFAULT 0 COMMENT '会员ID',
+  `createtime` bigint NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_group_user` (`group_id`,`user_id`),
+  KEY `idx_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='IM 群成员';

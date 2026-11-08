@@ -9,8 +9,8 @@ use think\facade\Db;
 /**
  * 持仓服务 —— 数字藏品凭证（hold 表）发放与查询
  *
- * hold.status：0=持有 1=寄售中 2=已锁定
- * hold.source：1=一级购 2=市场购 3=定向发放 4=抽奖 5=合成 6=邀请奖励
+ * hold.status：0=持有 1=寄售中 2=已锁定 3=已转出 4=已开启(盲盒) 5=已合成(材料)
+ * hold.source：1=一级购 2=市场购 3=定向发放 4=抽奖 5=合成 6=邀请奖励 7=盲盒开启
  */
 class HoldService
 {
@@ -92,14 +92,16 @@ class HoldService
         if (!$hold) {
             throw CException::notFound();
         }
-        $col = CollectionModel::where('id', (int) $hold->collection_id)->find();
-        $out = $this->toNft($hold->toArray(), $col ? $col->toArray() : []);
+        $col    = CollectionModel::where('id', (int) $hold->collection_id)->find();
+        $colArr = $col ? $col->toArray() : [];
+        $out    = $this->toNft($hold->toArray(), $colArr);
         $out['item'] = $col ? [
             'name'          => (string) $col->name,
             'issueQuantity' => (int) $col->stock,
             'content'       => (string) $col->detail,
             'imageUrl'      => $col->cover !== '' ? full_url((string) $col->cover, true) : '',
-            'type'          => 1, // 1=普通藏品（盲盒为 2，暂未接入）
+            // 1=普通藏品 2=盲盒（盲盒凭证可开启，NftInfo.vue 按 type===2 显示「开启」）
+            'type'          => (int) ($colArr['type'] ?? 1),
         ] : null;
         return $out;
     }
@@ -143,5 +145,106 @@ class HoldService
             }
         }
         return 'C' . $collectionId . '-' . uniqid();
+    }
+
+    /**
+     * 盲盒开启（源站 POST /nft/box/open 契约：{imageUrl, name, token, total, nftId}）
+     *
+     * 校验凭证为当前用户持有态、藏品 collection.type=2；
+     * 奖池复用 blindbox_prize（box_id=collection.id，万分比概率）；
+     * 原凭证消耗（status=4），按概率发新藏品新凭证（source=7）。
+     *
+     * @throws CException
+     */
+    public function openBox(int $userId, int $nftId): array
+    {
+        if ($nftId <= 0) {
+            throw CException::missing('nftId');
+        }
+
+        Db::startTrans();
+        try {
+            $hold = Db::name('hold')
+                ->where('id', $nftId)
+                ->where('user_id', $userId)
+                ->where('status', 0)
+                ->find();
+            if (!$hold) {
+                throw CException::notFound('藏品凭证不存在或不可开启');
+            }
+
+            $col = Db::name('collection')->where('id', (int) $hold['collection_id'])->find();
+            if (!$col || (int) ($col['type'] ?? 1) !== 2) {
+                throw CException::biz('该藏品不是盲盒');
+            }
+
+            // 只在尚有库存的奖品中随机（sent < quantity）
+            $prizes = Db::name('blindbox_prize')
+                ->where('box_id', (int) $col['id'])
+                ->where('status', 1)
+                ->where('collection_id', '>', 0)
+                ->whereRaw('sent < quantity')
+                ->select()
+                ->toArray();
+            if (!$prizes) {
+                throw CException::biz('奖池已空');
+            }
+
+            $prize = $this->pickPrize($prizes);
+
+            // 原凭证消耗（status=4 已开启）
+            Db::name('hold')->where('id', $nftId)->update(['status' => 4, 'updatetime' => time()]);
+            Db::name('user')->where('id', $userId)->inc('hold_count', -1)->update();
+
+            // 奖品记数 + 发新凭证（source=7 盲盒开启）
+            Db::name('blindbox_prize')->where('id', (int) $prize['id'])->inc('sent', 1)->update();
+            $ids    = $this->issue($userId, (int) $prize['collection_id'], 1, 7);
+            $newId  = $ids[0] ?? 0;
+
+            Db::name('blindbox_record')->insert([
+                'box_id'        => (int) $col['id'],
+                'user_id'       => $userId,
+                'prize_id'      => (int) $prize['id'],
+                'collection_id' => (int) $prize['collection_id'],
+                'prize_name'    => (string) $prize['name'],
+                'hold_id'       => $newId,
+                'createtime'    => time(),
+            ]);
+            Db::commit();
+        } catch (\Throwable $e) {
+            Db::rollback();
+            throw $e;
+        }
+
+        $new   = Db::name('collection')->where('id', (int) $prize['collection_id'])->field('name,cover,stock')->find();
+        $cover = (string) ($new['cover'] ?? '');
+        return [
+            'imageUrl' => $cover !== '' ? full_url($cover, true) : '',
+            'name'     => (string) ($new['name'] ?? ''),
+            'token'    => (int) $newId,
+            'total'    => (int) ($new['stock'] ?? 0),
+            'nftId'    => (string) $newId,
+        ];
+    }
+
+    /** 盲盒万分比概率加权随机 */
+    private function pickPrize(array $prizes): array
+    {
+        $weights = [];
+        $total   = 0;
+        foreach ($prizes as $p) {
+            $w        = max(1, (int) $p['probability']);
+            $weights[] = $w;
+            $total    += $w;
+        }
+
+        $roll = mt_rand(1, $total);
+        foreach ($prizes as $i => $p) {
+            $roll -= $weights[$i];
+            if ($roll <= 0) {
+                return $p;
+            }
+        }
+        return $prizes[0];
     }
 }

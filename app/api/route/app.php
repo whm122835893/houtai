@@ -73,4 +73,24 @@ Route::group(function () {
     Route::get('basic/notice', 'nft.Basic/notice')->completeMatch();
     Route::get('basic/notice/:id', 'nft.Basic/noticeInfo')->pattern(['id' => '\d+']);
 
+    /* ---------- 活动：签到 / 积分 / 抽奖 ---------- */
+    Route::get('activity/sign', 'nft.Activity/sign')->completeMatch();
+    Route::post('activity/sign', 'nft.Activity/doSign')->completeMatch();
+    Route::get('activity/points/balance', 'nft.Activity/pointsBalance')->completeMatch();
+    Route::get('activity/lottery/active', 'nft.Activity/lotteryActive')->completeMatch();
+    Route::get('activity/lottery/log', 'nft.Activity/lotteryLog')->completeMatch();
+    Route::post('activity/lottery/start/:id', 'nft.Activity/lotteryStart')->pattern(['id' => '\d+']);
+
+    /* ---------- 合成（浏览免登录，兑换登录） ---------- */
+    Route::get('item/merge', 'nft.Item/mergeIndex')->completeMatch();
+    Route::get('item/merge/:id', 'nft.Item/mergeDetail')->pattern(['id' => '\d+']);
+    Route::post('nft/merge/v1', 'nft.Nft/mergeV1')->completeMatch();
+
+    /* ---------- 盲盒 ---------- */
+    Route::post('nft/box/open', 'nft.Nft/boxOpen')->completeMatch();
+
+    /* ---------- IM 群组 ---------- */
+    Route::get('im/group', 'nft.Im/group')->completeMatch();
+    Route::post('im/group/join/:id', 'nft.Im/join')->pattern(['id' => '\d+']);
+
 })->middleware([BearerToken::class, CStyleResponse::class]);
