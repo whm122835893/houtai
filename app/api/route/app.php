@@ -23,6 +23,15 @@ Route::group(function () {
     Route::get('passport/captcha/image', 'nft.Passport/captchaImage');
     Route::post('passport/captcha/sms', 'nft.Passport/captchaSms');
     Route::put('passport/secondPassword', 'nft.Passport/secondPassword');
+    Route::put('passport/password', 'nft.Passport/password')->completeMatch();
+    Route::post('passport/realName', 'nft.Passport/realName')->completeMatch();
+    Route::post('passport/delete', 'nft.Passport/delete')->completeMatch();
+
+    /* ---------- 会员中心 ---------- */
+    Route::get('user/profile', 'nft.User/profile')->completeMatch();
+    Route::put('user/profile/nickname', 'nft.User/nickname')->completeMatch();
+    Route::get('user/resource', 'nft.User/resource')->completeMatch();
+    Route::get('user/invite', 'nft.User/invite')->completeMatch();
 
     /* ---------- 藏品目录与关注 ---------- */
     // 静态段开启完整匹配，避免 /item/5 被 item 规则部分匹配吞掉

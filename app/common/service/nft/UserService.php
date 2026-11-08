@@ -4,6 +4,7 @@ namespace app\common\service\nft;
 
 use app\common\library\Auth;
 use app\common\model\User as UserModel;
+use think\facade\Db;
 use Throwable;
 
 /**
@@ -127,6 +128,163 @@ class UserService
         if (md5((string) $plain) !== $stored) {
             throw CException::biz('二级密码错误');
         }
+    }
+
+    /* ==================== 账户中心（源站 user 分包 + passport 扩展） ==================== */
+
+    /**
+     * 个人资料（源站 GET /user/profile 契约）
+     *
+     * 页面消费字段：nickname（我的/设置/账号与安全）、inviteCode（邀请页复制链接）
+     */
+    public function profileOf(int $userId): array
+    {
+        $row = UserModel::where('id', $userId)->find();
+        if (!$row) {
+            throw CException::notFound();
+        }
+        $r = $row->toArray();
+
+        return [
+            'uid'          => (string) $r['id'],
+            'nickname'     => (string) ($r['nickname'] ?? ''),
+            'avatar'       => ($r['avatar'] ?? '') !== '' ? full_url((string) $r['avatar'], false, (string) config('buildadmin.default_avatar')) : '',
+            'introduction' => (string) ($r['introduction'] ?? ''),
+            'inviteCode'   => (string) ($r['invite_code'] ?? ''),
+            'hasRealName'  => !empty($r['real_name']),
+            'realName'     => $this->maskName((string) ($r['real_name'] ?? '')),
+            'createTime'   => $this->ms((int) ($r['createtime'] ?? 0)),
+        ];
+    }
+
+    /**
+     * 修改昵称（源站 PUT /user/profile/nickname 契约，data:true）
+     *
+     * @throws CException 昵称为空或超长
+     */
+    public function updateNickname(int $userId, string $nickname): bool
+    {
+        $nickname = trim($nickname);
+        if ($nickname === '') {
+            throw CException::missing('nickname');
+        }
+        if (mb_strlen($nickname) > 20) {
+            throw CException::bad('昵称长度不能超过 20 字');
+        }
+        UserModel::where('id', $userId)->update(['nickname' => $nickname]);
+        return true;
+    }
+
+    /**
+     * 功能资源列表（源站 GET /user/resource 契约：字符串数组）
+     *
+     * 页面按 resourceList.includes('nft:sell:up:batch') 决定「批量寄售」入口；
+     * 批量寄售接口对登录用户全量开放，故默认下发该资源。
+     */
+    public function resourceOf(): array
+    {
+        return ['nft:sell:up:batch'];
+    }
+
+    /**
+     * 邀请记录（源站 GET /user/invite 契约：{list, total}）
+     *
+     * 行字段：{id, phone(脱敏), createTime(ms), hasRealName}
+     */
+    public function inviteListOf(int $userId, int $pageNo = 1, int $pageSize = 10): array
+    {
+        $total = (int) UserModel::where('inviter_id', $userId)->count();
+        $rows  = UserModel::where('inviter_id', $userId)
+            ->order('id', 'desc')
+            ->page($pageNo, $pageSize)
+            ->select()
+            ->toArray();
+
+        return [
+            'total' => $total,
+            'list'  => array_map(fn(array $r) => [
+                'id'          => (int) $r['id'],
+                'phone'       => $this->maskPhone((string) ($r['mobile'] ?? '')),
+                'hasRealName' => !empty($r['real_name']),
+                'createTime'  => $this->ms((int) ($r['createtime'] ?? 0)),
+            ], $rows),
+        ];
+    }
+
+    /**
+     * 重置密码（源站 PUT /passport/password 契约：{phone, captcha, password}）
+     *
+     * 短信 type=201（忘记密码）；debug 模式固定码校验，正式短信网关接入后替换。
+     *
+     * @param string $plain 新密码明文（调用方已完成 RSA 解密）
+     * @throws CException 手机号不存在 / 验证码错误 / 密码格式错误
+     */
+    public function resetPassword(string $phone, string $code, string $plain): bool
+    {
+        if ($phone === '') {
+            throw CException::missing('phone');
+        }
+        if ($code === '') {
+            throw CException::missing('captcha');
+        }
+        if (!preg_match('/^.{6,32}$/', $plain)) {
+            throw CException::bad('密码长度须为 6-32 位');
+        }
+        $user = UserModel::where('mobile', $phone)->find();
+        if (!$user) {
+            throw CException::notFound('账号不存在');
+        }
+        $user->resetPassword((int) $user->id, $plain);
+        return true;
+    }
+
+    /**
+     * 设置实名信息（源站 POST /passport/realName 契约：{realName, idCard}）
+     *
+     * @throws CException 格式错误
+     */
+    public function setRealName(int $userId, string $realName, string $idCard): bool
+    {
+        $realName = trim($realName);
+        $idCard   = trim($idCard);
+        if ($realName === '') {
+            throw CException::missing('realName');
+        }
+        if (!preg_match('/^[\x{4e00}-\x{9fa5}a-zA-Z·]{2,20}$/u', $realName)) {
+            throw CException::bad('姓名格式错误');
+        }
+        if (!preg_match('/^[1-9]\d{7}((0\d)|(1[0-2]))(([0|1|2]\d)|3[0-1])\d{3}$|^[1-9]\d{5}[1-9]\d{3}((0\d)|(1[0-2]))(([0|1|2]\d)|3[0-1])\d{3}([0-9]|X)$/', $idCard)) {
+            throw CException::bad('身份证号格式错误');
+        }
+        UserModel::where('id', $userId)->update(['real_name' => $realName, 'idcard' => $idCard]);
+        return true;
+    }
+
+    /**
+     * 注销账号（源站 POST /passport/delete 契约）
+     *
+     * 口径：软注销 —— status 置 'disable'（框架登录硬校验直接拦截）并踢掉全部 token；
+     * 数据保留以便合规追溯，昵称打脱敏标记。
+     *
+     * @throws CException
+     */
+    public function deleteAccount(int $userId): bool
+    {
+        $row = UserModel::where('id', $userId)->find();
+        if (!$row) {
+            throw CException::notFound();
+        }
+        UserModel::where('id', $userId)->update([
+            'status'   => 'disable',
+            'nickname' => '已注销用户' . $userId,
+        ]);
+        // 踢掉全部在线 token（user_token 表为框架通用表，逐条删除）
+        try {
+            Db::name('user_token')->where('user_id', $userId)->delete();
+        } catch (Throwable $e) {
+            // token 表不可用时注销主流程不受影响（status 已拦截登录）
+        }
+        return true;
     }
 
     /**

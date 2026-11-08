@@ -13,7 +13,9 @@ use Throwable;
  * BuildAdmin 统一响应为 {code, msg, time, data}（code==1 成功），
  * zhenhai 风格 C 端契约要求 {status, code, message, data}（恒 HTTP 200，code==0 成功）。
  *
- * 由 config/nft.php 的 c_end_style 控制：
+ * 由 config/nft.php 的 c_end_style 控制全局默认，路由组可显式传参覆盖（多 C 端并存隔离）：
+ *   Route::group()->middleware([CStyleResponse::class . ':zhenhai'])
+ *   Route::group()->middleware([CStyleResponse::class . ':standard'])
  *   zhenhai  = 转换为源站包络（默认）
  *   standard = 原样输出 BuildAdmin 包络
  *
@@ -40,9 +42,14 @@ class CStyleResponse
     /** BuildAdmin「未登录/需登录/令牌过期」类 code */
     private const AUTH_CODES = [303, 409, 401, 403];
 
-    public function handle(Request $request, \Closure $next): Response
+    /**
+     * @param string $style 包络风格；空串回退全局 config('nft.c_end_style')，
+     *                      路由组可传 ':zhenhai' / ':standard' 实现多 C 端并存隔离
+     */
+    public function handle(Request $request, \Closure $next, string $style = ''): Response
     {
-        if (config('nft.c_end_style', 'zhenhai') !== 'zhenhai') {
+        $style = $style !== '' ? $style : (string) config('nft.c_end_style', 'zhenhai');
+        if ($style !== 'zhenhai') {
             try {
                 return $next($request);
             } catch (CException $e) {
