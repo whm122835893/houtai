@@ -130,11 +130,12 @@ CREATE TABLE IF NOT EXISTS `hold` (
   `sn` varchar(30) NOT NULL DEFAULT '' COMMENT '藏品编号',
   `collection_id` int unsigned NOT NULL DEFAULT 0 COMMENT '所属藏品ID',
   `user_id` int unsigned NOT NULL DEFAULT 0 COMMENT '持有人ID',
-  `source` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '来源:1=一级购,2=市场购,3=定向发放,4=抽奖,5=合成,6=邀请奖励',
-  `status` tinyint unsigned NOT NULL DEFAULT 0 COMMENT '状态:0=持有,1=寄售中,2=已锁定',
+  `source` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '来源:1=一级购,2=市场购,3=定向发放,4=抽奖,5=合成,6=邀请奖励,7=置换',
+  `status` tinyint unsigned NOT NULL DEFAULT 0 COMMENT '状态:0=持有,1=寄售中,2=已锁定,3=已回收',
   `sell_order_id` int unsigned NOT NULL DEFAULT 0 COMMENT '关联寄售单ID',
   `claim_status` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '领取状态:0=待领取,1=已领取(空投领取式到账用)',
   `ref_id` int unsigned NOT NULL DEFAULT 0 COMMENT '来源业务ID(空投任务ID等)',
+  `recycle_info` varchar(500) NOT NULL DEFAULT '' COMMENT '回收信息JSON{reason,note,time}',
   `mint_time` bigint NULL DEFAULT NULL COMMENT '铸造时间',
   `createtime` bigint NULL DEFAULT NULL COMMENT '获得时间',
   `updatetime` bigint NULL DEFAULT NULL COMMENT '更新时间',
@@ -419,16 +420,16 @@ INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_t
 (253,250,'menu','日志审计','nft/operlog','nft/operlog','fa fa-shield','tab','','/src/views/backend/nft/operlog/index.vue',1,'none','',68,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 四、新增后台菜单与按钮（显式 ID 菜单须在自增按钮 INSERT 之前执行）
--- 注：盲盒/名录/白名单/转赠/置换/第三方渠道/协议 7 个模块的业务控制器与页面尚未从原型移植，菜单暂置 status=0；移植完成后改回 1 即可
+-- 注：盲盒/名录/白名单/转赠/置换/第三方渠道/协议 7 个模块已全部移植（控制器+页面+接口），菜单 status=1 启用
 -- ------------------------------------------------------------
 INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
-(220,210,'menu','盲盒管理','nft/blindbox','nft/blindbox','fa fa-cube','tab','','/src/views/backend/nft/blindbox/index.vue',1,'none','',84,0,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(221,210,'menu','发放名录','nft/roster','nft/roster','fa fa-list-ul','tab','','/src/views/backend/nft/roster/index.vue',1,'none','',82,0,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(222,210,'menu','白名单','nft/whitelist','nft/whitelist','fa fa-id-card-o','tab','','/src/views/backend/nft/whitelist/index.vue',1,'none','',81,0,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(224,210,'menu','转赠管理','nft/transfer','nft/transfer','fa fa-exchange','tab','','/src/views/backend/nft/transfer/index.vue',1,'none','',80,0,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(225,210,'menu','置换管理','nft/swap','nft/swap','fa fa-random','tab','','/src/views/backend/nft/swap/index.vue',1,'none','',79,0,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(256,250,'menu','第三方渠道','nft/thirdparty','nft/thirdparty','fa fa-plug','tab','','/src/views/backend/nft/thirdparty/index.vue',1,'none','',67,0,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(257,250,'menu','协议管理','nft/agreement','nft/agreement','fa fa-file-text','tab','','/src/views/backend/nft/agreement/index.vue',1,'none','',66,0,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+(220,210,'menu','盲盒管理','nft/blindbox','nft/blindbox','fa fa-cube','tab','','/src/views/backend/nft/blindbox/index.vue',1,'none','',84,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(221,210,'menu','发放名录','nft/roster','nft/roster','fa fa-list-ul','tab','','/src/views/backend/nft/roster/index.vue',1,'none','',82,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(222,210,'menu','白名单','nft/whitelist','nft/whitelist','fa fa-id-card-o','tab','','/src/views/backend/nft/whitelist/index.vue',1,'none','',81,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(224,210,'menu','转赠管理','nft/transfer','nft/transfer','fa fa-exchange','tab','','/src/views/backend/nft/transfer/index.vue',1,'none','',80,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(225,210,'menu','置换管理','nft/swap','nft/swap','fa fa-random','tab','','/src/views/backend/nft/swap/index.vue',1,'none','',79,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(256,250,'menu','第三方渠道','nft/thirdparty','nft/thirdparty','fa fa-plug','tab','','/src/views/backend/nft/thirdparty/index.vue',1,'none','',67,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(257,250,'menu','协议管理','nft/agreement','nft/agreement','fa fa-file-text','tab','','/src/views/backend/nft/agreement/index.vue',1,'none','',66,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 页面按钮权限（各页面通用 index + 写操作按钮）
 INSERT INTO `admin_rule` (`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
@@ -458,12 +459,15 @@ INSERT INTO `admin_rule` (`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,
 -- 订单管理
 (215,'button','查看','nft/order/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (215,'button','详情','nft/order/detail','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(215,'button','订单导出','nft/order/export','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 -- 市场寄售
 (216,'button','查看','nft/market/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (216,'button','下架','nft/market/off','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (216,'button','查看求购单','nft/market/buys','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 -- 持仓查询
 (217,'button','查看','nft/hold/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(217,'button','持仓导出','nft/hold/export','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(217,'button','回收藏品','nft/hold/recycle','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 -- 定向发放
 (218,'button','查看','nft/airdrop/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (218,'button','创建任务','nft/airdrop/add','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),

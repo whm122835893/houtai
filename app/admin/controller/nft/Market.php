@@ -53,14 +53,17 @@ class Market extends Backend
         $holdIds   = array_values(array_unique(array_filter(array_column($rows, 'hold_id'))));
         $userMap   = $sellerIds ? UserModel::where('id', 'in', $sellerIds)->column('nickname', 'id') : [];
         $colMap    = $colIds ? CollectionModel::where('id', 'in', $colIds)->column('name', 'id') : [];
-        // 寄售限价（C 端挂单时价格不得超过，供后台审核展示）
+        // 寄售限价（C 端挂单时价格不得超上限/低于下限，供后台审核展示）
         $limitMap  = $colIds ? CollectionModel::where('id', 'in', $colIds)->column('resale_price_limit', 'id') : [];
+        $minMap    = $colIds ? CollectionModel::where('id', 'in', $colIds)->column('resale_price_min', 'id') : [];
         $holdMap   = $holdIds ? HoldModel::where('id', 'in', $holdIds)->column('sn', 'id') : [];
         foreach ($list as $row) {
             $row->seller_name        = $userMap[$row->seller_id] ?? ('用户#' . $row->seller_id);
             $row->collection_name    = $colMap[$row->collection_id] ?? '-';
             $row->resale_price_limit = (int) ($limitMap[$row->collection_id] ?? 0);
+            $row->resale_price_min   = (int) ($minMap[$row->collection_id] ?? 0);
             $row->price_exceeded     = ($row->resale_price_limit > 0 && $row->price > $row->resale_price_limit) ? 1 : 0;
+            $row->price_under        = ($row->resale_price_min > 0 && $row->price < $row->resale_price_min) ? 1 : 0;
             $row->hold_sn            = $holdMap[$row->hold_id] ?? '-';
         }
 

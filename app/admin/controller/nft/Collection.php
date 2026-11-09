@@ -71,7 +71,9 @@ class Collection extends Backend
             $bbin       = (int) Db::name('blindbox_prize')->where('collection_id', $cid)->sum('quantity');
             $recycled   = (int) Db::name('hold')->where('collection_id', $cid)->where('status', 3)->count();
             $destroyed  = (int) $row->destroyed;
-            $remain     = max(0, (int) $row->stock - (int) $row->sold - $airdropped - $bbin - $destroyed + $recycled);
+            // 置换计划向本藏品空投的数量也占用库存池（对齐原型 POOL 口径：swap 主记录行 in_num 汇总）
+            $swapIssued = (int) Db::name('swap')->where('user_id', 0)->where('out_collection_id', 0)->where('in_collection_id', $cid)->where('status', 1)->sum('in_num');
+            $remain     = max(0, (int) $row->stock - (int) $row->sold - $airdropped - $swapIssued - $bbin - $destroyed + $recycled);
             $row->pool  = [
                 'airdropped' => $airdropped,
                 'bbin'       => $bbin,

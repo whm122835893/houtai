@@ -23,6 +23,7 @@
             </select>
             <button class="btn btn-primary" @click="load(1)">查询</button>
             <button class="btn btn-ghost" @click="resetQuery">重置</button>
+            <button v-if="auth('export')" class="btn btn-ghost" @click="doExport">导出</button>
         </div>
 
         <!-- 列表 -->
@@ -39,24 +40,22 @@
                             <th>支付方式</th>
                             <th>状态</th>
                             <th>下单时间</th>
-                            <th>支付时间</th>
-                            <th style="width: 90px">操作</th>
+                            <th>操作</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="row in list" :key="row.id">
                             <td>
                                 <div class="cell-main">{{ row.order_no }}</div>
-                                <div class="cell-sub">{{ row.pay_no || '-' }}</div>
+                                <div class="cell-sub">{{ row.pay_no || '第三方单号 -' }}</div>
                             </td>
                             <td>{{ row.user_name }}</td>
-                            <td>{{ row.collection_name }}<span v-if="row.num > 1" class="cell-sub"> ×{{ row.num }}</span></td>
+                            <td class="cell-main">{{ row.collection_name }}</td>
                             <td><span class="tag" :class="row.type == 1 ? 'tag-blue' : 'tag-orange'">{{ row.type == 1 ? '一级购' : '市场购' }}</span></td>
                             <td><span class="serif-num">￥{{ fen2yuan(row.amount) }}</span></td>
                             <td>{{ payTypeText[row.pay_type] || row.pay_type || '-' }}</td>
                             <td><span class="tag" :class="statusCls[row.status]">{{ statusText[row.status] || '-' }}</span></td>
                             <td class="cell-sub">{{ fmtTime(row.createtime) }}</td>
-                            <td class="cell-sub">{{ fmtTime(row.paytime) }}</td>
                             <td>
                                 <button class="btn btn-ghost btn-sm" @click="openDetail(row)">详情</button>
                             </td>
@@ -114,6 +113,8 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { auth } from '/@/utils/common'
 import { fen2yuan, fmtTime } from '/@/utils/nft'
 import * as api from '/@/api/backend/nft/order'
 
@@ -153,6 +154,30 @@ const resetQuery = () => {
 const openDetail = async (row: any) => {
     const res = await api.detail(row.id)
     detailRow.value = res.data
+}
+
+/** 导出 CSV（按当前筛选条件拉取全量） */
+const doExport = async () => {
+    const res = await api.list({ keyword: query.keyword, type: query.type, status: query.status, page: 1, limit: 1000 })
+    const rows: any[] = res.data.list || []
+    if (!rows.length) {
+        ElMessage.warning('当前没有可导出的数据')
+        return
+    }
+    const q = (v: any) => '"' + String(v ?? '').replace(/"/g, '""') + '"'
+    const headers = ['订单号', '用户', '藏品', '类型', '数量', '金额(元)', '支付方式', '状态', '下单时间']
+    const lines = rows.map((o) =>
+        [o.order_no, o.user_name, o.collection_name, o.type == 1 ? '一级购' : '市场购', o.num, (o.amount / 100).toFixed(2), payTypeText[o.pay_type] || o.pay_type || '', statusText[o.status] ?? o.status, fmtTime(o.createtime)]
+            .map(q)
+            .join(',')
+    )
+    const csv = '\ufeff' + [headers.map(q).join(','), ...lines].join('\r\n')
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    a.download = `订单列表_${new Date().toISOString().slice(0, 10)}.csv`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
 }
 
 onMounted(() => load())

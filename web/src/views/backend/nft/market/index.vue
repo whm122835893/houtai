@@ -11,14 +11,14 @@
             <button class="btn" :class="tab === 'orders' ? 'btn-primary' : 'btn-ghost'" @click="switchTab('orders')">挂单列表</button>
             <button class="btn" :class="tab === 'buys' ? 'btn-primary' : 'btn-ghost'" @click="switchTab('buys')">求购单</button>
             <template v-if="tab === 'orders'">
+                <span style="flex: 1"></span>
                 <select v-model="query.status" class="select">
                     <option :value="-1">全部状态</option>
                     <option :value="0">在售</option>
                     <option :value="1">已售</option>
                     <option :value="2">已下架</option>
                 </select>
-                <button class="btn btn-primary" @click="loadOrders(1)">查询</button>
-                <button class="btn btn-ghost" @click="resetQuery">重置</button>
+                <button class="btn btn-primary" @click="loadOrders(1)">筛选</button>
             </template>
         </div>
 
@@ -30,7 +30,7 @@
                         <tr>
                             <th>挂单号</th>
                             <th>卖家</th>
-                            <th>藏品</th>
+                            <th>藏品 / 编号</th>
                             <th>单价 / 限价</th>
                             <th>状态</th>
                             <th>挂单时间</th>
@@ -40,25 +40,27 @@
                     </thead>
                     <tbody>
                         <tr v-for="row in orderList" :key="row.id">
-                            <td class="cell-main">{{ row.order_no }}</td>
+                            <td class="cell-sub">{{ row.order_no }}</td>
                             <td>{{ row.seller_name }}</td>
                             <td>
                                 <div class="cell-main">{{ row.collection_name }}</div>
-                                <div class="cell-sub">编号 {{ row.hold_sn }}</div>
+                                <div class="cell-sub">{{ row.hold_sn }}</div>
                             </td>
                             <td>
-                                <span class="serif-num" :class="{ 'amount-out': row.price_exceeded }">￥{{ fen2yuan(row.price) }}</span>
+                                <span class="serif-num" :class="{ 'amount-out': row.price_exceeded || row.price_under }">￥{{ fen2yuan(row.price) }}</span>
                                 <div class="cell-sub">
-                                    <template v-if="row.resale_price_limit > 0">限价 ￥{{ fen2yuan(row.resale_price_limit) }}</template>
+                                    <template v-if="row.resale_price_limit > 0">限价 {{ row.resale_price_min > 0 ? '￥' + fen2yuan(row.resale_price_min) + ' ~ ￥' + fen2yuan(row.resale_price_limit) : '≤ ￥' + fen2yuan(row.resale_price_limit) }}</template>
                                     <template v-else>不限价</template>
-                                    <span v-if="row.price_exceeded" class="tag tag-red" style="margin-left: 4px">超限</span>
+                                    <span v-if="row.price_exceeded" class="tag tag-red" style="margin-left: 4px">超上限</span>
+                                    <span v-if="row.price_under" class="tag tag-red" style="margin-left: 4px">低于下限</span>
                                 </div>
                             </td>
                             <td><span class="tag" :class="statusCls[row.status]">{{ statusText[row.status] || '-' }}</span></td>
                             <td class="cell-sub">{{ fmtTime(row.createtime) }}</td>
                             <td class="cell-sub">{{ fmtTime(row.soldtime) }}</td>
                             <td>
-                                <button v-if="row.status == 0 && auth('off')" class="btn btn-danger btn-sm" @click="doOff(row)">下架</button>
+                                <button v-if="row.status == 0 && auth('off')" class="btn btn-ghost btn-sm" @click="doOff(row)">下架</button>
+                                <span v-else class="cell-sub">—</span>
                             </td>
                         </tr>
                     </tbody>
@@ -82,7 +84,6 @@
                 <table class="tbl">
                     <thead>
                         <tr>
-                            <th>ID</th>
                             <th>求购人</th>
                             <th>藏品</th>
                             <th>求购价</th>
@@ -92,9 +93,8 @@
                     </thead>
                     <tbody>
                         <tr v-for="row in buyList" :key="row.id">
-                            <td class="serif-num">{{ row.id }}</td>
                             <td>{{ row.user_name }}</td>
-                            <td>{{ row.collection_name }}</td>
+                            <td class="cell-main">{{ row.collection_name }}</td>
                             <td><span class="serif-num">￥{{ fen2yuan(row.price) }}</span></td>
                             <td><span class="tag" :class="buyStatusCls[row.status]">{{ buyStatusText[row.status] || '-' }}</span></td>
                             <td class="cell-sub">{{ fmtTime(row.createtime) }}</td>
@@ -172,10 +172,6 @@ const loadBuys = async (page = 1) => {
 const switchTab = (t: 'orders' | 'buys') => {
     tab.value = t
     if (t === 'buys') loadBuys(1)
-}
-const resetQuery = () => {
-    query.status = -1
-    loadOrders(1)
 }
 const doOff = (row: any) => {
     ElMessageBox.confirm(`确认下架挂单「${row.order_no}」？持仓将恢复为持有状态`, '操作确认', { type: 'warning' }).then(() =>

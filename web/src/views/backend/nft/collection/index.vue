@@ -94,6 +94,7 @@
                                 <button v-if="row.status == 2 && auth('soldout')" class="btn btn-ghost btn-sm" @click="doSoldout(row)">停止发售</button>
                                 <button v-if="row.status == 2 && auth('off')" class="btn btn-ghost btn-sm" @click="doOff(row)">下架</button>
                                 <button v-if="(row.status == 0 || row.status == 3 || row.status == 4) && auth('sale')" class="btn btn-primary btn-sm" @click="openSale(row)">{{ row.status == 4 ? '重新开售' : '开售' }}</button>
+                                <button class="btn btn-ghost btn-sm" @click="openSwap(row)">置换</button>
                                 <button v-if="auth('edit')" class="btn btn-ghost btn-sm" @click="openEdit(row)">编辑</button>
                                 <button v-if="auth('del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
                             </td>
@@ -251,6 +252,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { auth } from '/@/utils/common'
 import { fen2yuan, fmtTime } from '/@/utils/nft'
@@ -259,6 +261,11 @@ import * as catApi from '/@/api/backend/nft/category'
 import BaInput from '/@/components/baInput/index.vue'
 
 defineOptions({ name: 'nft/collection' })
+
+const router = useRouter()
+const openSwap = () => {
+    router.push({ path: '/admin/nft/swap' })
+}
 
 const statusText: Record<number, string> = { 0: '未发售', 1: '已排期', 2: '发售中', 3: '已下架', 4: '已售罄' }
 const statusCls: Record<number, string> = { 0: 'tag-gray', 1: 'tag-orange', 2: 'tag-green', 3: 'tag-red', 4: 'tag-orange' }
