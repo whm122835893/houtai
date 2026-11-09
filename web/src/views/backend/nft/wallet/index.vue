@@ -43,10 +43,10 @@
                                 <td><span class="serif-num amount-in">￥{{ fen2yuan(row.total_income) }}</span></td>
                                 <td><span class="serif-num amount-out">￥{{ fen2yuan(row.total_expense) }}</span></td>
                                 <td>
-                                    <button v-if="auth('nft/wallet/logs')" class="btn btn-ghost btn-sm" @click="toggleLogs(row)">
+                                    <button v-if="auth('logs')" class="btn btn-ghost btn-sm" @click="toggleLogs(row)">
                                         {{ expandedId === row.id ? '收起明细' : '流水明细' }}
                                     </button>
-                                    <button v-if="auth('nft/wallet/adjust')" class="btn btn-ghost btn-sm" @click="openAdjust(row)">
+                                    <button v-if="auth('adjust')" class="btn btn-ghost btn-sm" @click="openAdjust(row)">
                                         余额调整
                                     </button>
                                 </td>

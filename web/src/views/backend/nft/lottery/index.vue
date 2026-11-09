@@ -17,7 +17,7 @@
             <button class="btn btn-primary" @click="load(1)">查询</button>
             <button class="btn btn-ghost" @click="resetQuery">重置</button>
             <span style="flex: 1"></span>
-            <button v-if="auth('nft/lottery/save')" class="btn btn-primary" @click="openAct()">新建活动</button>
+            <button v-if="auth('save')" class="btn btn-primary" @click="openAct()">新建活动</button>
         </div>
 
         <!-- 活动列表 -->
@@ -52,11 +52,11 @@
                             <td class="cell-sub">{{ fmtTime(row.start_time) }}</td>
                             <td class="cell-sub">{{ fmtTime(row.end_time) }}</td>
                             <td>
-                                <button v-if="auth('nft/lottery/prizes')" class="btn btn-ghost btn-sm" @click="openPrizes(row)">奖池配置</button>
-                                <button v-if="auth('nft/lottery/chances')" class="btn btn-ghost btn-sm" @click="openChances(row)">次数流水</button>
-                                <button v-if="auth('nft/lottery/records')" class="btn btn-ghost btn-sm" @click="openRecords(row)">中奖记录</button>
-                                <button v-if="auth('nft/lottery/save')" class="btn btn-ghost btn-sm" @click="openAct(row)">编辑</button>
-                                <button v-if="auth('nft/lottery/del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
+                                <button v-if="auth('prizes')" class="btn btn-ghost btn-sm" @click="openPrizes(row)">奖池配置</button>
+                                <button v-if="auth('chances')" class="btn btn-ghost btn-sm" @click="openChances(row)">次数流水</button>
+                                <button v-if="auth('records')" class="btn btn-ghost btn-sm" @click="openRecords(row)">中奖记录</button>
+                                <button v-if="auth('save')" class="btn btn-ghost btn-sm" @click="openAct(row)">编辑</button>
+                                <button v-if="auth('del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
                             </td>
                         </tr>
                     </tbody>
@@ -301,7 +301,7 @@
                         <button :disabled="chanceQuery.page >= chanceMaxPage" @click="loadChances(chanceQuery.page + 1)">›</button>
                     </div>
                     <!-- 手动补发 -->
-                    <div v-if="auth('nft/lottery/grant')" class="grant-box">
+                    <div v-if="auth('grant')" class="grant-box">
                         <div class="card-head" style="padding-top: 0"><h3>手动补发次数</h3><span class="en">GRANT</span></div>
                         <div class="filter-bar" style="padding: 0">
                             <input v-model="grantForm.user_id" class="input" type="number" min="1" placeholder="用户ID" style="width: 120px" />

@@ -53,7 +53,7 @@
             <div class="confirm-row">
                 <span class="cell-sub">已选分组：<b>{{ selectedTitle || '（未选择）' }}</b></span>
                 <input v-model="confirmText" class="input confirm-input" placeholder='请输入「清空」以启用按钮' />
-                <button v-if="auth('nft/cleanup/clean')" class="btn btn-danger" :disabled="!canClean || cleaning" @click="doClean(false)">
+                <button v-if="auth('clean')" class="btn btn-danger" :disabled="!canClean || cleaning" @click="doClean(false)">
                     {{ cleaning ? '清理中…' : '执行清理' }}
                 </button>
                 <span v-else class="cell-sub">仅超级管理员可执行</span>
@@ -82,7 +82,7 @@
             </div>
             <div class="confirm-row">
                 <input v-model="userConfirmText" class="input confirm-input" placeholder='请输入「清空」确认' />
-                <button v-if="auth('nft/cleanup/clean')" class="btn btn-danger" :disabled="userConfirmText !== '清空' || cleaning" @click="doClean(true)">
+                <button v-if="auth('clean')" class="btn btn-danger" :disabled="userConfirmText !== '清空' || cleaning" @click="doClean(true)">
                     {{ cleaning ? '清理中…' : '清空全体用户' }}
                 </button>
                 <span v-else class="cell-sub">仅超级管理员可执行</span>

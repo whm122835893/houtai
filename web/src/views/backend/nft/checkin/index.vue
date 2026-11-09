@@ -45,7 +45,7 @@
                                     <td class="cell-main">连续签到 {{ r.day_num }} 天</td>
                                     <td><span class="tag" :class="typeCls[r.reward_type]">{{ typeName[r.reward_type] }}</span></td>
                                     <td class="serif-num">{{ rewardText(r) }}</td>
-                                    <td v-if="auth('nft/checkin/save')">
+                                    <td v-if="auth('save')">
                                         <button class="btn btn-ghost btn-sm" @click="editRule(i)">编辑</button>
                                         <button class="btn btn-danger btn-sm" @click="delRule(i)">删除</button>
                                     </td>
@@ -54,9 +54,9 @@
                             </tbody>
                         </table>
                     </div>
-                    <button v-if="auth('nft/checkin/save')" class="btn btn-ghost btn-sm" style="margin-top: 10px" @click="addRule">＋ 添加阶梯</button>
+                    <button v-if="auth('save')" class="btn btn-ghost btn-sm" style="margin-top: 10px" @click="addRule">＋ 添加阶梯</button>
                 </div>
-                <button v-if="auth('nft/checkin/save')" class="btn btn-primary" @click="submit">保存签到规则</button>
+                <button v-if="auth('save')" class="btn btn-primary" @click="submit">保存签到规则</button>
             </div>
         </div>
 

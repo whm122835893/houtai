@@ -23,7 +23,7 @@
             <button class="btn btn-primary" @click="load(1)">查询</button>
             <button class="btn btn-ghost" @click="resetQuery">重置</button>
             <span style="flex: 1"></span>
-            <button v-if="auth('nft/notice/add')" class="btn btn-primary" @click="openAdd">发布公告</button>
+            <button v-if="auth('add')" class="btn btn-primary" @click="openAdd">发布公告</button>
         </div>
 
         <!-- 列表 -->
@@ -57,8 +57,8 @@
                             </td>
                             <td class="cell-sub">{{ fmtTime(row.publish_time) }}</td>
                             <td>
-                                <button v-if="auth('nft/notice/edit')" class="btn btn-ghost btn-sm" @click="openEdit(row)">编辑</button>
-                                <button v-if="auth('nft/notice/del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
+                                <button v-if="auth('edit')" class="btn btn-ghost btn-sm" @click="openEdit(row)">编辑</button>
+                                <button v-if="auth('del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
                             </td>
                         </tr>
                     </tbody>

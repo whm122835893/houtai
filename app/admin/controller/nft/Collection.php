@@ -46,7 +46,7 @@ class Collection extends Backend
 
         $total = $this->model->where($where)->count();
         $list  = $this->model->where($where)
-            ->field(['id', 'name', 'category_id', 'author', 'cover', 'price', 'market_price', 'stock', 'sold', 'resale', 'resale_price_limit', 'status', 'sale_time', 'sale_end_time', 'pre_sale_time', 'pre_rule_type', 'pre_rule_value', 'pre_limit', 'createtime'])
+            ->field(['id', 'name', 'category_id', 'author', 'publisher', 'cover', 'price', 'market_price', 'stock', 'sold', 'destroyed', 'resale', 'resale_price_min', 'resale_price_limit', 'status', 'sale_time', 'sale_end_time', 'pre_sale_time', 'pre_rule_type', 'pre_rule_value', 'pre_limit', 'createtime'])
             ->order('id', 'desc')
             ->page($page, $limit)
             ->select();
@@ -64,6 +64,21 @@ class Collection extends Backend
                 && $row->sale_time
                 && $now >= $row->pre_sale_time && $now < $row->sale_time;
             $row->pre_active = $preOn ? 1 : 0;
+
+            // 库存池 = 发行量 − 已售 − 空投已发放 − 盲盒投放 − 已销毁 + 已回收（持仓status=3回收回池）
+            $cid = (int) $row->id;
+            $airdropped = (int) Db::name('airdrop_task')->where('collection_id', $cid)->sum(Db::raw('success_num - revoke_num'));
+            $bbin       = (int) Db::name('blindbox_prize')->where('collection_id', $cid)->sum('quantity');
+            $recycled   = (int) Db::name('hold')->where('collection_id', $cid)->where('status', 3)->count();
+            $destroyed  = (int) $row->destroyed;
+            $remain     = max(0, (int) $row->stock - (int) $row->sold - $airdropped - $bbin - $destroyed + $recycled);
+            $row->pool  = [
+                'airdropped' => $airdropped,
+                'bbin'       => $bbin,
+                'destroyed'  => $destroyed,
+                'recycled'   => $recycled,
+                'remain'     => $remain,
+            ];
         }
 
         $this->success('', ['list' => $list, 'total' => $total]);
@@ -81,12 +96,17 @@ class Collection extends Backend
         if ($resale === 1 && $resaleLimit <= 0) {
             $this->error('开启二级市场必须设置藏品寄售限价');
         }
+        // 寄售限价下限（0 = 不限），必须小于上限
+        $resaleMin = (int) bcmul(round((float) ($data['resale_price_min'] ?? 0), 2), '100');
+        if ($resale === 1 && $resaleMin > 0 && $resaleMin >= $resaleLimit) {
+            $this->error('寄售限价下限必须小于上限');
+        }
         $saleTs    = !empty($data['sale_time']) ? strtotime((string) $data['sale_time']) : 0;
         $saleEndTs = !empty($data['sale_end_time']) ? strtotime((string) $data['sale_end_time']) : null;
         if ($saleEndTs && $saleTs > 0 && $saleEndTs <= $saleTs) {
             $this->error('发售结束时间必须晚于开售时间');
         }
-        return ['resale' => $resale, 'resale_price_limit' => $resaleLimit, 'sale_time' => $saleTs ?: null, 'sale_end_time' => $saleEndTs];
+        return ['resale' => $resale, 'resale_price_limit' => $resaleLimit, 'resale_price_min' => $resaleMin, 'sale_time' => $saleTs ?: null, 'sale_end_time' => $saleEndTs];
     }
 
     /**
@@ -126,7 +146,11 @@ class Collection extends Backend
     public function add(): void
     {
         if ($this->request->isPost()) {
-            $data = $this->request->only(['name', 'category_id', 'author', 'cover', 'price', 'market_price', 'stock', 'detail', 'resale', 'resale_price_limit', 'sale_time', 'sale_end_time', 'pre_rule_type', 'pre_rule_value', 'pre_sale_time', 'pre_limit'], 'post');
+            $data = $this->request->only(['name', 'category_id', 'author', 'cover', 'price', 'market_price', 'stock', 'detail', 'publisher', 'resale', 'resale_price_min', 'resale_price_limit', 'sale_time', 'sale_end_time', 'pre_rule_type', 'pre_rule_value', 'pre_sale_time', 'pre_limit'], 'post');
+            if (trim((string) ($data['publisher'] ?? '')) === '') {
+                $this->error('请输入发行方');
+            }
+            $data['publisher'] = trim((string) $data['publisher']);
             try {
                 validate(\app\admin\validate\nft\Collection::class)->scene('add')->check($data);
             } catch (Throwable $e) {
@@ -160,7 +184,11 @@ class Collection extends Backend
             $this->error(__('Record not found'));
         }
         if ($this->request->isPost()) {
-            $data = $this->request->only(['name', 'category_id', 'author', 'cover', 'price', 'market_price', 'stock', 'detail', 'resale', 'resale_price_limit', 'sale_time', 'sale_end_time', 'pre_rule_type', 'pre_rule_value', 'pre_sale_time', 'pre_limit'], 'post');
+            $data = $this->request->only(['name', 'category_id', 'author', 'cover', 'price', 'market_price', 'stock', 'detail', 'publisher', 'resale', 'resale_price_min', 'resale_price_limit', 'sale_time', 'sale_end_time', 'pre_rule_type', 'pre_rule_value', 'pre_sale_time', 'pre_limit'], 'post');
+            if (trim((string) ($data['publisher'] ?? '')) === '') {
+                $this->error('请输入发行方');
+            }
+            $data['publisher'] = trim((string) $data['publisher']);
             try {
                 validate(\app\admin\validate\nft\Collection::class)->scene('edit')->check($data);
             } catch (Throwable $e) {

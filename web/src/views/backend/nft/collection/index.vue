@@ -24,7 +24,8 @@
             <button class="btn btn-primary" @click="load(1)">查询</button>
             <button class="btn btn-ghost" @click="resetQuery">重置</button>
             <span style="flex: 1"></span>
-            <button v-if="auth('nft/collection/add')" class="btn btn-primary" @click="openAdd">新增藏品</button>
+            <button v-if="auth('add')" class="btn btn-primary" @click="openAdd">新增藏品</button>
+            <div class="cell-sub" style="width: 100%">库存池 = 发行量 − 已售 − 空投已发放 − 盲盒投放 − 已销毁 + 已回收；空投、盲盒配置从库存池扣减，超发在保存时拦截；回收藏品回池可复用（销毁为永久减量）</div>
         </div>
 
         <!-- 列表 -->
@@ -35,47 +36,66 @@
                         <tr>
                             <th>ID</th>
                             <th>封面</th>
-                            <th>名称</th>
+                            <th>名称 / 作者</th>
                             <th>分类</th>
                             <th>售价 / 市场价</th>
-                            <th>发行量 / 已售</th>
+                            <th>已售 / 发行量</th>
+                            <th>库存池</th>
                             <th>二级市场</th>
                             <th>状态</th>
                             <th>优先购 / 开售时间</th>
-                            <th style="width: 220px">操作</th>
+                            <th style="width: 200px">操作</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="row in list" :key="row.id">
                             <td class="serif-num">{{ row.id }}</td>
-                            <td><img class="thumb" :src="row.cover" alt="" /></td>
+                            <td>
+                                <img v-if="row.cover" class="thumb" :src="row.cover" alt="" />
+                                <div v-else class="thumb" style="display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #56a3fc33, #7dd8ff55)">
+                                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M7 3h10l4 6-9 12L3 9z" /><path d="M3 9h18M12 21 8 9l4-6 4 6z" /></svg>
+                                </div>
+                            </td>
                             <td>
                                 <div class="cell-main">{{ row.name }}</div>
                                 <div class="cell-sub">{{ row.author || '-' }}</div>
+                                <div class="cell-sub">发行方：{{ row.publisher || '-' }}</div>
                             </td>
                             <td>{{ row.category_name }}</td>
                             <td>
                                 <span class="serif-num">￥{{ fen2yuan(row.price) }}</span>
                                 <div class="cell-sub">市场价 ￥{{ fen2yuan(row.market_price) }}</div>
                             </td>
-                            <td class="serif-num">{{ row.stock }} / {{ row.sold }}</td>
+                            <td class="cell-sub"><span class="serif-num">{{ Number(row.sold).toLocaleString() }}</span> / {{ Number(row.stock).toLocaleString() }}</td>
+                            <td>
+                                <span class="serif-num" title="库存池 = 发行量 − 已售 − 空投已发放 − 盲盒投放 − 已销毁 + 已回收">{{ (row.pool?.remain ?? 0).toLocaleString() }}</span>
+                                <div class="cell-sub">
+                                    空投 {{ (row.pool?.airdropped ?? 0).toLocaleString() }} · 盲盒 {{ (row.pool?.bbin ?? 0).toLocaleString() }}<template v-if="row.pool?.destroyed"> · 销毁 {{ row.pool.destroyed.toLocaleString() }}</template><template v-if="row.pool?.recycled"> · <span style="color: var(--blue)">回收 {{ row.pool.recycled.toLocaleString() }}</span></template>
+                                </div>
+                            </td>
                             <td>
                                 <span class="tag" :class="row.resale == 1 ? 'tag-green' : 'tag-gray'">{{ row.resale == 1 ? '开启' : '关闭' }}</span>
-                                <div v-if="row.resale == 1" class="cell-sub">限价 ￥{{ fen2yuan(row.resale_price_limit) }}</div>
+                                <div v-if="row.resale == 1" class="cell-sub">
+                                    <template v-if="Number(row.resale_price_min) > 0">限价 ￥{{ fen2yuan(row.resale_price_min) }} ~ ￥{{ fen2yuan(row.resale_price_limit) }}</template>
+                                    <template v-else>限价 ≤ ￥{{ fen2yuan(row.resale_price_limit) }}</template>
+                                </div>
                             </td>
                             <td><span class="tag" :class="statusCls[row.status]">{{ statusText[row.status] || '-' }}</span></td>
                             <td class="cell-sub">
-                                <div v-if="row.pre_rule_type > 0">
-                                    <span class="tag" :class="row.pre_active ? 'tag-orange' : 'tag-blue'">优先购{{ row.pre_active ? '中' : '已配置' }}</span>
-                                </div>
-                                {{ fmtTime(row.sale_time) || '未排期' }}<template v-if="row.sale_end_time"> ~ {{ fmtTime(row.sale_end_time) }}</template>
+                                <span
+                                    v-if="row.pre_rule_type > 0"
+                                    class="tag"
+                                    :class="row.pre_active ? 'tag-orange' : 'tag-blue'"
+                                    :title="`优先购：${preCn(row)} · 每人限购 ${row.pre_limit || 1} 份 · ${fmtTime(row.pre_sale_time)} 起`"
+                                >优先购{{ row.pre_active ? '中' : '' }}</span>
+                                {{ fmtTime(row.sale_time) || '未排期' }}<template v-if="row.sale_end_time"><br />至 {{ fmtTime(row.sale_end_time) }}</template>
                             </td>
                             <td>
-                                <button v-if="row.status == 2 && auth('nft/collection/soldout')" class="btn btn-ghost btn-sm" @click="doSoldout(row)">停止发售</button>
-                                <button v-if="row.status == 2 && auth('nft/collection/off')" class="btn btn-ghost btn-sm" @click="doOff(row)">下架</button>
-                                <button v-if="(row.status == 0 || row.status == 3 || row.status == 4) && auth('nft/collection/sale')" class="btn btn-ghost btn-sm" @click="openSale(row)">{{ row.status == 4 ? '重新开售' : '开售' }}</button>
-                                <button v-if="auth('nft/collection/edit')" class="btn btn-ghost btn-sm" @click="openEdit(row)">编辑</button>
-                                <button v-if="auth('nft/collection/del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
+                                <button v-if="row.status == 2 && auth('soldout')" class="btn btn-ghost btn-sm" @click="doSoldout(row)">停止发售</button>
+                                <button v-if="row.status == 2 && auth('off')" class="btn btn-ghost btn-sm" @click="doOff(row)">下架</button>
+                                <button v-if="(row.status == 0 || row.status == 3 || row.status == 4) && auth('sale')" class="btn btn-primary btn-sm" @click="openSale(row)">{{ row.status == 4 ? '重新开售' : '开售' }}</button>
+                                <button v-if="auth('edit')" class="btn btn-ghost btn-sm" @click="openEdit(row)">编辑</button>
+                                <button v-if="auth('del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
                             </td>
                         </tr>
                     </tbody>
@@ -143,6 +163,13 @@
                             <input v-model="form.author" class="input" />
                         </div>
                         <div class="form-row">
+                            <label>发行方 *</label>
+                            <input v-model="form.publisher" class="input" list="pub-datalist" placeholder="发行主体全称，如：灵境数字科技有限公司" />
+                            <datalist id="pub-datalist">
+                                <option v-for="p in pubList" :key="p" :value="p"></option>
+                            </datalist>
+                        </div>
+                        <div class="form-row">
                             <label>售价（元）*</label>
                             <input v-model="form.price" class="input" type="number" step="0.01" min="0" />
                         </div>
@@ -162,8 +189,12 @@
                             </select>
                         </div>
                         <div class="form-row" v-if="form.resale == 1">
-                            <label>寄售限价（元）*</label>
+                            <label>寄售限价上限（元）*</label>
                             <input v-model="form.resale_price_limit" class="input" type="number" step="0.01" min="0" placeholder="用户挂单价格不得超过此价" />
+                        </div>
+                        <div class="form-row" v-if="form.resale == 1">
+                            <label>寄售限价下限（元，0 = 不限）</label>
+                            <input v-model="form.resale_price_min" class="input" type="number" step="0.01" min="0" placeholder="低于此价的挂单将被拦截，0 表示不设下限" />
                         </div>
                     </div>
                     <div class="form-row">
@@ -273,6 +304,10 @@ const loadCollections = async () => {
 }
 // datetime-local 与时间戳互转
 const toDtVal = (ts: number | null) => (ts ? fmtTime(ts).replace(' ', 'T') : '')
+// 优先购资格说明（对齐原型 preTag 的 title）
+const preCn = (row: any) => (Number(row.pre_rule_type) === 1 ? `持有「${collections.value.find((c) => c.id == String(row.pre_rule_value).split(',')[0])?.name || '指定藏品'}」` : '白名单用户')
+// 发行方联想（历史发行方去重）
+const pubList = computed(() => [...new Set(list.value.map((x: any) => x.publisher).filter(Boolean))])
 const resetQuery = () => {
     query.keyword = ''
     query.category_id = 0
@@ -281,7 +316,7 @@ const resetQuery = () => {
 }
 
 const openAdd = () => {
-    Object.assign(form, { id: 0, name: '', category_id: 0, author: '', cover: '', price: '', market_price: '', stock: '', detail: '', resale: 1, resale_price_limit: '', pre_rule_type: 0, pre_collection_id: '', pre_rule_value: '', pre_sale_time: '', pre_limit: 1 })
+    Object.assign(form, { id: 0, name: '', category_id: 0, author: '', publisher: '', cover: '', price: '', market_price: '', stock: '', detail: '', resale: 1, resale_price_limit: '', resale_price_min: '', pre_rule_type: 0, pre_collection_id: '', pre_rule_value: '', pre_sale_time: '', pre_limit: 1 })
     formVisible.value = true
 }
 const openEdit = (row: any) => {
@@ -290,6 +325,7 @@ const openEdit = (row: any) => {
         name: row.name,
         category_id: row.category_id,
         author: row.author,
+        publisher: row.publisher || '',
         cover: row.cover,
         price: Number(fen2yuan(row.price)),
         market_price: Number(fen2yuan(row.market_price)),
@@ -297,6 +333,7 @@ const openEdit = (row: any) => {
         detail: '',
         resale: row.resale,
         resale_price_limit: row.resale == 1 ? Number(fen2yuan(row.resale_price_limit)) : '',
+        resale_price_min: row.resale == 1 ? Number(fen2yuan(row.resale_price_min) || 0) : '',
         pre_rule_type: Number(row.pre_rule_type) || 0,
         pre_collection_id: Number(row.pre_rule_type) === 1 ? String(row.pre_rule_value || '').split(',')[0] : '',
         pre_rule_value: Number(row.pre_rule_type) === 2 ? String(row.pre_rule_value || '') : '',
@@ -312,6 +349,10 @@ const openEdit = (row: any) => {
 const submitForm = async () => {
     if (!form.name || !form.category_id || form.price === '' || form.stock === '') {
         ElMessage.warning('请填写完整必填项')
+        return
+    }
+    if (!String(form.publisher || '').trim()) {
+        ElMessage.warning('请输入发行方')
         return
     }
     // 优先购配置校验与组装
@@ -333,9 +374,15 @@ const submitForm = async () => {
         ElMessage.warning('开启二级市场必须设置寄售限价')
         return
     }
+    if (form.resale == 1 && Number(form.resale_price_min) > 0 && Number(form.resale_price_min) >= Number(form.resale_price_limit)) {
+        ElMessage.warning('寄售限价下限必须小于上限')
+        return
+    }
     const payload = {
         ...form,
+        publisher: String(form.publisher || '').trim(),
         resale_price_limit: form.resale == 1 ? Number(form.resale_price_limit) : 0,
+        resale_price_min: form.resale == 1 ? Number(form.resale_price_min) || 0 : 0,
         pre_sale_time: form.pre_rule_type > 0 && form.pre_sale_time ? form.pre_sale_time.replace('T', ' ') : '',
         pre_rule_value:
             form.pre_rule_type === 1

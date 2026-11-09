@@ -18,7 +18,7 @@
             <button class="btn btn-primary" @click="load(1)">查询</button>
             <button class="btn btn-ghost" @click="resetQuery">重置</button>
             <span style="flex: 1"></span>
-            <button v-if="auth('nft/airdrop/add')" class="btn btn-primary" @click="openAdd">创建任务</button>
+            <button v-if="auth('add')" class="btn btn-primary" @click="openAdd">创建任务</button>
         </div>
 
         <!-- 任务列表 -->
@@ -73,20 +73,20 @@
                             </td>
                             <td>
                                 <button
-                                    v-if="auth('nft/airdrop/retry') && (row.status == 0 || row.status == 2)"
+                                    v-if="auth('retry') && (row.status == 0 || row.status == 2)"
                                     class="btn btn-ghost btn-sm"
                                     @click="doRetry(row)"
                                 >
                                     {{ row.status == 0 ? (row.plan_time ? '提前执行' : '执行发放') : '补发差额' }}
                                 </button>
                                 <button
-                                    v-if="auth('nft/airdrop/revoke') && row.status == 2 && row.success_num - row.revoke_num > 0"
+                                    v-if="auth('revoke') && row.status == 2 && row.success_num - row.revoke_num > 0"
                                     class="btn btn-ghost btn-sm"
                                     @click="doRevoke(row)"
                                 >
                                     撤销批次
                                 </button>
-                                <button v-if="auth('nft/airdrop/del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
+                                <button v-if="auth('del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
                             </td>
                         </tr>
                     </tbody>

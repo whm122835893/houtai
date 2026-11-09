@@ -17,8 +17,8 @@
             <button class="btn btn-primary" @click="load(1)">查询</button>
             <button class="btn btn-ghost" @click="resetQuery">重置</button>
             <span style="flex: 1"></span>
-            <button v-if="auth('nft/user/add')" class="btn btn-ghost" @click="openAdd">新增会员</button>
-            <button v-if="auth('nft/user/del') && selectedIds.length" class="btn btn-danger btn-sm" @click="batchDel">
+            <button v-if="auth('add')" class="btn btn-ghost" @click="openAdd">新增会员</button>
+            <button v-if="auth('del') && selectedIds.length" class="btn btn-danger btn-sm" @click="batchDel">
                 批量删除({{ selectedIds.length }})
             </button>
         </div>
@@ -61,11 +61,11 @@
                             <td class="cell-sub">{{ fmtTime(row.createtime) }}</td>
                             <td>
                                 <button class="btn btn-ghost btn-sm" @click="openDetail(row)">详情</button>
-                                <button v-if="auth('nft/user/edit')" class="btn btn-ghost btn-sm" @click="openEdit(row)">编辑</button>
-                                <button v-if="auth('nft/user/status')" class="btn btn-ghost btn-sm" @click="toggleStatus(row)">
+                                <button v-if="auth('edit')" class="btn btn-ghost btn-sm" @click="openEdit(row)">编辑</button>
+                                <button v-if="auth('status')" class="btn btn-ghost btn-sm" @click="toggleStatus(row)">
                                     {{ row.status == 1 ? '禁用' : '启用' }}
                                 </button>
-                                <button v-if="auth('nft/user/del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
+                                <button v-if="auth('del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
                             </td>
                         </tr>
                     </tbody>
@@ -120,7 +120,7 @@
                             <div class="sub">订单数 {{ detailRow.order_count }}</div>
                         </div>
                     </div>
-                    <div v-if="auth('nft/wallet/adjust')" class="adjust-row">
+                    <div v-if="auth('adjust')" class="adjust-row">
                         <input v-model="adjustForm.amount" class="input" type="number" placeholder="调整金额（元，负数为扣减）" />
                         <input v-model="adjustForm.remark" class="input" placeholder="备注" />
                         <button class="btn btn-primary" @click="doAdjust">确认调整</button>

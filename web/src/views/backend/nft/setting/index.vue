@@ -27,7 +27,7 @@
                     <div class="brand-tip">平台名称修改后全站生效（含浏览器标题）</div>
                 </div>
                 <div class="brand-save">
-                    <button v-if="auth('nft/setting/save')" class="btn btn-primary" :disabled="savingBrand" @click="saveBrand">
+                    <button v-if="auth('save')" class="btn btn-primary" :disabled="savingBrand" @click="saveBrand">
                         {{ savingBrand ? '保存中…' : '保存品牌' }}
                     </button>
                     <span v-else class="cell-sub">仅超级管理员可保存</span>
@@ -53,7 +53,7 @@
             </div>
             <div class="group-foot">
                 <span class="cell-sub">参数值一律以字符串存储</span>
-                <button v-if="auth('nft/setting/save')" class="btn btn-primary btn-sm" :disabled="savingGroup === group.name" @click="saveGroup(group)">
+                <button v-if="auth('save')" class="btn btn-primary btn-sm" :disabled="savingGroup === group.name" @click="saveGroup(group)">
                     {{ savingGroup === group.name ? '保存中…' : '保存本组' }}
                 </button>
                 <span v-else class="cell-sub">仅超级管理员可保存</span>

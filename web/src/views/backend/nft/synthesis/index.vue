@@ -17,7 +17,7 @@
             <button class="btn btn-primary" @click="load(1)">查询</button>
             <button class="btn btn-ghost" @click="resetQuery">重置</button>
             <span style="flex: 1"></span>
-            <button v-if="auth('nft/synthesis/save')" class="btn btn-primary" @click="openForm()">新建合成</button>
+            <button v-if="auth('save')" class="btn btn-primary" @click="openForm()">新建合成</button>
         </div>
 
         <!-- 活动列表 -->
@@ -51,9 +51,9 @@
                             <td><span class="tag" :class="row.status == 1 ? 'tag-green' : 'tag-gray'">{{ row.status == 1 ? '开启' : '关闭' }}</span></td>
                             <td class="cell-sub">{{ fmtTime(row.start_time) }} ~ {{ fmtTime(row.end_time) }}</td>
                             <td>
-                                <button v-if="auth('nft/synthesis/save')" class="btn btn-ghost btn-sm" @click="openForm(row)">编辑</button>
-                                <button v-if="auth('nft/synthesis/records')" class="btn btn-ghost btn-sm" @click="openRecords(row)">记录</button>
-                                <button v-if="auth('nft/synthesis/del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
+                                <button v-if="auth('save')" class="btn btn-ghost btn-sm" @click="openForm(row)">编辑</button>
+                                <button v-if="auth('records')" class="btn btn-ghost btn-sm" @click="openRecords(row)">记录</button>
+                                <button v-if="auth('del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
                             </td>
                         </tr>
                     </tbody>

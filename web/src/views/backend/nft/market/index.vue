@@ -58,7 +58,7 @@
                             <td class="cell-sub">{{ fmtTime(row.createtime) }}</td>
                             <td class="cell-sub">{{ fmtTime(row.soldtime) }}</td>
                             <td>
-                                <button v-if="row.status == 0 && auth('nft/market/off')" class="btn btn-danger btn-sm" @click="doOff(row)">下架</button>
+                                <button v-if="row.status == 0 && auth('off')" class="btn btn-danger btn-sm" @click="doOff(row)">下架</button>
                             </td>
                         </tr>
                     </tbody>

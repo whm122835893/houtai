@@ -6,23 +6,26 @@
             <span class="en">CATEGORIES</span>
         </div>
 
+        <!-- 筛选条 -->
+        <div class="glass filter-bar rise" :style="{ '--i': 1 }">
+            <span class="cell-sub">分类被藏品引用时不可删除</span>
+            <span style="flex: 1"></span>
+            <button v-if="auth('add')" class="btn btn-primary" @click="openAdd">新增分类</button>
+        </div>
+
         <!-- 列表 -->
-        <div class="glass rise" :style="{ '--i': 1 }">
-            <div class="card-head" style="padding-bottom: 12px">
-                <h3>藏品分类</h3>
-                <button v-if="auth('nft/category/add')" class="btn btn-primary" @click="openAdd">新增分类</button>
-            </div>
-            <div class="tbl-wrap" style="margin-top: 12px">
+        <div class="glass rise" :style="{ '--i': 2 }">
+            <div class="tbl-wrap">
                 <table class="tbl">
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>名称</th>
+                            <th>分类名称</th>
                             <th>藏品数</th>
                             <th>排序</th>
                             <th>状态</th>
                             <th>创建时间</th>
-                            <th style="width: 160px">操作</th>
+                            <th style="width: 190px">操作</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -36,8 +39,9 @@
                             </td>
                             <td class="cell-sub">{{ fmtTime(row.createtime) }}</td>
                             <td>
-                                <button v-if="auth('nft/category/edit')" class="btn btn-ghost btn-sm" @click="openEdit(row)">编辑</button>
-                                <button v-if="auth('nft/category/del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
+                                <button v-if="auth('edit')" class="btn btn-ghost btn-sm" @click="openEdit(row)">编辑</button>
+                                <button v-if="auth('edit')" class="btn btn-ghost btn-sm" @click="toggleStatus(row)">{{ row.status == 1 ? '停用' : '启用' }}</button>
+                                <button v-if="auth('del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
                             </td>
                         </tr>
                     </tbody>
@@ -150,6 +154,11 @@ const oneDel = (row: any) => {
             load()
         })
     )
+}
+const toggleStatus = async (row: any) => {
+    await api.edit(row.id, { ...row, status: row.status == 1 ? 0 : 1 })
+    ElMessage.success(row.status == 1 ? '已停用' : '已启用')
+    load()
 }
 
 onMounted(() => load())

@@ -16,7 +16,7 @@
             <button class="btn btn-primary" @click="load(1)">查询</button>
             <button class="btn btn-ghost" @click="resetQuery">重置</button>
             <span style="flex: 1"></span>
-            <button v-if="auth('nft/raffle/save')" class="btn btn-primary" @click="openAct()">新建抽签</button>
+            <button v-if="auth('save')" class="btn btn-primary" @click="openAct()">新建抽签</button>
         </div>
 
         <!-- 活动列表 -->
@@ -51,10 +51,10 @@
                             <td class="cell-sub">{{ fmtTime(row.apply_start) }}<br />~ {{ fmtTime(row.apply_end) }}</td>
                             <td class="cell-sub">{{ fmtTime(row.buy_deadline) }}</td>
                             <td>
-                                <button v-if="row.phase === 2 && auth('nft/raffle/draw')" class="btn btn-primary btn-sm" @click="doDraw(row)">执行抽签</button>
-                                <button v-if="auth('nft/raffle/applys')" class="btn btn-ghost btn-sm" @click="openApplys(row)">报名记录</button>
-                                <button v-if="row.status < 3 && auth('nft/raffle/save')" class="btn btn-ghost btn-sm" @click="openAct(row)">编辑</button>
-                                <button v-if="auth('nft/raffle/del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
+                                <button v-if="row.phase === 2 && auth('draw')" class="btn btn-primary btn-sm" @click="doDraw(row)">执行抽签</button>
+                                <button v-if="auth('applys')" class="btn btn-ghost btn-sm" @click="openApplys(row)">报名记录</button>
+                                <button v-if="row.status < 3 && auth('save')" class="btn btn-ghost btn-sm" @click="openAct(row)">编辑</button>
+                                <button v-if="auth('del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
                             </td>
                         </tr>
                     </tbody>

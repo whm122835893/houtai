@@ -55,7 +55,7 @@
                     </div>
                 </div>
                 <div class="cell-sub" style="margin-bottom: 12px">新用户完成注册即自动发放礼包。抽奖次数绑定指定场次时，若该场次未开启，次数先入账为「待生效」，场次开启后自动可用；优先购资格可对未发售藏品预先配置，资格在藏品开售后的优先购期内生效。邀请人奖励 0 = 不发放。</div>
-                <button v-if="auth('nft/register/save')" class="btn btn-primary" @click="submit">保存配置</button>
+                <button v-if="auth('save')" class="btn btn-primary" @click="submit">保存配置</button>
             </div>
         </div>
 

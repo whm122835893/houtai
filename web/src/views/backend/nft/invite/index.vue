@@ -22,7 +22,7 @@
                     <h3>奖励规则</h3>
                     <span class="en">REWARD RULES</span>
                 </div>
-                <button v-if="auth('nft/invite/save')" class="btn btn-primary" @click="openRule()">添加规则</button>
+                <button v-if="auth('save')" class="btn btn-primary" @click="openRule()">添加规则</button>
             </div>
             <div class="tbl-wrap">
                 <table class="tbl">
@@ -44,8 +44,8 @@
                             <td>{{ rewardContent(row) }}</td>
                             <td><span class="tag" :class="row.status == 1 ? 'tag-green' : 'tag-gray'">{{ row.status == 1 ? '启用' : '停用' }}</span></td>
                             <td>
-                                <button v-if="auth('nft/invite/save')" class="btn btn-ghost btn-sm" @click="openRule(row)">编辑</button>
-                                <button v-if="auth('nft/invite/del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
+                                <button v-if="auth('save')" class="btn btn-ghost btn-sm" @click="openRule(row)">编辑</button>
+                                <button v-if="auth('del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
                             </td>
                         </tr>
                     </tbody>

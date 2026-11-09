@@ -11,7 +11,7 @@
             <div class="card-head">
                 <h3>轮播图列表</h3>
                 <span style="flex: 1"></span>
-                <button v-if="auth('nft/banner/add')" class="btn btn-primary" @click="openAdd">添加轮播</button>
+                <button v-if="auth('add')" class="btn btn-primary" @click="openAdd">添加轮播</button>
             </div>
             <div class="tbl-wrap" style="padding: 12px 20px 20px">
                 <table class="tbl">
@@ -39,8 +39,8 @@
                                 <span class="tag" :class="row.status == 1 ? 'tag-green' : 'tag-gray'">{{ row.status == 1 ? '启用' : '停用' }}</span>
                             </td>
                             <td>
-                                <button v-if="auth('nft/banner/edit')" class="btn btn-ghost btn-sm" @click="openEdit(row)">编辑</button>
-                                <button v-if="auth('nft/banner/del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
+                                <button v-if="auth('edit')" class="btn btn-ghost btn-sm" @click="openEdit(row)">编辑</button>
+                                <button v-if="auth('del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
                             </td>
                         </tr>
                     </tbody>
