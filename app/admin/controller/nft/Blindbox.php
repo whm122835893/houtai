@@ -51,7 +51,7 @@ class Blindbox extends Backend
 
         $total = $this->model->where($where)->count();
         $list  = $this->model->where($where)
-            ->field(['id', 'name', 'cover', 'description', 'price', 'total_supply', 'sold_count', 'airdropped', 'limit_per_user', 'status', 'createtime'])
+            ->field(['id', 'name', 'cover', 'description', 'rule_text', 'price', 'total_supply', 'sold_count', 'airdropped', 'limit_per_user', 'status', 'createtime'])
             ->order('id', 'desc')
             ->page($page, $limit)
             ->select();
@@ -203,13 +203,24 @@ class Blindbox extends Backend
         if ($totalSupply < 1) {
             $this->error('请输入发行总量');
         }
+        $cover   = trim((string) $this->request->post('cover/s', ''));
+        $desc    = trim((string) $this->request->post('description/s', ''));
+        $rule    = trim((string) $this->request->post('rule_text/s', ''));
+        $limit   = $this->request->post('limit_per_user/d', 0);
+        if ($limit < 0 || $limit > 999) {
+            $this->error('限购数量需在 0 ~ 999（0 = 不限购）');
+        }
         $prizes = $this->buildPrizes($id, (array) $this->request->post('prizes/a', []));
 
         $data = [
-            'name'         => $name,
-            'price'        => $price,
-            'total_supply' => $totalSupply,
-            'status'       => $this->request->post('status/d', 0) ? 1 : 0,
+            'name'           => $name,
+            'price'          => $price,
+            'total_supply'   => $totalSupply,
+            'status'         => $this->request->post('status/d', 0) ? 1 : 0,
+            'cover'          => $cover,
+            'description'    => mb_substr($desc, 0, 500),
+            'rule_text'      => $rule,
+            'limit_per_user' => $limit,
         ];
         if ($id > 0) {
             $row->save($data);

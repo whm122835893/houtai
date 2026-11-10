@@ -108,6 +108,7 @@ CREATE TABLE IF NOT EXISTS `order` (
   `user_id` int unsigned NOT NULL DEFAULT 0 COMMENT '买家会员ID',
   `type` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '类型:1=一级购,2=市场购',
   `collection_id` int unsigned NOT NULL DEFAULT 0 COMMENT '藏品ID',
+  `box_id` int unsigned NOT NULL DEFAULT 0 COMMENT '盲盒ID(盲盒订单专用,普通订单为0)',
   `hold_id` int unsigned NOT NULL DEFAULT 0 COMMENT '关联持仓ID(市场购)',
   `num` int unsigned NOT NULL DEFAULT 1 COMMENT '数量',
   `amount` bigint NOT NULL DEFAULT 0 COMMENT '实付金额(分)',

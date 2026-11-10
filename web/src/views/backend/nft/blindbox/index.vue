@@ -101,11 +101,29 @@
                         </div>
                     </div>
                     <div class="form-row">
-                        <label>状态</label>
-                        <select v-model="form.status" class="select">
-                            <option :value="1">在售</option>
-                            <option :value="0">停售</option>
-                        </select>
+                        <label>封面图地址</label>
+                        <input v-model="form.cover" class="input" placeholder="https://...（可留空）" />
+                    </div>
+                    <div class="form-row">
+                        <label>盲盒描述</label>
+                        <textarea v-model="form.description" class="input" rows="2" maxlength="500" placeholder="展示给用户的盲盒简介（500 字内）"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <label>规则说明</label>
+                        <textarea v-model="form.rule_text" class="input" rows="3" placeholder="开盒规则、概率公示等说明文案"></textarea>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-row">
+                            <label>单人限购（0 = 不限购）</label>
+                            <input v-model="form.limit_per_user" class="input" type="number" min="0" max="999" />
+                        </div>
+                        <div class="form-row">
+                            <label>状态</label>
+                            <select v-model="form.status" class="select">
+                                <option :value="1">在售</option>
+                                <option :value="0">停售</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="form-row">
                         <label>奖品池（概率 4 位小数，总和必须等于 100%）</label>
@@ -237,7 +255,7 @@ const addPrizeRow = () => {
 }
 
 const openForm = async (row: any) => {
-    Object.assign(form, { id: 0, name: '', price: '', total_supply: '', status: 0 })
+    Object.assign(form, { id: 0, name: '', price: '', total_supply: '', status: 0, cover: '', description: '', rule_text: '', limit_per_user: 0 })
     prizeRows.value = []
     if (row) {
         form.id = row.id
@@ -245,6 +263,10 @@ const openForm = async (row: any) => {
         form.price = fen2yuan(row.price)
         form.total_supply = row.total_supply
         form.status = Number(row.status)
+        form.cover = row.cover || ''
+        form.description = row.description || ''
+        form.rule_text = row.rule_text || ''
+        form.limit_per_user = Number(row.limit_per_user || 0)
         const res = await api.prizes(row.id)
         prizeRows.value = (res.data.list || []).map((p: any) => ({
             collection_id: p.collection_id,

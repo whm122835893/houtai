@@ -12,7 +12,7 @@
 // [ 应用入口文件 ]
 namespace think;
 
-$server = isset($_REQUEST['server']) || isset($_SERVER['HTTP_SERVER']) || substr($_SERVER['REQUEST_URI'], 1, 9) == 'index.php' || $_SERVER['REQUEST_METHOD'] == 'OPTIONS';
+$server = isset($_REQUEST['server']) || isset($_SERVER['HTTP_SERVER']) || substr($_SERVER['REQUEST_URI'], 1, 9) == 'index.php' || substr($_SERVER['REQUEST_URI'], 1, 4) == 'api/' || $_SERVER['REQUEST_METHOD'] == 'OPTIONS';
 if (!$server) {
     /*
      * 用户访问前端
@@ -30,7 +30,9 @@ if (!$server) {
     // 检测是否已编译前端（如果存在 index.html，则访问）-s
     if (is_file($rootPath . 'index.html')) {
         // 携带原始路径转为 hash 路由（如 /admin -> /index.html#/admin），避免后台路径丢失
-        header("location:" . DIRECTORY_SEPARATOR . 'index.html#' . $_SERVER['REQUEST_URI']);
+        // 根路径直接进后台（#/），避免落在框架门户页
+        $hash = $_SERVER['REQUEST_URI'] === '/' ? '/admin' : $_SERVER['REQUEST_URI'];
+        header("location:" . DIRECTORY_SEPARATOR . 'index.html#' . $hash);
         exit();
     }
     // 检测是否已编译前端-e
