@@ -54,7 +54,7 @@ export const useConfig = defineStore(
             // tour
             // 布局漫游式引导
             layoutTour: false,
-            layoutTourUnfinished: true,
+            layoutTourUnfinished: false,
         })
 
         const lang: Lang = reactive({
