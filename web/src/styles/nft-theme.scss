@@ -73,6 +73,7 @@ background:linear-gradient(rgba(220,236,251,.85),rgba(220,236,251,0));backdrop-f
 .page-head h2{font-size:22px;font-weight:700}
 .page-head .en{font-size:11px;letter-spacing:.18em;color:var(--ink-muted);text-transform:uppercase}
 .filter-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px 16px}
+.filter-note{flex-basis:100%;line-height:1.7;color:var(--ink-3)}
 .input,.select{height:36px;padding:0 12px;border-radius:10px;border:1px solid rgba(126,139,155,.25);background:rgba(255,255,255,.7);outline:none;font-size:13px;color:var(--ink);transition:.2s;font-family:inherit}
 .input:focus,.select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(var(--acc-rgb),.15)}
 .filter-bar .input,.filter-bar .select{width:180px}

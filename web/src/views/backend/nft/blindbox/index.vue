@@ -8,6 +8,7 @@
 
         <!-- 筛选条 -->
         <div class="glass filter-bar rise" :style="{ '--i': 1 }">
+            <span class="cell-sub filter-note">按份销售，开启后按概率随机产出藏品；概率 0.0001~100（4 位小数），总和必须等于 100%，超出拦截；开盒时校验奖品库存，不足自动降级为空盒并记录异常</span>
             <input v-model="query.keyword" class="input" placeholder="盲盒名称" style="width: 180px" @keyup.enter="load(1)" />
             <select v-model="query.status" class="select" style="width: 140px">
                 <option :value="-1">全部状态</option>
@@ -16,7 +17,6 @@
             </select>
             <button class="btn btn-primary" @click="load(1)">查询</button>
             <button class="btn btn-ghost" @click="resetQuery">重置</button>
-            <span class="cell-sub" style="flex: 1">按份销售，开启后按概率随机产出藏品；概率 0.0001~100（4 位小数），总和必须等于 100%，超出拦截；开盒时校验奖品库存，不足自动降级为空盒并记录异常</span>
             <button v-if="auth('save')" class="btn btn-primary" @click="openForm(null)">创建盲盒</button>
         </div>
 
