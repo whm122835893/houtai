@@ -4,5 +4,7 @@
 // +----------------------------------------------------------------------
 return [
     // 指令定义
-    'commands' => [],
+    'commands' => [
+        'nft:maintain' => 'app\command\NftMaintain',
+    ],
 ];

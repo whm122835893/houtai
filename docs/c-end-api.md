@@ -86,7 +86,58 @@
 - [ ] 开盒结果动画素材（C 端前端消费 `results` 渲染）
 - [ ] 概率公示页面合规文案（`rule_text` 已支持）
 - [ ] C 端登录验证码/短信（如需合规，接入 NftAuth）
+- [ ] 活动参与 API（签到/抽奖/邀请——后台开奖引擎尚缺，下一轮建设）
 
-## 6. 后续模块契约占位（待实现）
+## 6. 藏品直购（NftCollection）— 已实现跑通
 
-藏品浏览（collection/detail）、市场寄售（market）、持仓（hold）、转赠（transfer）、置换（swap）、钱包流水（wallet）、活动（签到/抽奖/邀请）——表结构与后台管理接口已就绪，按本契约风格补充即可。
+| Method | Path | 说明 | 鉴权 |
+|--------|------|------|------|
+| GET | `/api/nft_collection/index` | 发售中列表 | 否 |
+| GET | `/api/nft_collection/detail?id=` | 详情（含发售窗口/优先购信息） | 否 |
+| POST | `/api/nft_collection/order` | 下单 `{collection_id, num}` | 是 |
+| POST | `/api/nft_collection/pay_mock` | 模拟支付并铸造持仓 `{order_no}` | 是 |
+| GET | `/api/nft_collection/orders` | 我的一级购订单 | 是 |
+
+- 发售窗口：`sale_end_time` 过后拦截；库存口径与管理端一致（stock−sold−空投−置换−盲盒占用−销毁+回收）
+- **优先购**：`pre_sale_time ~ sale_time` 窗口内仅资格用户可买（`pre_rule_type` 1=持有凭证藏品 / 2=指定用户ID），并受 `pre_limit` 限购
+- 支付即铸造：SN 规则 `C{collectionId}O{orderId}N{seq}`，source=1 一级购；钱包记支出流水
+
+## 7. 市场寄售（NftMarket）— 已实现跑通
+
+| Method | Path | 说明 | 鉴权 |
+|--------|------|------|------|
+| GET | `/api/nft_market/index?collection_id=` | 在售寄售单 | 否 |
+| GET | `/api/nft_market/mine` | 我的寄售单（含预估净入） | 是 |
+| POST | `/api/nft_market/sell` | 挂单 `{hold_id, price(元)}` | 是 |
+| POST | `/api/nft_market/buy` | 买入 `{id}` | 是 |
+| POST | `/api/nft_market/cancel` | 撤单 `{id}`（卖家） | 是 |
+
+- 三重开关：`market_open` 总闸 → `collection.resale` 单品开关 → 限价区间 `[resale_price_min, resale_price_limit]`
+- 成交：手续费率实时读 `setting.sell_fee_rate`（后台运营参数可改），卖家净入 price−fee 记 income（**余额联动**），买家记 expense
+- 持仓过户：hold → 买家，source=2 市场购，`sell_order_id` 关联寄售单；挂单期持仓锁定 status=1
+
+## 8. 转赠（NftTransfer）— 已实现跑通
+
+| Method | Path | 说明 | 鉴权 |
+|--------|------|------|------|
+| GET | `/api/nft_transfer/records` | 我的转赠记录（发出+收到） | 是 |
+| POST | `/api/nft_transfer/create` | 发起 `{hold_id, to_mobile}` | 是 |
+| POST | `/api/nft_transfer/accept` | 接收 `{transfer_no}`（接收方） | 是 |
+| POST | `/api/nft_transfer/cancel` | 撤销 `{transfer_no}`（发起方） | 是 |
+
+- 单品开关：`collection.transfer_enabled`（后台藏品编辑控制）；手续费 `setting.transfer_fee`（元，0=免费，后台可改），撤销自动退回
+- 流程：发起 → 持仓锁定(status=2) → 接收过户 / 撤销回退；手机号定位接收方
+
+## 9. 定时任务（运维）
+
+```
+php think nft:maintain          # 全部：售罄自动置位 + 待支付订单超时取消
+php think nft:maintain soldout  # 仅售罄置位
+php think nft:maintain orders   # 仅订单超时取消（读 setting.order_auto_cancel 分钟）
+```
+
+建议 crontab 每分钟一次。已验证：库存池归零 → status=4 售罄；超时订单 → status=2 取消。
+
+## 10. 后续模块契约占位（待实现）
+
+持仓查询（hold）、置换（swap 用户侧）、钱包流水查询（wallet_log）、活动参与（签到/抽奖/邀请，需先建开奖引擎）——表结构与管理接口就绪，按本契约风格补充即可。
