@@ -3,6 +3,7 @@
 namespace app\api\controller;
 
 use app\common\controller\Frontend;
+use think\facade\Db;
 
 /**
  * C 端用户认证
@@ -45,10 +46,71 @@ class NftAuth extends Frontend
         if ($res !== true) {
             $this->error($this->auth->getError() ?: '注册失败，请更换用户名重试');
         }
+
+        $inviteBonus = $this->afterRegisterBonus((string) $this->request->post('invite_code/s', ''));
+
         $this->success('注册成功', [
-            'token'    => $this->auth->getToken(),
-            'userInfo' => $this->auth->getUserInfo(),
+            'token'       => $this->auth->getToken(),
+            'userInfo'    => $this->auth->getUserInfo(),
+            'invite_bonus'=> $inviteBonus,
         ]);
+    }
+
+    /**
+     * 注册后附加：邀请码绑定 + 注册/邀请抽奖次数发放
+     * 失败不影响注册本身（尽力而为）。
+     */
+    private function afterRegisterBonus(string $inviteCode): array
+    {
+        $uid = (int) $this->auth->id;
+        $out = ['invited_by' => 0, 'register_chances' => 0];
+        try {
+            // 0. 邀请码兜底生成
+            \app\common\service\NftTrade::ensureInviteCode($uid);
+            // 1. 新人注册次数（source=2）
+            $now  = time();
+            $acts = Db::name('lottery_activity')->where('status', 1)
+                ->where('start_time', '<=', $now)->where('end_time', '>=', $now)->select()->toArray();
+            foreach ($acts as $act) {
+                $rules = json_decode($act['chance_rules'] ?: '{}', true) ?: [];
+                $reg   = is_array($rules['register'] ?? 0) ? (int) ($rules['register']['num'] ?? 0) : (int) ($rules['register'] ?? 0);
+                if ($reg > 0) {
+                    \app\common\service\NftTrade::addChance($uid, (int) $act['id'], $reg, 2, 'register');
+                    $out['register_chances'] += $reg;
+                }
+            }
+
+            // 2. 邀请码绑定
+            $code = strtoupper(trim($inviteCode));
+            if ($code !== '') {
+                $inviter = Db::name('user')->where('invite_code', $code)->where('id', '<>', $uid)->find();
+                if (!$inviter) {
+                    return $out;
+                }
+                if (!Db::name('invite_record')->where('invitee_id', $uid)->count()) {
+                    Db::name('invite_record')->insert([
+                        'activity_id'  => 0,
+                        'inviter_id'   => (int) $inviter['id'],
+                        'invitee_id'   => $uid,
+                        'rule_id'      => 0,
+                        'reward_status'=> 0,
+                        'createtime'   => time(),
+                    ]);
+                    $out['invited_by'] = (int) $inviter['id'];
+                    // 3. 邀请人抽奖次数（source=4）
+                    foreach ($acts as $act) {
+                        $rules = json_decode($act['chance_rules'] ?: '{}', true) ?: [];
+                        $inv   = is_array($rules['invite'] ?? 0) ? (int) ($rules['invite']['num'] ?? 0) : (int) ($rules['invite'] ?? 0);
+                        if ($inv > 0) {
+                            \app\common\service\NftTrade::addChance((int) $inviter['id'], (int) $act['id'], $inv, 4, 'invite-' . $uid);
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // 附加流程失败静默，注册不受影响
+        }
+        return $out;
     }
 
     /**

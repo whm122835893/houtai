@@ -86,7 +86,58 @@
 - [ ] 开盒结果动画素材（C 端前端消费 `results` 渲染）
 - [ ] 概率公示页面合规文案（`rule_text` 已支持）
 - [ ] C 端登录验证码/短信（如需合规，接入 NftAuth）
-- [ ] 活动参与 API（签到/抽奖/邀请——后台开奖引擎尚缺，下一轮建设）
+- [x] ~~活动参与 API（签到/抽奖/邀请）~~ → 已实现，见第 10~12 节
+- [ ] 抽签发售用户侧（报名/中签/购付——raffle 系列表已就绪，开奖按运营节奏走后台）
+
+## 10. 持仓 / 钱包 / 置换查询 — 已实现跑通
+
+| Method | Path | 说明 | 鉴权 |
+|--------|------|------|------|
+| GET | `/api/nft_hold/index?status=&page=&limit=` | 我的持仓（含藏品信息/可售标记） | 是 |
+| GET | `/api/nft_hold/detail?id=` | 持仓详情（含藏品档案） | 是 |
+| GET | `/api/nft_wallet/index` | 钱包概览（余额/累计收支，元） | 是 |
+| GET | `/api/nft_wallet/logs?type=&page=` | 流水列表（type 可选过滤） | 是 |
+| GET | `/api/nft_swap_c/index?page=` | 我的置换记录（含换入换出藏品名） | 是 |
+
+## 11. 签到（NftCheckin）— 已实现跑通
+
+| Method | Path | 说明 | 鉴权 |
+|--------|------|------|------|
+| GET | `/api/nft_checkin/config` | 签到面板：开关/今日状态/连签天数/规则/本月日历 | 是 |
+| POST | `/api/nft_checkin/sign` | 每日签到（连签奖励自动发放） | 是 |
+| POST | `/api/nft_checkin/repair` | 补签 `{date: Y-m-d}`（ck_repair_limit 天内，补签不发奖） | 是 |
+| GET | `/api/nft_checkin/records` | 签到记录 | 是 |
+
+- 配置来源（后台「签到」模块）：`ck_enabled` / `ck_daily_type`(1=抽奖次数 2=藏品 3=优先购资格) / `ck_daily_num` / `ck_daily_collection_id` / `ck_daily_pre_collection_id` / `ck_repair_limit` + `checkin_rule` 连签奖励（day_num 连续天数）
+- 奖励发放通用规则：藏品→铸造持仓（SN 前缀 CKD/CKR，sold+1 占库存池）；抽奖次数→发到最新进行中活动；优先购资格→写白名单
+- 并发安全：用户行锁 + 当日唯一校验，双签不可能
+
+## 12. 抽奖（NftLottery）— 已实现跑通
+
+| Method | Path | 说明 | 鉴权 |
+|--------|------|------|------|
+| GET | `/api/nft_lottery/index` | 进行中/预告活动列表 | 否 |
+| GET | `/api/nft_lottery/detail?id=` | 详情（奖池概率公示+剩余次数） | 否 |
+| GET | `/api/nft_lottery/chances?id=` | 我的次数（**自动结算**每日免费/持有获得） | 是 |
+| POST | `/api/nft_lottery/draw` | 开奖 `{id}`（消耗 1 次） | 是 |
+| GET | `/api/nft_lottery/records?id=` | 我的中奖记录 | 是 |
+
+- 次数获取 `chance_rules(JSON)`：`daily_free` 每日免费（chances 接口自动发）/ `register` 注册（NftAuth 自动发）/ `hold` 持有 ×N（chances 接口补差）/ `invite` 邀请（注册绑定后自动给邀请人）
+- 开奖：万分比加权抽取 → 奖品原子扣库存（`stock>0` 才可扣，防超发）→ 发放（type1 藏品铸造持仓 SN 前缀 LP / type2 加次数 / type3 谢谢参与）→ 记录，全事务
+- 奖品「再抽一次」(type2) 开出即返还 1 次次数
+
+## 13. 邀请（NftInvite）— 已实现跑通
+
+| Method | Path | 说明 | 鉴权 |
+|--------|------|------|------|
+| GET | `/api/nft_invite/index` | 邀请码/好友列表/规则进度（含可领次数） | 是 |
+| POST | `/api/nft_invite/claim` | 领取达标奖励 `{rule_id}` | 是 |
+
+- 绑定：注册时传 `invite_code`（NftAuth），自动建 `invite_record` 并给邀请人发抽奖次数（source=4）
+- 邀请码：`user.invite_code`，8 位唯一（去易混淆字符），无则自动生成
+- 达标模型：邀请人数每达 `invite_rule.invite_num` 门槛一次可领一次该规则奖励（标记落 `invite_record.rule_id`+`reward_status`，防重复领）
+- 奖励类型 `invite_rule.reward_type`：**1=藏品 2=抽奖次数 3=优先购资格**（注意与签到枚举顺序不同）
+- 总开关：`setting.invite_reward_enable`（后台可改）
 
 ## 6. 藏品直购（NftCollection）— 已实现跑通
 

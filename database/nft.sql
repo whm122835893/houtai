@@ -310,6 +310,7 @@ CREATE TABLE IF NOT EXISTS `invite_record` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `inviter_id` int unsigned NOT NULL DEFAULT 0 COMMENT '邀请人ID',
   `invitee_id` int unsigned NOT NULL DEFAULT 0 COMMENT '被邀请人ID',
+  `rule_id` int(10) NOT NULL DEFAULT 0 COMMENT '达标的规则ID(0=未关联)',
   `reward_status` tinyint unsigned NOT NULL DEFAULT 0 COMMENT '奖励状态:0=未达标,1=已发放',
   `createtime` bigint NULL DEFAULT NULL COMMENT '时间',
   PRIMARY KEY (`id`),
