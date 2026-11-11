@@ -54,7 +54,7 @@
                             <td><span class="tag" :class="statusCls(row.status)">{{ statusText(row.status) }}</span></td>
                             <td class="cell-sub">{{ fmtTime(row.createtime) }}</td>
                             <td class="cell-sub">{{ fmtTime(row.done_time) }}</td>
-                            <td>
+                            <td style="white-space:nowrap">
                                 <button v-if="row.status == 1 && auth('revoke')" class="btn btn-danger btn-sm" @click="oneRevoke(row)">撤销转赠</button>
                                 <span v-else class="cell-sub">-</span>
                             </td>

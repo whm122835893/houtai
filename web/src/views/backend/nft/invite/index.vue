@@ -24,7 +24,7 @@
                             <td class="serif-num">—</td>
                             <td class="cell-main">邀请有礼</td>
                             <td class="cell-sub">长期有效</td>
-                            <td>
+                            <td style="white-space:nowrap">
                                 <button class="btn btn-ghost btn-sm" @click="onSwitch(inviteEnabled != 1)">{{ inviteEnabled == 1 ? '关闭' : '开启' }}</button>
                                 <span class="tag" :class="inviteEnabled == 1 ? 'tag-green' : 'tag-gray'" style="margin-left: 6px">{{ inviteEnabled == 1 ? '启用' : '停用' }}</span>
                             </td>
@@ -64,7 +64,7 @@
                             <td><span class="tag" :class="rewardTypeClass(row.reward_type)">{{ rewardTypeName(row.reward_type) }}</span></td>
                             <td>{{ rewardContent(row) }}</td>
                             <td><span class="tag" :class="row.status == 1 ? 'tag-green' : 'tag-gray'">{{ row.status == 1 ? '启用' : '停用' }}</span></td>
-                            <td>
+                            <td style="white-space:nowrap">
                                 <button v-if="auth('save')" class="btn btn-ghost btn-sm" @click="openRule(row)">编辑</button>
                                 <button v-if="auth('del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
                             </td>

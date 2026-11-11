@@ -90,7 +90,7 @@
                                 >优先购{{ row.pre_active ? '中' : '' }}</span>
                                 {{ fmtTime(row.sale_time) || '未排期' }}<template v-if="row.sale_end_time"><br />至 {{ fmtTime(row.sale_end_time) }}</template>
                             </td>
-                            <td>
+                            <td style="white-space:nowrap">
                                 <button v-if="row.status == 2 && auth('soldout')" class="btn btn-ghost btn-sm" @click="doSoldout(row)">停止发售</button>
                                 <button v-if="row.status == 2 && auth('off')" class="btn btn-ghost btn-sm" @click="doOff(row)">下架</button>
                                 <button v-if="(row.status == 0 || row.status == 3 || row.status == 4) && auth('sale')" class="btn btn-primary btn-sm" @click="openSale(row)">{{ row.status == 4 ? '重新开售' : '开售' }}</button>

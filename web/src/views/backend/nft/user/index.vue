@@ -59,7 +59,7 @@
                             <td><span class="tag" :class="row.status == 1 ? 'tag-green' : 'tag-red'">{{ row.status == 1 ? '正常' : '已禁用' }}</span></td>
                             <td class="cell-sub">{{ fmtTime(row.last_login_time) }}</td>
                             <td class="cell-sub">{{ fmtTime(row.createtime) }}</td>
-                            <td>
+                            <td style="white-space:nowrap">
                                 <button class="btn btn-ghost btn-sm" @click="openDetail(row)">详情</button>
                                 <button v-if="auth('edit')" class="btn btn-ghost btn-sm" @click="openEdit(row)">编辑</button>
                                 <button v-if="auth('status')" class="btn btn-ghost btn-sm" @click="toggleStatus(row)">

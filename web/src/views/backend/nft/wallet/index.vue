@@ -42,7 +42,7 @@
                                 <td><span class="serif-num">￥{{ fen2yuan(row.frozen) }}</span></td>
                                 <td><span class="serif-num amount-in">￥{{ fen2yuan(row.total_income) }}</span></td>
                                 <td><span class="serif-num amount-out">￥{{ fen2yuan(row.total_expense) }}</span></td>
-                                <td>
+                                <td style="white-space:nowrap">
                                     <button v-if="auth('logs')" class="btn btn-ghost btn-sm" @click="toggleLogs(row)">
                                         {{ expandedId === row.id ? '收起明细 ▲' : '流水明细 ▼' }}
                                     </button>

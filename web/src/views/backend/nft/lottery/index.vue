@@ -50,7 +50,7 @@
                                 <span v-if="row.pool_unlimited > 0" class="cell-sub">（含 {{ row.pool_unlimited }} 种无限）</span>
                                 <div class="cell-sub">共 {{ row.prize_count }} 种奖品</div>
                             </td>
-                            <td>
+                            <td style="white-space:nowrap">
                                 <button v-if="auth('prizes')" class="btn btn-ghost btn-sm" @click="openPrizes(row)">奖池配置</button>
                                 <button v-if="auth('chances')" class="btn btn-ghost btn-sm" @click="openChances(row)">次数流水</button>
                                 <button v-if="auth('records')" class="btn btn-ghost btn-sm" @click="openRecords(row)">中奖记录</button>
@@ -186,7 +186,7 @@
                                     </td>
                                     <td><input v-model="p.probability" class="input" type="number" min="0" style="width: 100px" /></td>
                                     <td><input v-model="p.stock" class="input" type="number" min="0" style="width: 90px" /></td>
-                                    <td><button class="btn btn-danger btn-sm" @click="prizeRows.splice(i, 1)">删除</button></td>
+                                    <td style="white-space:nowrap"><button class="btn btn-danger btn-sm" @click="prizeRows.splice(i, 1)">删除</button></td>
                                 </tr>
                             </tbody>
                         </table>

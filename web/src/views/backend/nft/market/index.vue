@@ -58,7 +58,7 @@
                             <td><span class="tag" :class="statusCls[row.status]">{{ statusText[row.status] || '-' }}</span></td>
                             <td class="cell-sub">{{ fmtTime(row.createtime) }}</td>
                             <td class="cell-sub">{{ fmtTime(row.soldtime) }}</td>
-                            <td>
+                            <td style="white-space:nowrap">
                                 <button v-if="row.status == 0 && auth('off')" class="btn btn-ghost btn-sm" @click="doOff(row)">下架</button>
                                 <span v-else class="cell-sub">—</span>
                             </td>

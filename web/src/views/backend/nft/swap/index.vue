@@ -49,7 +49,7 @@
                             <td class="cell-sub">
                                 {{ row.admin }}<br />{{ fmtTime(row.createtime) }}
                             </td>
-                            <td>
+                            <td style="white-space:nowrap">
                                 <button class="btn btn-ghost btn-sm" @click="openDetail(row)">明细</button>
                             </td>
                         </tr>

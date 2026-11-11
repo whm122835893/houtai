@@ -71,7 +71,7 @@
                                 <template v-if="row.plan_time">定时 {{ fmtTime(row.plan_time) }}</template>
                                 <template v-else>{{ fmtTime(row.createtime) }}</template>
                             </td>
-                            <td>
+                            <td style="white-space:nowrap">
                                 <button
                                     v-if="auth('items') && (row.success_num > 0 || row.revoke_num > 0)"
                                     class="btn btn-ghost btn-sm"

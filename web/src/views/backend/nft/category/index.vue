@@ -38,7 +38,7 @@
                                 <span class="tag" :class="row.status == 1 ? 'tag-green' : 'tag-gray'">{{ row.status == 1 ? '启用' : '停用' }}</span>
                             </td>
                             <td class="cell-sub">{{ fmtTime(row.createtime) }}</td>
-                            <td>
+                            <td style="white-space:nowrap">
                                 <button v-if="auth('edit')" class="btn btn-ghost btn-sm" @click="openEdit(row)">编辑</button>
                                 <button v-if="auth('edit')" class="btn btn-ghost btn-sm" @click="toggleStatus(row)">{{ row.status == 1 ? '停用' : '启用' }}</button>
                                 <button v-if="auth('del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>

@@ -56,7 +56,7 @@
                             <td>{{ payTypeText[row.pay_type] || row.pay_type || '-' }}</td>
                             <td><span class="tag" :class="statusCls[row.status]">{{ statusText[row.status] || '-' }}</span></td>
                             <td class="cell-sub">{{ fmtTime(row.createtime) }}</td>
-                            <td>
+                            <td style="white-space:nowrap">
                                 <button class="btn btn-ghost btn-sm" @click="openDetail(row)">详情</button>
                             </td>
                         </tr>

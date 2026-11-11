@@ -45,7 +45,7 @@
                             <td>
                                 <span class="tag" :class="row.status ? 'tag-green' : 'tag-gray'">{{ row.status ? '开启中' : '已关闭' }}</span>
                             </td>
-                            <td>
+                            <td style="white-space:nowrap">
                                 <el-switch :model-value="!!row.status" @change="(v: any) => onToggle(row, v)" />
                                 <button class="btn btn-ghost btn-sm" style="margin-left: 8px" @click="goConfig(row)">配置奖励</button>
                             </td>

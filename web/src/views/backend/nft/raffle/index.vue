@@ -50,7 +50,7 @@
                             <td><span class="tag" :class="phaseText[row.phase]?.[1] || 'tag-gray'">{{ phaseText[row.phase]?.[0] || '-' }}</span></td>
                             <td class="cell-sub">{{ fmtTime(row.apply_start) }}<br />~ {{ fmtTime(row.apply_end) }}</td>
                             <td class="cell-sub">{{ fmtTime(row.buy_deadline) }}</td>
-                            <td style="width: 260px">
+                            <td style="width: 260px; white-space:nowrap">
                                 <button v-if="row.phase === 2 && auth('draw')" class="btn btn-primary btn-sm" @click="doDraw(row)">执行抽签</button>
                                 <button v-if="auth('codes')" class="btn btn-ghost btn-sm" @click="openCodes(row)">抽签码</button>
                                 <button v-if="auth('applys')" class="btn btn-ghost btn-sm" @click="openApplys(row)">报名记录</button>
@@ -236,7 +236,7 @@
                                         <template v-if="row.inviter_nickname"><br />邀请人：{{ row.inviter_nickname }}</template>
                                     </td>
                                     <td class="cell-sub">{{ fmtTime(row.createtime) }}</td>
-                                    <td>
+                                    <td style="white-space:nowrap">
                                         <button v-if="row.status == 0 && auth('codes')" class="btn btn-danger btn-sm" @click="oneVoidCode(row)">作废</button>
                                         <span v-else class="cell-sub">-</span>
                                     </td>

@@ -50,7 +50,7 @@
                             <td class="serif-num">{{ row.done_num }}</td>
                             <td><span class="tag" :class="row.status == 1 ? 'tag-green' : 'tag-gray'">{{ row.status == 1 ? '开启' : '关闭' }}</span></td>
                             <td class="cell-sub">{{ fmtTime(row.start_time) }} ~ {{ fmtTime(row.end_time) }}</td>
-                            <td>
+                            <td style="white-space:nowrap">
                                 <button v-if="auth('save')" class="btn btn-ghost btn-sm" @click="openForm(row)">编辑</button>
                                 <button v-if="auth('records')" class="btn btn-ghost btn-sm" @click="openRecords(row)">记录</button>
                                 <button v-if="auth('del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
