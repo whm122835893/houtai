@@ -13,7 +13,7 @@ use app\admin\model\nft\OperLog;
  */
 class Trash extends Backend
 {
-    protected array $noNeedPermission = ['index', 'restore', 'purge'];
+    protected array $noNeedPermission = ['index', 'restore', 'purge', 'clear'];
 
     /** type => [表名, 名称字段, 中文名] */
     protected array $types = [
@@ -115,5 +115,24 @@ class Trash extends Backend
         Db::name($table)->where('id', $id)->delete();
         OperLog::record('回收站', '彻底删除', $cn . '#' . $id, (string) ($row['name'] ?? $row['title'] ?? ''));
         $this->success('已彻底删除');
+    }
+
+    /**
+     * 清空回收站（物理删除全部软删记录）
+     */
+    public function clear(): void
+    {
+        $count = 0;
+        $brief = [];
+        foreach ($this->types as $key => [$table, , $cn]) {
+            $n = Db::name($table)->where('deletetime', '>', 0)->count();
+            if ($n > 0) {
+                Db::name($table)->where('deletetime', '>', 0)->delete();
+                $count += $n;
+                $brief[] = $cn . '×' . $n;
+            }
+        }
+        OperLog::record('回收站', '清空', '全部类型', $count ? implode('、', $brief) : '无记录');
+        $this->success($count ? "已清空 {$count} 条记录" : '回收站本来就是空的');
     }
 }

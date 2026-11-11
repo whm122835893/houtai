@@ -8,7 +8,7 @@
 
         <!-- 筛选条 -->
         <div class="glass filter-bar rise" :style="{ '--i': 1 }">
-            <input v-model="query.keyword" class="input" placeholder="昵称 / 账号 / 手机号 / 邮箱" @keyup.enter="load(1)" />
+            <input v-model="query.keyword" class="input" placeholder="昵称 / 账号 / 手机号" @keyup.enter="load(1)" />
             <select v-model="query.status" class="select">
                 <option :value="-1">全部状态</option>
                 <option :value="1">启用</option>

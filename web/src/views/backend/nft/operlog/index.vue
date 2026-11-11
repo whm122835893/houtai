@@ -8,7 +8,7 @@
 
         <!-- 筛选条 -->
         <div class="glass filter-bar rise" :style="{ '--i': 1 }">
-            <input v-model="query.keyword" class="input" placeholder="操作人 / 模块关键词" @keyup.enter="load(1)" />
+            <input v-model="query.keyword" class="input" placeholder="操作人 / 模块 / 动作" @keyup.enter="load(1)" />
             <button class="btn btn-primary" @click="load(1)">查询</button>
             <button class="btn btn-ghost" @click="resetQuery">重置</button>
         </div>

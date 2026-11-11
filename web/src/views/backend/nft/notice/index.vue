@@ -87,7 +87,7 @@
                 <div class="modal-body">
                     <div class="form-row">
                         <label>标题 *</label>
-                        <input v-model="form.title" class="input" placeholder="请输入公告标题" />
+                        <input v-model="form.title" class="input" placeholder="公告标题" />
                     </div>
                     <div style="display: flex; gap: 14px">
                         <div class="form-row" style="flex: 1">

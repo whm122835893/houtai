@@ -12,10 +12,11 @@
                 <option value="">全部类型</option>
                 <option v-for="t in types" :key="t.key" :value="t.key">{{ t.name }}</option>
             </select>
-            <input v-model="query.keyword" class="input" placeholder="名称关键词" @keyup.enter="load(1)" />
+            <input v-model="query.keyword" class="input" placeholder="搜索名称" @keyup.enter="load(1)" />
             <button class="btn btn-primary" @click="load(1)">查询</button>
             <span style="flex: 1"></span>
-            <span class="cell-sub">删除的记录保留在此，可恢复或彻底清除</span>
+            <span class="cell-sub">所有删除均为<b>软删除</b>：先入回收站，可随时恢复；彻底删除后不可恢复</span>
+            <button v-if="total > 0" class="btn btn-danger" @click="doClear">清空回收站</button>
         </div>
 
         <!-- 列表 -->
@@ -24,10 +25,10 @@
                 <table class="tbl">
                     <thead>
                         <tr>
-                            <th style="width: 90px">ID</th>
-                            <th>名称 / 类型</th>
+                            <th style="width: 90px">原 ID</th>
+                            <th>名称</th>
                             <th>类型</th>
-                            <th>操作人</th>
+                            <th>删除人</th>
                             <th>删除时间</th>
                             <th style="width: 200px">操作</th>
                         </tr>
@@ -111,6 +112,17 @@ const doPurge = (row: any) => {
     ).then(() => api.purge(row.type, row.id)).then(() => {
         ElMessage.success('已彻底删除')
         load()
+    })
+}
+
+const doClear = () => {
+    ElMessageBox.confirm(
+        '确认清空回收站？全部已删除记录将被物理删除，且无法恢复',
+        '危险操作',
+        { type: 'error', confirmButtonText: '清空回收站', cancelButtonText: '取消' }
+    ).then(() => api.clear()).then(() => {
+        ElMessage.success('回收站已清空')
+        load(1)
     })
 }
 

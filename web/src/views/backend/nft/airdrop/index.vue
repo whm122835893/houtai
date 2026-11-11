@@ -28,7 +28,7 @@
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>任务名称</th>
+                            <th>任务</th>
                             <th>藏品</th>
                             <th>份数</th>
                             <th>目标规则</th>

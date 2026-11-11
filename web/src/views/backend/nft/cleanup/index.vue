@@ -52,14 +52,15 @@
             </div>
             <div class="confirm-row">
                 <span class="cell-sub">已选分组：<b>{{ selectedTitle || '（未选择）' }}</b></span>
-                <input v-model="confirmText" class="input confirm-input" placeholder='请输入「清空」以启用按钮' />
+                <span class="cell-sub">① 输入「<b style="color: var(--danger)">清空</b>」：</span>
+                <input v-model="confirmText" class="input confirm-input" style="width: 110px" placeholder="清空" />
                 <input v-model="adminPassword" type="password" class="input" style="width: 150px" placeholder="管理员密码" />
                 <input v-model="smsCode" class="input" style="width: 110px" maxlength="6" placeholder="6 位验证码" />
                 <button class="btn btn-ghost btn-sm" :disabled="!adminPassword || codeSending" @click="sendCode">
                     {{ codeSending ? '发送中…' : (codeCountdown > 0 ? `${codeCountdown}s 后重发` : '发送验证码') }}
                 </button>
                 <button v-if="auth('clean')" class="btn btn-danger" :disabled="!canClean || cleaning" @click="doClean(false)">
-                    {{ cleaning ? '清理中…' : '执行清理' }}
+                    {{ cleaning ? '清理中…' : '④ 执行清理' }}
                 </button>
                 <span v-else class="cell-sub">仅超级管理员可执行</span>
             </div>

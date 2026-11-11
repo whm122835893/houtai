@@ -352,7 +352,7 @@ const doExec = async () => {
         await ElMessageBox.confirm(
             `确认执行统一置换？将回收 ${c.total_recovered} 份源持仓${leftTxt}（寄售中的挂单将联动下架，回收不可自动撤销），并向 ${c.users.length} 名用户空投《${c.new_name}》共 ${c.total_airdropped} 份`,
             '执行置换',
-            { type: 'warning' }
+            { type: 'warning', confirmButtonText: '确认发放', cancelButtonText: '再想想' }
         )
         await api.exec(buildPayload())
         ElMessage.success(`置换完成：回收 ${c.total_recovered} 份，空投《${c.new_name}》${c.total_airdropped} 份`)

@@ -16,3 +16,7 @@ export function restore(type: string, id: number) {
 export function purge(type: string, id: number) {
     return createAxios({ url: url + 'purge', method: 'post', data: { type, id } })
 }
+
+export function clear() {
+    return createAxios({ url: url + 'clear', method: 'post' })
+}
