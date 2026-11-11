@@ -33,6 +33,8 @@ class Checkin extends Backend
         $keyword = $this->request->get('keyword/s', '');
         $limit   = $this->request->get('limit/d', 10);
         $page    = $this->request->get('page/d', 1);
+        // 场次过滤：activity_id 0=默认场次，-1=不过滤
+        $activityId = $this->request->get('activity_id/d', -1);
 
         $where = [];
         if ($keyword !== '') {
@@ -49,7 +51,11 @@ class Checkin extends Backend
         unset($log);
 
         // 阶梯规则（附藏品名 / 优先购目标藏品名，奖励类型 1=抽奖次数 2=藏品 3=优先购资格）
-        $rules      = $this->model->order('day_num', 'asc')->select();
+        $ruleQuery = $this->model->order('day_num', 'asc');
+        if ($activityId >= 0) {
+            $ruleQuery->where('activity_id', $activityId);
+        }
+        $rules      = $ruleQuery->select();
         $ruleArr    = $rules->toArray();
         $ruleColIds = array_values(array_unique(array_filter(array_merge(array_column($ruleArr, 'collection_id'), array_column($ruleArr, 'pre_collection_id')))));
         $ruleCols   = $ruleColIds ? Db::name('collection')->whereIn('id', $ruleColIds)->column('name', 'id') : [];
@@ -76,6 +82,10 @@ class Checkin extends Backend
         unset($data['rules']);
 
         $allow = ['ck_enabled', 'ck_daily_type', 'ck_daily_num', 'ck_daily_collection_id', 'ck_daily_pre_collection_id', 'ck_repair_limit'];
+        // 场次绑定：默认场次（最小 id）映射 activity_id=0
+        $activityId = (int) $this->request->post('activity_id/d', 0);
+        $defaultId  = (int) Db::name('act_session')->where('is_deleted', 0)->where('type', 2)->min('id');
+        $aid        = ($activityId > 0 && $activityId === $defaultId) ? 0 : $activityId;
         Db::startTrans();
         try {
             // 每日签到奖励类型校验：类型 3=优先购资格必须绑定目标藏品
@@ -91,9 +101,9 @@ class Checkin extends Backend
                 }
                 Db::name('setting')->where('name', $name)->update(['value' => $val, 'updatetime' => time()]);
             }
-            // 阶梯整体重建
+            // 阶梯整体重建（仅重建当前场次范围内的规则）
             // 奖励类型：1=抽奖次数 2=藏品(reward_num=份数+collection_id) 3=优先购资格(reward_num=可用次数+pre_collection_id=目标藏品，未发售可预配置)
-            CheckinRule::where('id', '>', 0)->delete();
+            CheckinRule::where('activity_id', $aid)->delete();
             $now = time();
             foreach ($rules as $rule) {
                 $dayNum = intval($rule['day_num'] ?? 0);
@@ -112,6 +122,7 @@ class Checkin extends Backend
                     throw new \Exception("连续签到 {$dayNum} 天的阶梯：优先购目标藏品不存在");
                 }
                 CheckinRule::create([
+                    'activity_id'   => $aid,
                     'day_num'       => $dayNum,
                     'reward_type'   => $rewardType,
                     'reward_num'    => max(1, intval($rule['reward_num'] ?? 1)),

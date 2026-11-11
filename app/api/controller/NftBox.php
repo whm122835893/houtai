@@ -38,7 +38,7 @@ class NftBox extends Frontend
      */
     public function index(): void
     {
-        $list = Db::name('blindbox')
+        $list = Db::name('blindbox')->where('deletetime', 0)
             ->where('status', 1)
             ->where('is_deleted', 0)
             ->field('id,name,cover,description,price,total_supply,sold_count,limit_per_user')
@@ -60,7 +60,7 @@ class NftBox extends Frontend
     public function detail(): void
     {
         $id  = $this->request->get('id/d', 0);
-        $box = Db::name('blindbox')->where('id', $id)->where('status', 1)->where('is_deleted', 0)
+        $box = Db::name('blindbox')->where('deletetime', 0)->where('id', $id)->where('status', 1)->where('is_deleted', 0)
             ->field('id,name,cover,description,rule_text,price,total_supply,sold_count,limit_per_user')
             ->find();
         if (!$box) {
@@ -95,7 +95,7 @@ class NftBox extends Frontend
             $this->error('单笔最多购买 99 份');
         }
 
-        $box = Db::name('blindbox')->where('id', $boxId)->where('status', 1)->where('is_deleted', 0)->find();
+        $box = Db::name('blindbox')->where('deletetime', 0)->where('id', $boxId)->where('status', 1)->where('is_deleted', 0)->find();
         if (!$box) {
             $this->error('盲盒不存在或已下架');
         }
@@ -166,11 +166,11 @@ class NftBox extends Frontend
             if ($boxId <= 0) {
                 throw new \RuntimeException('订单缺少盲盒信息');
             }
-            $box = Db::name('blindbox')->where('id', $boxId)->where('is_deleted', 0)->lock(true)->find();
+            $box = Db::name('blindbox')->where('deletetime', 0)->where('id', $boxId)->where('is_deleted', 0)->lock(true)->find();
             if (!$box) {
                 throw new \RuntimeException('盲盒不存在');
             }
-            $hit = Db::name('blindbox')->where('id', $boxId)
+            $hit = Db::name('blindbox')->where('deletetime', 0)->where('id', $boxId)
                 ->whereRaw('sold_count + ' . $num . ' <= total_supply')
                 ->update(['sold_count' => Db::raw('sold_count + ' . $num), 'updatetime' => time()]);
             if (!$hit) {

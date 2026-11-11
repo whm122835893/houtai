@@ -23,15 +23,20 @@ class Invite extends Backend
     }
 
     /**
-     * 一次返回规则全量 + 邀请记录分页
+     * 一次返回规则全量 + 邀请记录分页（rules 支持按场次过滤：activity_id，0=默认场次）
      */
     public function index(): void
     {
-        $limit = $this->request->get('limit/d', 10);
-        $page  = $this->request->get('page/d', 1);
+        $limit      = $this->request->get('limit/d', 10);
+        $page       = $this->request->get('page/d', 1);
+        $activityId = $this->request->get('activity_id/d', -1);
 
         // 规则全量（附奖励藏品名 / 优先购目标藏品名）
-        $rules = $this->model->order('invite_num', 'asc')->select();
+        $ruleQuery = $this->model->order('invite_num', 'asc');
+        if ($activityId >= 0) {
+            $ruleQuery->where('activity_id', $activityId);
+        }
+        $rules = $ruleQuery->select();
         $ruleArr      = $rules->toArray();
         $collectionIds = array_values(array_unique(array_filter(array_merge(array_column($ruleArr, 'collection_id'), array_column($ruleArr, 'pre_collection_id')))));
         $collections   = $collectionIds ? Db::name('collection')->where('id', 'in', $collectionIds)->column('name', 'id') : [];
@@ -71,7 +76,8 @@ class Invite extends Backend
             $this->error('请求方式错误');
         }
         $id   = $this->request->param('id/d', 0);
-        $data = $this->request->only(['invite_num', 'reward_type', 'collection_id', 'pre_collection_id', 'reward_num', 'status'], 'post');
+        $data = $this->request->only(['invite_num', 'reward_type', 'collection_id', 'pre_collection_id', 'reward_num', 'status', 'activity_id'], 'post');
+        $data['activity_id'] = (int) ($data['activity_id'] ?? 0);
         try {
             validate(\app\admin\validate\nft\InviteRule::class)->scene($id ? 'edit' : 'add')->check($data);
         } catch (Throwable $e) {

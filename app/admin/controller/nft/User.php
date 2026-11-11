@@ -7,6 +7,7 @@ use app\common\controller\Backend;
 use app\admin\model\nft\User as UserModel;
 use app\admin\model\nft\WalletLog;
 use app\admin\model\nft\OperLog;
+use think\facade\Db;
 
 /**
  * 平台会员管理
@@ -41,6 +42,7 @@ class User extends Backend
             $where[] = ['status', '=', $status];
         }
 
+        $where[] = ['deletetime', '=', 0];
         $total = $this->model->where($where)->count();
         $list  = $this->model->where($where)
             ->field(['id', 'nickname', 'username', 'mobile', 'email', 'real_name', 'idcard', 'invite_code', 'balance', 'frozen', 'order_count', 'hold_count', 'status', 'last_login_time', 'createtime'])
@@ -97,7 +99,7 @@ class User extends Backend
         if (!$ids) {
             $this->error(__('Parameter %s can not be empty', ['ids']));
         }
-        $count = $this->model->where('id', 'in', $ids)->delete();
+        $count = $this->model->where('id', 'in', $ids)->update(['deletetime' => time()]);
         OperLog::record('用户管理', '删除', '用户#' . implode(',', $ids), '共删除 ' . $count . ' 条');
         $this->success();
     }
@@ -136,6 +138,87 @@ class User extends Backend
             $this->success();
         }
         $this->success('', []);
+    }
+
+    /**
+     * 重置密码（后台生成随机密码）
+     */
+    public function resetpwd(): void
+    {
+        $id  = $this->request->param('id/d', 0);
+        $row = $this->model->find($id);
+        if (!$row) {
+            $this->error(__('Record not found'));
+        }
+        $newPwd = substr(str_shuffle('abcdefghjkmnpqrstuvwxyz23456789'), 0, 8);
+        $row->save(['password' => hash_password($newPwd), 'salt' => '']);
+        // 密码变更后强制重新登录
+        try {
+            \app\common\facade\Token::clear('user', $id);
+            \app\common\facade\Token::clear('user-refresh', $id);
+        } catch (Throwable $e) {
+        }
+        OperLog::record('用户管理', '重置密码', '用户#' . $id);
+        $this->success('密码已重置', ['password' => $newPwd]);
+    }
+
+    /**
+     * 强制下线（清除该用户全部登录态）
+     */
+    public function kick(): void
+    {
+        $id = $this->request->param('id/d', 0);
+        $row = $this->model->find($id);
+        if (!$row) {
+            $this->error(__('Record not found'));
+        }
+        try {
+            \app\common\facade\Token::clear('user', $id);
+            \app\common\facade\Token::clear('user-refresh', $id);
+        } catch (Throwable $e) {
+            $this->error('下线失败：' . $e->getMessage());
+        }
+        OperLog::record('用户管理', '强制下线', '用户#' . $id);
+        $this->success('已强制下线');
+    }
+
+    /**
+     * 导出 CSV（按当前筛选条件）
+     */
+    public function export(): void
+    {
+        $keyword = $this->request->get('keyword/s', '');
+        $status  = $this->request->get('status/d', -1);
+        $where = [];
+        if ($keyword !== '') {
+            $where[] = ['username|nickname|mobile|email', 'like', '%' . str_replace('%', '\%', $keyword) . '%'];
+        }
+        if ($status >= 0) {
+            $where[] = ['status', '=', $status];
+        }
+        $rows = $this->model->where($where)
+            ->field(['id', 'nickname', 'username', 'mobile', 'email', 'invite_code', 'balance', 'frozen', 'order_count', 'hold_count', 'status', 'last_login_time', 'createtime'])
+            ->order('id', 'desc')
+            ->limit(10000)
+            ->select()
+            ->toArray();
+
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="users-' . date('YmdHi') . '.csv"');
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF"); // BOM 防 Excel 乱码
+        fputcsv($out, ['ID', '昵称', '账号', '手机号', '邮箱', '邀请码', '余额(元)', '冻结(元)', '订单数', '持仓数', '状态', '最近登录', '注册时间']);
+        foreach ($rows as $r) {
+            fputcsv($out, [
+                $r['id'], $r['nickname'], $r['username'], $r['mobile'], $r['email'], $r['invite_code'],
+                number_format($r['balance'] / 100, 2, '.', ''), number_format($r['frozen'] / 100, 2, '.', ''),
+                $r['order_count'], $r['hold_count'], $r['status'] == 1 ? '正常' : '冻结',
+                $r['last_login_time'] ? date('Y-m-d H:i:s', (int) $r['last_login_time']) : '-',
+                date('Y-m-d H:i:s', (int) $r['createtime']),
+            ]);
+        }
+        fclose($out);
+        exit;
     }
 
     /**

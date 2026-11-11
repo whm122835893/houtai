@@ -31,6 +31,7 @@ class Notice extends Backend
         $limit    = $this->request->get('limit/d', 10);
         $page     = $this->request->get('page/d', 1);
 
+$where[] = ['deletetime', '=', 0];
         $where = [];
         if ($keyword !== '') {
             $where[] = ['title', 'like', '%' . str_replace('%', '\%', $keyword) . '%'];
@@ -115,7 +116,7 @@ class Notice extends Backend
         if (!$ids) {
             $this->error(__('Parameter %s can not be empty', ['ids']));
         }
-        $count = $this->model->where('id', 'in', $ids)->delete();
+        $count = $this->model->where('id', 'in', $ids)->update(['deletetime' => time()]);
         OperLog::record('公告管理', '删除', '公告#' . implode(',', $ids), '共删除 ' . $count . ' 条');
         $this->success();
     }

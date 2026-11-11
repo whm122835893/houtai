@@ -142,4 +142,99 @@ class Thirdparty extends Backend
         OperLog::record('第三方渠道', '删除支付渠道', '渠道#' . $id, (string) $row['name']);
         $this->success();
     }
+
+    /**
+     * 短信配置（存 setting 表 sms_config JSON；密钥字段脱敏返回）
+     */
+    public function sms(): void
+    {
+        $default = ['enabled' => 0, 'items' => [
+            ['name' => 'provider',    'title' => '服务商',                 'value' => ''],
+            ['name' => 'access_key',  'title' => 'AccessKey ID',          'value' => ''],
+            ['name' => 'secret_key',  'title' => 'AccessKey Secret',      'value' => ''],
+            ['name' => 'sign_name',   'title' => '短信签名',               'value' => ''],
+            ['name' => 'tpl_code',    'title' => '验证码模板 ID',          'value' => ''],
+            ['name' => 'daily_limit', 'title' => '单用户每日发送上限（条）', 'value' => '10'],
+            ['name' => 'code_ttl',    'title' => '验证码有效期（分钟）',    'value' => '5'],
+        ]];
+        $raw = Db::name('setting')->where('name', 'sms_config')->value('value');
+        $cfg = is_string($raw) ? json_decode($raw, true) : [];
+        if (!is_array($cfg) || !isset($cfg['items'])) {
+            $cfg = $default;
+        }
+        // 密钥脱敏：保留前 8 位，其余打星
+        foreach ($cfg['items'] as &$item) {
+            if (in_array($item['name'], ['secret_key', 'access_key'], true) && mb_strlen($item['value']) > 12) {
+                $item['value'] = mb_substr($item['value'], 0, 8) . str_repeat('*', 8);
+            }
+        }
+        unset($item);
+        $this->success('', ['sms' => $cfg]);
+    }
+
+    /**
+     * 保存短信配置（含脱敏掩码的字段保留原值）
+     */
+    public function saveSms(): void
+    {
+        if (!$this->request->isPost()) {
+            $this->error('请求方式错误');
+        }
+        $items   = $this->request->post('items');
+        $enabled = $this->request->post('enabled/d', 0) ? 1 : 0;
+        if (!is_array($items)) {
+            $this->error('配置项格式错误');
+        }
+        // 掩码字段还原为库里原值
+        $raw = Db::name('setting')->where('name', 'sms_config')->value('value');
+        $old = is_string($raw) ? json_decode($raw, true) : [];
+        $oldMap = [];
+        if (isset($old['items']) && is_array($old['items'])) {
+            foreach ($old['items'] as $it) {
+                $oldMap[$it['name']] = (string) ($it['value'] ?? '');
+            }
+        }
+        foreach ($items as &$item) {
+            $name = (string) ($item['name'] ?? '');
+            $val  = (string) ($item['value'] ?? '');
+            if (in_array($name, ['secret_key', 'access_key'], true) && str_contains($val, '****')) {
+                $item['value'] = $oldMap[$name] ?? '';
+            }
+            $item['title'] = (string) ($item['title'] ?? '');
+        }
+        unset($item);
+
+        $json = json_encode(['enabled' => $enabled, 'items' => array_values($items)], JSON_UNESCAPED_UNICODE);
+        $now  = time();
+        if (Db::name('setting')->where('name', 'sms_config')->count()) {
+            Db::name('setting')->where('name', 'sms_config')->update(['value' => $json, 'updatetime' => $now]);
+        } else {
+            Db::name('setting')->insert(['name' => 'sms_config', 'group' => 'thirdparty', 'title' => '短信服务配置', 'value' => $json, 'createtime' => $now, 'updatetime' => $now]);
+        }
+        OperLog::record('第三方渠道', '保存短信配置', 'sms', $enabled ? '启用' : '未启用');
+        $this->success('短信配置已保存');
+    }
+
+    /**
+     * 发送测试短信（模拟通道：落审计日志；接入真实服务商后替换 TODO 段）
+     */
+    public function sendSmsTest(): void
+    {
+        if (!$this->request->isPost()) {
+            $this->error('请求方式错误');
+        }
+        $phone = (string) $this->request->post('phone/s', '');
+        if (!preg_match('/^1[3-9]\d{9}$/', $phone)) {
+            $this->error('请输入正确的测试手机号');
+        }
+        $raw = Db::name('setting')->where('name', 'sms_config')->value('value');
+        $cfg = is_string($raw) ? json_decode($raw, true) : [];
+        if (empty($cfg['enabled'])) {
+            $this->error('短信通道未启用，请先保存并启用');
+        }
+        $code = (string) random_int(100000, 999999);
+        // TODO: 接入真实短信服务商 SDK 后，用配置的签名/模板发送
+        OperLog::record('第三方渠道', '发送测试短信', $phone, '内容【灵境数藏】您的验证码为 ' . $code . '，5 分钟内有效（模拟通道）');
+        $this->success('测试短信已发送（演示环境请到操作日志查看）');
+    }
 }

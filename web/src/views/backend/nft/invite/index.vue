@@ -8,6 +8,13 @@
 
         <!-- 活动信息（多场次表格样式） -->
         <div class="glass rise" :style="{ '--i': 1 }" style="margin-bottom: 14px">
+            <div class="card-head" style="padding-bottom: 14px">
+                <div>
+                    <h3>活动列表</h3>
+                    <span class="en">Sessions</span>
+                </div>
+                <button class="btn btn-primary" @click="openSession()">新建活动</button>
+            </div>
             <div class="tbl-wrap">
                 <table class="tbl">
                     <thead>
@@ -16,19 +23,29 @@
                             <th>活动名称</th>
                             <th>活动时间</th>
                             <th>开关</th>
-                            <th>操作</th>
+                            <th style="width: 210px">操作</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td class="serif-num">—</td>
-                            <td class="cell-main">邀请有礼</td>
-                            <td class="cell-sub">长期有效</td>
-                            <td style="white-space:nowrap">
-                                <button class="btn btn-ghost btn-sm" @click="onSwitch(inviteEnabled != 1)">{{ inviteEnabled == 1 ? '关闭' : '开启' }}</button>
-                                <span class="tag" :class="inviteEnabled == 1 ? 'tag-green' : 'tag-gray'" style="margin-left: 6px">{{ inviteEnabled == 1 ? '启用' : '停用' }}</span>
+                        <tr v-for="s in sessions" :key="s.id">
+                            <td class="serif-num">{{ s.id }}</td>
+                            <td class="cell-main">
+                                {{ s.title }}
+                                <span v-if="!s.has_config" class="tag tag-gray" style="margin-left: 4px">待配置</span>
+                                <span v-if="currentSessionId === s.id" class="tag tag-blue" style="margin-left: 4px">配置中</span>
                             </td>
-                            <td class="cell-sub">关闭后该场 C 端暂停发放，规则保留</td>
+                            <td class="cell-sub">
+                                <template v-if="s.start_time || s.end_time">{{ fmtTime(s.start_time) }} ~ {{ fmtTime(s.end_time) }}</template>
+                                <template v-else>长期有效</template>
+                            </td>
+                            <td style="white-space:nowrap">
+                                <el-switch :model-value="!!s.status" @change="(v: any) => onSessionToggle(s, v)" />
+                            </td>
+                            <td style="white-space:nowrap">
+                                <button class="btn btn-ghost btn-sm" @click="pickSession(s)">配置</button>
+                                <button class="btn btn-ghost btn-sm" @click="openSession(s)">编辑</button>
+                                <button class="btn btn-danger btn-sm" @click="delSession(s)">删除</button>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
@@ -40,7 +57,7 @@
         <div class="glass rise" :style="{ '--i': 2 }" style="margin-bottom: 14px">
             <div class="card-head" style="padding-bottom: 14px">
                 <div>
-                    <h3>奖励规则 · 邀请有礼</h3>
+                    <h3>奖励规则 · {{ currentSession?.title || '邀请有礼' }}</h3>
                     <span class="en">Reward Rules</span>
                 </div>
                 <button v-if="auth('save')" class="btn btn-primary" @click="openRule()">添加规则</button>
@@ -174,6 +191,39 @@
             </div>
         </div>
     </div>
+
+    <!-- 场次弹窗 -->
+    <div v-if="sessionVisible" class="modal-mask fadein" @click.self="sessionVisible = false">
+        <div class="modal glass pop" style="width: 460px">
+            <div class="modal-head">
+                <h3>{{ sessionForm.id ? '编辑活动' : '新建活动' }} · 邀请有礼</h3>
+                <span class="close" @click="sessionVisible = false">✕</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <label>活动名称 *</label>
+                    <input v-model="sessionForm.title" class="input" placeholder="如：春节邀请季" />
+                </div>
+                <div class="form-grid" style="grid-template-columns: 1fr 1fr">
+                    <div class="form-row">
+                        <label>开始时间（可空 = 立即）</label>
+                        <input v-model="sessionForm.start_local" class="input" type="datetime-local" />
+                    </div>
+                    <div class="form-row">
+                        <label>结束时间（可空 = 长期）</label>
+                        <input v-model="sessionForm.end_local" class="input" type="datetime-local" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <span class="cell-sub">新建后默认关闭：请为该场次完成奖励配置，再通过列表开关开启。空配置的活动不允许开启。</span>
+                </div>
+            </div>
+            <div class="modal-foot">
+                <button class="btn btn-ghost" @click="sessionVisible = false">取消</button>
+                <button class="btn btn-primary" @click="submitSession">保存</button>
+            </div>
+        </div>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -182,6 +232,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { auth } from '/@/utils/common'
 import { fmtTime, nftApi } from '/@/utils/nft'
 import * as api from '/@/api/backend/nft/invite'
+import * as sesApi from '/@/api/backend/nft/actsession'
 
 defineOptions({ name: 'nft/invite' })
 
@@ -192,12 +243,73 @@ const collections = ref<any[]>([])
 const ruleVisible = ref(false)
 const ruleForm = reactive<any>({})
 const query = reactive({ page: 1, limit: 10 })
-const inviteEnabled = ref(1)
 
-const onSwitch = async (v: boolean) => {
-    await api.enable(v ? 1 : 0)
-    ElMessage.success(v ? '邀请有礼已开启，C 端即时生效' : '邀请有礼已关闭，C 端暂停发放')
-    inviteEnabled.value = v ? 1 : 0
+// ============ 活动场次 ============
+const sessions = ref<any[]>([])
+const currentSessionId = ref(0)
+const currentSession = computed(() => sessions.value.find((s) => s.id === currentSessionId.value))
+const sessionVisible = ref(false)
+const sessionForm = reactive<any>({})
+
+const toLocalInput = (ts: number) => (ts ? new Date(ts * 1000).toISOString().slice(0, 16) : '')
+const loadSessions = async () => {
+    const res = await sesApi.index({ type: 1 })
+    sessions.value = res.data.list || []
+    if (!sessions.value.find((s) => s.id === currentSessionId.value)) {
+        currentSessionId.value = sessions.value[0]?.id || 0
+    }
+}
+
+const openSession = (s?: any) => {
+    Object.assign(sessionForm, {
+        id: s?.id || 0,
+        title: s?.title || '',
+        start_local: toLocalInput(s?.start_time || 0),
+        end_local: toLocalInput(s?.end_time || 0),
+    })
+    sessionVisible.value = true
+}
+
+const submitSession = async () => {
+    if (!sessionForm.title.trim()) {
+        ElMessage.warning('请输入活动名称')
+        return
+    }
+    const start = sessionForm.start_local ? Math.floor(new Date(sessionForm.start_local).getTime() / 1000) : 0
+    const end = sessionForm.end_local ? Math.floor(new Date(sessionForm.end_local).getTime() / 1000) : 0
+    if (start && end && end <= start) {
+        ElMessage.warning('结束时间必须晚于开始时间')
+        return
+    }
+    await sesApi.save({ id: sessionForm.id || undefined, type: 1, title: sessionForm.title.trim(), start_time: start, end_time: end })
+    ElMessage.success('保存成功')
+    sessionVisible.value = false
+    loadSessions()
+}
+
+const delSession = (s: any) => {
+    ElMessageBox.confirm(`确认删除活动场次「${s.title}」？删除后不可恢复`, '危险操作', { type: 'warning' }).then(() =>
+        sesApi.del(s.id).then(() => {
+            if (currentSessionId.value === s.id) currentSessionId.value = 0
+            loadSessions()
+            load()
+        })
+    )
+}
+
+const onSessionToggle = async (s: any, v: boolean) => {
+    try {
+        await sesApi.toggle(s.id, v ? 1 : 0)
+        ElMessage.success(v ? '场次已开启，C 端即时生效（同类型其他场次已自动关闭）' : '场次已关闭，C 端暂停发放')
+    } finally {
+        loadSessions()
+    }
+}
+
+const pickSession = (s: any) => {
+    currentSessionId.value = s.id
+    load()
+    document.querySelector('.nft-page')?.scrollTo?.({ top: 260, behavior: 'smooth' })
 }
 
 const maxPage = computed(() => Math.max(1, Math.ceil(total.value / query.limit)))
@@ -227,11 +339,13 @@ const statusName = (s: number) => ['未发售', '已排期', '发售中', '已�
 
 const load = async (page = 1) => {
     query.page = page
-    const res = await api.index({ page, limit: query.limit })
+    // 默认场次映射 activity_id=0；其余按场次 ID
+    const defaultId = sessions.value[0]?.id || 0
+    const activityId = currentSessionId.value === 0 ? -1 : currentSessionId.value === defaultId ? 0 : currentSessionId.value
+    const res = await api.index({ page, limit: query.limit, activity_id: activityId })
     rules.value = res.data.rules
     records.value = res.data.records
     total.value = res.data.total
-    inviteEnabled.value = Number(res.data.invite_enabled ?? 1)
 }
 const loadCollections = async () => {
     try {
@@ -279,10 +393,15 @@ const submitRule = async () => {
         pre_collection_id: ruleForm.reward_type == 3 ? Number(ruleForm.pre_collection_id) : 0,
         reward_num: ruleForm.reward_type == 1 ? 0 : Number(ruleForm.reward_num),
         status: ruleForm.status,
+        activity_id: (() => {
+            const defaultId = sessions.value[0]?.id || 0
+            return currentSessionId.value === defaultId ? 0 : currentSessionId.value
+        })(),
     })
     ElMessage.success('保存成功')
     ruleVisible.value = false
     load()
+    loadSessions() // 规则变化影响场次「待配置」状态
 }
 const oneDel = (row: any) => {
     ElMessageBox.confirm(`确认删除邀请 ${row.invite_num} 人的奖励规则？`, '危险操作', { type: 'warning' }).then(() =>
@@ -290,7 +409,8 @@ const oneDel = (row: any) => {
     )
 }
 
-onMounted(() => {
+onMounted(async () => {
+    await loadSessions()
     load()
     loadCollections()
 })

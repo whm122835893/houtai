@@ -36,6 +36,7 @@ class Raffle extends Backend
         $limit   = $this->request->get('limit/d', 10);
         $page    = $this->request->get('page/d', 1);
 
+$where[] = ['deletetime', '=', 0];
         $where = [];
         if ($keyword !== '') {
             // 按藏品名关联筛选
@@ -160,8 +161,7 @@ class Raffle extends Backend
         }
         Db::startTrans();
         try {
-            $count = $this->model->where('id', 'in', $ids)->delete();
-            Db::name('raffle_apply')->where('raffle_id', 'in', $ids)->delete();
+            $count = $this->model->where('id', 'in', $ids)->update(['deletetime' => time(), 'status' => 0]);
             Db::commit();
         } catch (Throwable $e) {
             Db::rollback();

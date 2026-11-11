@@ -26,7 +26,13 @@ class NftInvite extends Frontend
         $me  = Db::name('user')->where('id', $uid)->field('id,invite_code')->find();
         $me['invite_code'] = NftTrade::ensureInviteCode($uid);
 
-        $rules = Db::name('invite_rule')->where('status', 1)->order('invite_num', 'asc')->select()->toArray();
+        // 启用场次（type=1 邀请）：activity_id 0=默认场次；无启用场次回退全部规则
+        $sessionId = NftTrade::activeSession(1);
+        $ruleQuery = Db::name('invite_rule')->where('status', 1);
+        if ($sessionId >= 0) {
+            $ruleQuery->where('activity_id', $sessionId);
+        }
+        $rules = $ruleQuery->order('invite_num', 'asc')->select()->toArray();
         $ruleView = [];
         foreach ($rules as $r) {
             $invited = Db::name('invite_record')->where('inviter_id', $uid)->count();
@@ -71,7 +77,13 @@ class NftInvite extends Frontend
         }
         $uid    = (int) $this->auth->id;
         $ruleId = (int) $this->request->post('rule_id/d', 0);
-        $rule   = Db::name('invite_rule')->where('id', $ruleId)->where('status', 1)->find();
+        // 校验规则属于当前启用场次（或无场次时的全局规则）
+        $sessionId = NftTrade::activeSession(1);
+        $ruleQuery = Db::name('invite_rule')->where('id', $ruleId)->where('status', 1);
+        if ($sessionId >= 0) {
+            $ruleQuery->where('activity_id', $sessionId);
+        }
+        $rule   = $ruleQuery->find();
         if (!$rule) {
             $this->error('规则不存在或已停用');
         }

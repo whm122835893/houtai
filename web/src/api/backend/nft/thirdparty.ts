@@ -20,3 +20,15 @@ export function status(id: number, enabled: number) {
 export function del(id: number) {
     return createAxios({ url: url + 'del', method: 'post', data: { id } })
 }
+
+export function sms() {
+    return createAxios({ url: url + 'sms', method: 'get' })
+}
+
+export function saveSms(data: { items: object[]; enabled: number }) {
+    return createAxios({ url: url + 'saveSms', method: 'post', data })
+}
+
+export function sendSmsTest(phone: string) {
+    return createAxios({ url: url + 'sendSmsTest', method: 'post', data: { phone } })
+}

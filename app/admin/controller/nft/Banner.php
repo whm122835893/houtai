@@ -28,12 +28,12 @@ class Banner extends Backend
         $page  = $this->request->get('page/d', 0);
         $limit = $this->request->get('limit/d', 0);
 
-        $query = $this->model->field(['id', 'title', 'image', 'link', 'weigh', 'status', 'createtime'])
+        $query = $this->model->where('deletetime', 0)->field(['id', 'title', 'image', 'link', 'weigh', 'status', 'createtime'])
             ->order('weigh', 'desc')
             ->order('id', 'desc');
 
         if ($page > 0 && $limit > 0) {
-            $total = $this->model->count();
+            $total = $this->model->where('deletetime', 0)->count();
             $list  = $query->page($page, $limit)->select();
             $this->success('', ['list' => $list, 'total' => $total]);
         }
@@ -91,6 +91,22 @@ class Banner extends Backend
     }
 
     /**
+     * 启用/停用
+     */
+    public function status(): void
+    {
+        $id     = $this->request->param('id/d', 0);
+        $status = $this->request->param('status/d', 1);
+        $row    = $this->model->find($id);
+        if (!$row) {
+            $this->error(__('Record not found'));
+        }
+        $row->save(['status' => $status ? 1 : 0]);
+        OperLog::record('轮播管理', $status ? '启用' : '停用', '轮播#' . $id, (string) $row->title);
+        $this->success();
+    }
+
+    /**
      * 删除轮播（支持批量）
      */
     public function del(): void
@@ -99,7 +115,7 @@ class Banner extends Backend
         if (!$ids) {
             $this->error(__('Parameter %s can not be empty', ['ids']));
         }
-        $count = $this->model->where('id', 'in', $ids)->delete();
+        $count = $this->model->where('id', 'in', $ids)->update(['deletetime' => time()]);
         OperLog::record('轮播管理', '删除', '轮播#' . implode(',', $ids), '共删除 ' . $count . ' 条');
         $this->success();
     }

@@ -33,6 +33,7 @@ class Collection extends Backend
         $limit      = $this->request->get('limit/d', 10);
         $page       = $this->request->get('page/d', 1);
 
+$where[] = ['deletetime', '=', 0];
         $where = [];
         if ($keyword !== '') {
             $where[] = ['name', 'like', '%' . str_replace('%', '\%', $keyword) . '%'];
@@ -267,7 +268,7 @@ class Collection extends Backend
                 $this->error("藏品「{$name}」被 " . implode('、', $refs) . " 引用，请先解除引用再删除");
             }
         }
-        $count = $this->model->where('id', 'in', $ids)->delete();
+        $count = $this->model->where('id', 'in', $ids)->update(['deletetime' => time(), 'status' => 0]);
         OperLog::record('藏品管理', '删除', '藏品#' . implode(',', $ids), '共删除 ' . $count . ' 条');
         $this->success();
     }

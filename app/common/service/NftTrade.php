@@ -20,6 +20,20 @@ class NftTrade
     }
 
     /**
+     * 当前启用中的活动场次 ID（act_session，type: 1=邀请 2=签到 3=注册）
+     * 返回规则表可用的 activity_id：默认场次映射为 0；无启用场次返回 -1（调用方回退全局配置）
+     */
+    public static function activeSession(int $type): int
+    {
+        $id = (int) Db::name('act_session')->where('is_deleted', 0)->where('type', $type)->where('status', 1)->value('id');
+        if (!$id) {
+            return -1;
+        }
+        $defaultId = (int) Db::name('act_session')->where('is_deleted', 0)->where('type', $type)->min('id');
+        return $id === $defaultId ? 0 : $id;
+    }
+
+    /**
      * 藏品库存池剩余（与管理端 Collection::index 同口径）：
      * stock − sold − 空投到账 − 置换发放 − 盲盒占用 − 销毁 + 回收
      */

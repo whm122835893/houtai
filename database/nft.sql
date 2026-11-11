@@ -1012,3 +1012,29 @@ ALTER TABLE `user`
   ADD COLUMN `updatetime` bigint NULL DEFAULT NULL COMMENT '更新时间' AFTER `createtime`;
 
 UPDATE `user` SET status='1' WHERE status='enable';
+
+-- ============================================================
+-- 2026-11-12 增量：软删除列（回收站）
+-- ============================================================
+ALTER TABLE collection ADD COLUMN IF NOT EXISTS deletetime bigint(16) unsigned NOT NULL DEFAULT 0 COMMENT '软删除时间';
+ALTER TABLE category ADD COLUMN IF NOT EXISTS deletetime bigint(16) unsigned NOT NULL DEFAULT 0;
+ALTER TABLE banner ADD COLUMN IF NOT EXISTS deletetime bigint(16) unsigned NOT NULL DEFAULT 0;
+ALTER TABLE notice ADD COLUMN IF NOT EXISTS deletetime bigint(16) unsigned NOT NULL DEFAULT 0;
+ALTER TABLE user ADD COLUMN IF NOT EXISTS deletetime bigint(16) unsigned NOT NULL DEFAULT 0;
+ALTER TABLE blindbox ADD COLUMN IF NOT EXISTS deletetime bigint(16) unsigned NOT NULL DEFAULT 0;
+ALTER TABLE raffle ADD COLUMN IF NOT EXISTS deletetime bigint(16) unsigned NOT NULL DEFAULT 0;
+ALTER TABLE lottery_activity ADD COLUMN IF NOT EXISTS deletetime bigint(16) unsigned NOT NULL DEFAULT 0;
+
+-- 回收站菜单与按钮
+INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
+(250,'menu','回收站','nft/trash','nft/trash','fa fa-trash','tab','','/src/views/backend/nft/trash/index.vue',1,'none','软删除恢复中心',80,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+SET @trashMenu = LAST_INSERT_ID();
+INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
+(@trashMenu,'button','查看','nft/trash/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(@trashMenu,'button','恢复','nft/trash/restore','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(@trashMenu,'button','彻底删除','nft/trash/purge','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(211,'button','导出','nft/user/export','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(211,'button','重置密码','nft/user/resetpwd','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(211,'button','强制下线','nft/user/kick','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(242,'button','启停','nft/banner/status','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(220,'button','删除盲盒','nft/blindbox/del','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());

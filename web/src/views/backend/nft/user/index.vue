@@ -17,6 +17,7 @@
             <button class="btn btn-primary" @click="load(1)">查询</button>
             <button class="btn btn-ghost" @click="resetQuery">重置</button>
             <span style="flex: 1"></span>
+            <button v-if="auth('export')" class="btn btn-ghost" @click="doExport">导出</button>
             <button v-if="auth('add')" class="btn btn-ghost" @click="openAdd">新增会员</button>
             <button v-if="auth('del') && selectedIds.length" class="btn btn-danger btn-sm" @click="batchDel">
                 批量删除({{ selectedIds.length }})
@@ -40,7 +41,7 @@
                             <th>状态</th>
                             <th>最近登录</th>
                             <th>注册时间</th>
-                            <th style="width: 220px">操作</th>
+                            <th style="width: 320px">操作</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -62,9 +63,11 @@
                             <td style="white-space:nowrap">
                                 <button class="btn btn-ghost btn-sm" @click="openDetail(row)">详情</button>
                                 <button v-if="auth('edit')" class="btn btn-ghost btn-sm" @click="openEdit(row)">编辑</button>
+                                <button v-if="auth('resetpwd')" class="btn btn-ghost btn-sm" @click="doResetpwd(row)">重置密码</button>
                                 <button v-if="auth('status')" class="btn btn-ghost btn-sm" @click="toggleStatus(row)">
-                                    {{ row.status == 1 ? '禁用' : '启用' }}
+                                    {{ row.status == 1 ? '冻结' : '解冻' }}
                                 </button>
+                                <button v-if="auth('kick')" class="btn btn-ghost btn-sm" @click="doKick(row)">强制下线</button>
                                 <button v-if="auth('del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
                             </td>
                         </tr>
@@ -248,6 +251,28 @@ const submitForm = async () => {
 }
 const toggleStatus = (row: any) => {
     api.changeStatus(row.id, row.status == 1 ? 0 : 1).then(() => load())
+}
+const doResetpwd = (row: any) => {
+    ElMessageBox.confirm(`确认重置用户「${row.nickname || row.username}」的密码？将生成随机密码并强制其重新登录`, '操作确认', { type: 'warning' }).then(() =>
+        api.resetpwd(row.id).then((res: any) => {
+            ElMessageBox.alert(`新密码：<b style="font-size:16px;letter-spacing:1px">${res.data.password}</b><br/><span style="color:var(--ink-muted)">请立即复制并告知用户，关闭后不再显示</span>`, '重置成功', { dangerouslyUseHTMLString: true })
+        })
+    )
+}
+const doKick = (row: any) => {
+    ElMessageBox.confirm(`确认强制下线用户「${row.nickname || row.username}」？其所有登录态将被清除`, '操作确认', { type: 'warning' }).then(() =>
+        api.kick(row.id).then(() => ElMessage.success('已强制下线'))
+    )
+}
+const doExport = () => {
+    api.exportCsv({ keyword: query.keyword || '', status: query.status ?? -1 }).then((res: any) => {
+        const blob = new Blob([res.data ?? res], { type: 'text/csv;charset=utf-8' })
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        a.download = `users-${new Date().toISOString().slice(0, 10)}.csv`
+        a.click()
+        URL.revokeObjectURL(a.href)
+    })
 }
 const oneDel = (row: any) => {
     ElMessageBox.confirm(`确认删除用户「${row.nickname || row.username}」？删除后不可恢复`, '危险操作', { type: 'warning' }).then(() =>

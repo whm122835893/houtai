@@ -22,7 +22,7 @@ class NftLottery extends Frontend
     public function index(): void
     {
         $now = time();
-        $list = Db::name('lottery_activity')
+        $list = Db::name('lottery_activity')->where('deletetime', 0)
             ->where('status', 1)->where('end_time', '>=', $now)
             ->field('id,title,start_time,end_time,chance_rules')
             ->order('id', 'desc')->select()->toArray();
@@ -40,7 +40,7 @@ class NftLottery extends Frontend
     public function detail(): void
     {
         $id = (int) $this->request->get('id/d', 0);
-        $act = Db::name('lottery_activity')->where('id', $id)->where('status', 1)->find();
+        $act = Db::name('lottery_activity')->where('id', $id)->where('deletetime', 0)->where('status', 1)->find();
         if (!$act) {
             $this->error('活动不存在或未开启');
         }
@@ -82,7 +82,7 @@ class NftLottery extends Frontend
     public function chances(): void
     {
         $id  = (int) $this->request->get('id/d', 0);
-        $act = Db::name('lottery_activity')->where('id', $id)->where('status', 1)->find();
+        $act = Db::name('lottery_activity')->where('id', $id)->where('deletetime', 0)->where('status', 1)->find();
         if (!$act) {
             $this->error('活动不存在或未开启');
         }
@@ -126,7 +126,7 @@ class NftLottery extends Frontend
     public function draw(): void
     {
         $id  = (int) $this->request->post('id/d', 0);
-        $act = Db::name('lottery_activity')->where('id', $id)->where('status', 1)->find();
+        $act = Db::name('lottery_activity')->where('id', $id)->where('deletetime', 0)->where('status', 1)->find();
         if (!$act) {
             $this->error('活动不存在或未开启');
         }

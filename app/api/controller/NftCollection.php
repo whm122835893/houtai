@@ -30,7 +30,7 @@ class NftCollection extends Frontend
      */
     public function index(): void
     {
-        $list = Db::name('collection')->where('status', 2)
+        $list = Db::name('collection')->where('deletetime', 0)->where('status', 2)
             ->field('id,name,cover,publisher,price,market_price,stock,sold,sale_end_time,pre_sale_time,pre_rule_type')
             ->order('id', 'desc')
             ->select()->toArray();
@@ -52,7 +52,7 @@ class NftCollection extends Frontend
     public function detail(): void
     {
         $id  = $this->request->get('id/d', 0);
-        $col = Db::name('collection')->where('id', $id)->where('status', 'in', [2, 4])
+        $col = Db::name('collection')->where('id', $id)->where('deletetime', 0)->where('status', 'in', [2, 4])
             ->field('id,name,category_id,author,publisher,cover,price,market_price,stock,sold,detail,resale,status,sale_time,sale_end_time,pre_sale_time,pre_rule_type,pre_limit')
             ->find();
         if (!$col) {
@@ -116,7 +116,7 @@ class NftCollection extends Frontend
         if ($num > 99) {
             $this->error('单笔最多购买 99 份');
         }
-        $col = Db::name('collection')->where('id', $cid)->where('status', 2)->find();
+        $col = Db::name('collection')->where('id', $cid)->where('deletetime', 0)->where('status', 2)->find();
         if (!$col) {
             $this->error('藏品不存在或未在发售');
         }

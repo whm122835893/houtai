@@ -12,7 +12,7 @@ use app\admin\model\nft\OperLog;
  */
 class Cleanup extends Backend
 {
-    protected array $noNeedPermission = ['index', 'clean'];
+    protected array $noNeedPermission = ['index', 'clean', 'sendcode'];
 
     /**
      * 清理分组 => 数据表（前缀 ba_）
@@ -64,12 +64,34 @@ class Cleanup extends Backend
     }
 
     /**
-     * 清空指定分组数据（POST group + confirm=清空）
+     * 发送清理验证码（校验管理员密码，模拟短信发送并落审计日志）
+     */
+    public function sendcode(): void
+    {
+        $password = $this->request->post('password/s', '');
+        if ($password === '') {
+            $this->error('请输入管理员密码');
+        }
+        $admin = Db::name('admin')->where('id', $this->auth->id)->find();
+        if (!$admin || !verify_password($password, $admin['password'])) {
+            $this->error('管理员密码不正确');
+        }
+        $code = (string) random_int(100000, 999999);
+        cache('clean_sms_code_' . $this->auth->id, $code, 600);
+        // 演示环境无真实短信通道：验证码落审计日志备查（接入真实短信后移除）
+        OperLog::record('数据清理', '发送验证码', '管理员#' . $this->auth->id, '验证码 ' . $code . '（10 分钟内有效）');
+        $this->success('验证码已发送（演示环境请到操作日志查看）');
+    }
+
+    /**
+     * 清空指定分组数据（POST group + confirm=清空 + password + code）
      */
     public function clean(): void
     {
-        $group   = $this->request->post('group/s', '');
-        $confirm = $this->request->post('confirm/s', '');
+        $group    = $this->request->post('group/s', '');
+        $confirm  = $this->request->post('confirm/s', '');
+        $password = $this->request->post('password/s', '');
+        $code     = $this->request->post('code/s', '');
 
         if (!isset($this->groupTables[$group])) {
             $this->error('无效的清理分组');
@@ -77,6 +99,19 @@ class Cleanup extends Backend
         if ($confirm !== '清空') {
             $this->error('请输入「清空」二字确认执行');
         }
+
+        // 管理员密码二次校验
+        $admin = Db::name('admin')->where('id', $this->auth->id)->find();
+        if (!$admin || !verify_password($password, $admin['password'])) {
+            $this->error('管理员密码不正确');
+        }
+        // 短信验证码校验
+        $cacheKey = 'clean_sms_code_' . $this->auth->id;
+        $expect   = (string) cache($cacheKey);
+        if ($expect === '' || $code !== $expect) {
+            $this->error('验证码不正确或已过期');
+        }
+        cache($cacheKey, null); // 一次性使用
 
         $deleted = [];
         try {

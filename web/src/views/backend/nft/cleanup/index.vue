@@ -53,6 +53,11 @@
             <div class="confirm-row">
                 <span class="cell-sub">已选分组：<b>{{ selectedTitle || '（未选择）' }}</b></span>
                 <input v-model="confirmText" class="input confirm-input" placeholder='请输入「清空」以启用按钮' />
+                <input v-model="adminPassword" type="password" class="input" style="width: 150px" placeholder="管理员密码" />
+                <input v-model="smsCode" class="input" style="width: 110px" maxlength="6" placeholder="6 位验证码" />
+                <button class="btn btn-ghost btn-sm" :disabled="!adminPassword || codeSending" @click="sendCode">
+                    {{ codeSending ? '发送中…' : (codeCountdown > 0 ? `${codeCountdown}s 后重发` : '发送验证码') }}
+                </button>
                 <button v-if="auth('clean')" class="btn btn-danger" :disabled="!canClean || cleaning" @click="doClean(false)">
                     {{ cleaning ? '清理中…' : '执行清理' }}
                 </button>
@@ -82,6 +87,8 @@
             </div>
             <div class="confirm-row">
                 <input v-model="userConfirmText" class="input confirm-input" placeholder='请输入「清空」确认' />
+                <input v-model="adminPassword" type="password" class="input" style="width: 150px" placeholder="管理员密码" />
+                <input v-model="smsCode" class="input" style="width: 110px" maxlength="6" placeholder="6 位验证码" />
                 <button v-if="auth('clean')" class="btn btn-danger" :disabled="userConfirmText !== '清空' || cleaning" @click="doClean(true)">
                     {{ cleaning ? '清理中…' : '清空全体用户' }}
                 </button>
@@ -108,7 +115,26 @@ const cleaning = ref(false)
 const lastResult = ref<{ name: string; count: number }[]>([])
 
 const selectedTitle = computed(() => groups.value.find((g) => g.key === selected.value)?.title || '')
-const canClean = computed(() => !!selected.value && confirmText.value === '清空')
+const canClean = computed(() => !!selected.value && confirmText.value === '清空' && adminPassword.value !== '' && smsCode.value.length === 6)
+
+const adminPassword = ref('')
+const smsCode = ref('')
+const codeSending = ref(false)
+const codeCountdown = ref(0)
+
+const sendCode = async () => {
+    codeSending.value = true
+    try {
+        await api.sendcode(adminPassword.value)
+        ElMessage.success('验证码已发送（演示环境请到操作日志查看）')
+        codeCountdown.value = 60
+        const timer = setInterval(() => {
+            if (--codeCountdown.value <= 0) clearInterval(timer)
+        }, 1000)
+    } finally {
+        codeSending.value = false
+    }
+}
 
 const load = async () => {
     const res = await api.index()
@@ -135,10 +161,12 @@ const runClean = async (group: string) => {
         return
     }
     try {
-        const res = await api.clean(group, '清空')
+        const res = await api.clean(group, '清空', adminPassword.value, smsCode.value)
         const deleted = res.data.deleted || {}
         lastResult.value = Object.keys(deleted).map((name) => ({ name, count: deleted[name] }))
         ElMessage.success('清理完成')
+        smsCode.value = ''
+        adminPassword.value = ''
         load()
     } finally {
         cleaning.value = false

@@ -24,7 +24,13 @@ class NftCheckin extends Frontend
     {
         $uid   = (int) $this->auth->id;
         $today = date('Y-m-d');
-        $rules = Db::name('checkin_rule')->order('day_num', 'asc')->select()->toArray();
+        // 启用场次（type=2 签到）：默认场次映射 activity_id=0；无启用场次回退全部规则
+        $sessionId = NftTrade::activeSession(2);
+        $ruleQuery = Db::name('checkin_rule');
+        if ($sessionId >= 0) {
+            $ruleQuery->where('activity_id', $sessionId);
+        }
+        $rules = $ruleQuery->order('day_num', 'asc')->select()->toArray();
         $continuous = $this->continuousDays($uid);
 
         $signed = (bool) Db::name('checkin_record')
@@ -98,7 +104,11 @@ class NftCheckin extends Frontend
             if ($daily['type'] > 0) {
                 $rewards[] = NftTrade::grantReward($uid, $map[$daily['type']], $daily['num'], $daily['collection_id'], $daily['pre_collection_id'], 'CKD', $uid);
             }
-            $rule = Db::name('checkin_rule')->where('day_num', $continuous)->order('id', 'asc')->find();
+            $ruleQuery = Db::name('checkin_rule')->where('day_num', $continuous);
+            if (isset($sessionId) && $sessionId >= 0) {
+                $ruleQuery->where('activity_id', $sessionId);
+            }
+            $rule = $ruleQuery->order('id', 'asc')->find();
             if ($rule) {
                 $rewards[] = NftTrade::grantReward($uid, $map[(int) $rule['reward_type']], (int) $rule['reward_num'], (int) $rule['collection_id'], (int) $rule['pre_collection_id'], 'CKR' . $rule['id'], (int) $rule['id']);
             }

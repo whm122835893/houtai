@@ -238,6 +238,20 @@ class Blindbox extends Backend
     /**
      * 上架/停售
      */
+    /**
+     * 删除盲盒（软删，可在回收站恢复；奖品配置保留）
+     */
+    public function del(): void
+    {
+        $ids = $this->request->param('ids/a', []);
+        if (!$ids) {
+            $this->error(__('Parameter %s can not be empty', ['ids']));
+        }
+        $count = BlindboxModel::where('id', 'in', $ids)->update(['deletetime' => time(), 'status' => 0]);
+        OperLog::record('盲盒管理', '删除', '盲盒#' . implode(',', $ids), '共删除 ' . $count . ' 个');
+        $this->success();
+    }
+
     public function status(): void
     {
         $id  = $this->request->post('id/d', 0);
@@ -288,6 +302,7 @@ class Blindbox extends Backend
         $boxId = $this->request->param('box_id/d', 0);
         $limit = $this->request->param('limit/d', 10);
         $page  = $this->request->param('page/d', 1);
+$where[] = ['deletetime', '=', 0];
         $where = [];
         if ($boxId > 0) {
             $where[] = ['r.box_id', '=', $boxId];

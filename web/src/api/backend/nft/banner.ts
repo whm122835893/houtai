@@ -20,3 +20,7 @@ export function edit(id: number, data: object = {}) {
 export function del(ids: number[]) {
     return createAxios({ url: url + 'del', method: 'post', data: { ids } })
 }
+
+export function status(id: number, enabled: number) {
+    return createAxios({ url: url + 'status', method: 'post', data: { id, status: enabled } })
+}

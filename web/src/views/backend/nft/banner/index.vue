@@ -20,7 +20,7 @@
                             <th>ID</th>
                             <th>图片</th>
                             <th>标题</th>
-                            <th>链接</th>
+                            <th>跳转链接</th>
                             <th>排序</th>
                             <th>状态</th>
                             <th style="width: 150px">操作</th>
@@ -40,6 +40,7 @@
                             </td>
                             <td style="white-space:nowrap">
                                 <button v-if="auth('edit')" class="btn btn-ghost btn-sm" @click="openEdit(row)">编辑</button>
+                                <button v-if="auth('status')" class="btn btn-ghost btn-sm" @click="toggleStatus(row)">{{ row.status == 1 ? '停用' : '启用' }}</button>
                                 <button v-if="auth('del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
                             </td>
                         </tr>
@@ -116,6 +117,9 @@ const load = async () => {
 const openAdd = () => {
     Object.assign(form, { id: 0, title: '', image: '', link: '', weigh: 0, status: 1 })
     formVisible.value = true
+}
+const toggleStatus = (row: any) => {
+    api.status(row.id, row.status == 1 ? 0 : 1).then(() => load())
 }
 const openEdit = (row: any) => {
     Object.assign(form, {

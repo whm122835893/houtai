@@ -32,3 +32,15 @@ export function changeStatus(id: number, status: number) {
 export function adjust(id: number, amount: number, remark: string) {
     return createAxios({ url: url + 'adjust', method: 'post', data: { id, amount, remark } })
 }
+
+export function resetpwd(id: number) {
+    return createAxios({ url: url + 'resetpwd', method: 'post', data: { id } })
+}
+
+export function kick(id: number) {
+    return createAxios({ url: url + 'kick', method: 'post', data: { id } })
+}
+
+export function exportCsv(params: object = {}) {
+    return createAxios({ url: url + 'export', method: 'get', params, responseType: 'blob' })
+}

@@ -40,6 +40,7 @@ class Lottery extends Backend
         $limit   = $this->request->get('limit/d', 10);
         $page    = $this->request->get('page/d', 1);
 
+$where[] = ['deletetime', '=', 0];
         $where = [];
         if ($keyword !== '') {
             $where[] = ['title', 'like', '%' . str_replace('%', '\%', $keyword) . '%'];
@@ -163,8 +164,7 @@ class Lottery extends Backend
         }
         Db::startTrans();
         try {
-            $count = $this->model->where('id', 'in', $ids)->delete();
-            Db::name('lottery_prize')->where('activity_id', 'in', $ids)->delete();
+            $count = $this->model->where('id', 'in', $ids)->update(['deletetime' => time(), 'status' => 0]);
             Db::name('lottery_chance')->where('activity_id', 'in', $ids)->delete();
             Db::commit();
         } catch (Throwable $e) {

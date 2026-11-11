@@ -43,6 +43,44 @@
             </div>
         </div>
 
+        <!-- 短信配置 -->
+        <div class="glass rise" style="margin-top: 16px" :style="{ '--i': channels.length + 2 }">
+            <div class="card-head">
+                <h3>短信配置</h3>
+                <span style="display: inline-flex; align-items: center; gap: 8px">
+                    <span class="tag" :class="sms.enabled ? 'tag-green' : 'tag-gray'">{{ sms.enabled ? '已启用' : '未启用' }}</span>
+                    <span class="en">SMS</span>
+                </span>
+            </div>
+            <div class="card-pad">
+                <div v-for="(it, si) in sms.items" :key="it.name" class="form-row">
+                    <label>{{ it.title }}</label>
+                    <input v-model="it.value" class="input" :disabled="!canSave" />
+                </div>
+                <div v-if="canSave" style="display: flex; gap: 10px; align-items: center; margin-top: 6px">
+                    <label style="font-size: 13px; display: inline-flex; align-items: center; gap: 6px">
+                        启用通道
+                        <select v-model.number="sms.enabled" class="select" style="width: 100px">
+                            <option :value="1">启用</option>
+                            <option :value="0">停用</option>
+                        </select>
+                    </label>
+                    <button class="btn btn-primary" @click="saveSmsCard">保存本组</button>
+                </div>
+            </div>
+            <div class="card-pad" style="padding-top: 0">
+                <div v-if="canSave" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap">
+                    <input v-model="smsTestPhone" class="input" style="width: 170px" placeholder="测试手机号" />
+                    <button class="btn btn-ghost btn-sm" :disabled="smsSending" @click="doSmsTest">
+                        {{ smsSending ? '发送中…' : '发送测试短信' }}
+                    </button>
+                </div>
+            </div>
+            <div class="card-pad" style="padding-top: 0">
+                <span class="cell-sub">用于注册/登录验证码、高危操作二次校验与业务通知；单用户每日上限防止短信轰炸</span>
+            </div>
+        </div>
+
         <!-- 添加渠道弹窗 -->
         <div v-if="addVisible" class="modal-mask fadein" @click.self="addVisible = false">
             <div class="modal glass pop" style="width: 460px">
@@ -206,5 +244,38 @@ const delCard = (ch: ChannelCard) => {
     )
 }
 
-onMounted(() => load())
+// ============ 短信配置 ============
+const sms = ref<{ enabled: number; items: { name: string; title: string; value: string }[] }>({ enabled: 0, items: [] })
+const smsTestPhone = ref('')
+const smsSending = ref(false)
+
+const loadSms = async () => {
+    const res = await api.sms()
+    sms.value = res.data.sms
+}
+
+const saveSmsCard = async () => {
+    await api.saveSms({ items: sms.value.items, enabled: sms.value.enabled })
+    ElMessage.success('短信配置已保存')
+    loadSms()
+}
+
+const doSmsTest = async () => {
+    if (!/^1[3-9]\d{9}$/.test(smsTestPhone.value)) {
+        ElMessage.warning('请输入正确的测试手机号')
+        return
+    }
+    smsSending.value = true
+    try {
+        await api.sendSmsTest(smsTestPhone.value)
+        ElMessage.success('测试短信已发送（演示环境请到操作日志查看）')
+    } finally {
+        smsSending.value = false
+    }
+}
+
+onMounted(() => {
+    load()
+    loadSms()
+})
 </script>

@@ -29,8 +29,9 @@ class Category extends Backend
         $limit = $this->request->get('limit/d', 10);
         $page  = $this->request->get('page/d', 1);
 
-        $total = $this->model->count();
+        $total = $this->model->where('deletetime', 0)->count();
         $list  = $this->model
+            ->where('deletetime', 0)
             ->field(['id', 'name', 'weigh', 'status', 'createtime'])
             ->order('weigh', 'desc')
             ->order('id', 'desc')
@@ -107,7 +108,7 @@ class Category extends Backend
         if ($refCount > 0) {
             $this->error('该分类下有 ' . $refCount . ' 个藏品，不能删除');
         }
-        $count = $this->model->where('id', 'in', $ids)->delete();
+        $count = $this->model->where('id', 'in', $ids)->update(['deletetime' => time()]);
         OperLog::record('分类管理', '删除', '分类#' . implode(',', $ids), '共删除 ' . $count . ' 条');
         $this->success();
     }
