@@ -11,6 +11,8 @@ use app\admin\library\Auth;
 class OperLog extends Model
 {
     protected $autoWriteTimestamp = true;
+    protected $createTime = 'createtime';
+    protected $updateTime = 'updatetime';
     protected $name = 'oper_log';
 
     /**

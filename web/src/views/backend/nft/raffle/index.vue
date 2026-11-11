@@ -50,8 +50,9 @@
                             <td><span class="tag" :class="phaseText[row.phase]?.[1] || 'tag-gray'">{{ phaseText[row.phase]?.[0] || '-' }}</span></td>
                             <td class="cell-sub">{{ fmtTime(row.apply_start) }}<br />~ {{ fmtTime(row.apply_end) }}</td>
                             <td class="cell-sub">{{ fmtTime(row.buy_deadline) }}</td>
-                            <td>
+                            <td style="width: 260px">
                                 <button v-if="row.phase === 2 && auth('draw')" class="btn btn-primary btn-sm" @click="doDraw(row)">执行抽签</button>
+                                <button v-if="auth('codes')" class="btn btn-ghost btn-sm" @click="openCodes(row)">抽签码</button>
                                 <button v-if="auth('applys')" class="btn btn-ghost btn-sm" @click="openApplys(row)">报名记录</button>
                                 <button v-if="row.status < 3 && auth('save')" class="btn btn-ghost btn-sm" @click="openAct(row)">编辑</button>
                                 <button v-if="auth('del')" class="btn btn-danger btn-sm" @click="oneDel(row)">删除</button>
@@ -174,6 +175,119 @@
                         <button :disabled="applyQuery.page <= 1" @click="loadApplys(applyQuery.page - 1)">‹</button>
                         <button :disabled="applyQuery.page >= applyMaxPage" @click="loadApplys(applyQuery.page + 1)">›</button>
                     </div>
+                </div>
+            </div>
+        </div>
+        <!-- 抽签码池弹窗 -->
+        <div v-if="codesVisible" class="modal-mask fadein" @click.self="codesVisible = false">
+            <div class="modal glass pop" style="width: 760px">
+                <div class="modal-head">
+                    <h3>抽签码 · {{ codesRaffle?.collection_name }}</h3>
+                    <span class="close" @click="codesVisible = false">✕</span>
+                </div>
+                <div class="modal-body" style="max-height: 58vh; overflow: auto">
+                    <div class="cell-sub" style="display: flex; gap: 18px; margin-bottom: 10px; flex-wrap: wrap">
+                        <span>总码数 <b class="serif-num">{{ codeStat.total }}</b></span>
+                        <span>报名码 <b class="serif-num">{{ codeStat.join }}</b></span>
+                        <span>邀请码 <b class="serif-num">{{ codeStat.invite }}</b></span>
+                        <span>手动码 <b class="serif-num">{{ codeStat.manual }}</b></span>
+                        <span>有效 <b class="serif-num">{{ codeStat.valid }}</b></span>
+                        <span>已中 <b class="serif-num">{{ codeStat.win }}</b></span>
+                        <span>作废 <b class="serif-num">{{ codeStat.void }}</b></span>
+                        <span style="color: var(--blue)">名额 {{ codeRaffle?.quota }} 签 · {{ codeRaffle?.draw_mode === 2 ? '按签抽取' : '按人抽取' }}</span>
+                    </div>
+                    <div class="filter-bar" style="padding: 0 0 12px">
+                        <input v-model="codeQuery.keyword" class="input" placeholder="码 / 用户昵称 / 手机号" @keyup.enter="loadCodes(1)" />
+                        <select v-model="codeQuery.source" class="select">
+                            <option :value="-1">全部来源</option>
+                            <option :value="1">报名</option>
+                            <option :value="2">邀请</option>
+                            <option :value="3">手动</option>
+                        </select>
+                        <select v-model="codeQuery.status" class="select">
+                            <option :value="-1">全部状态</option>
+                            <option :value="0">有效</option>
+                            <option :value="1">已中签</option>
+                            <option :value="2">已作废</option>
+                        </select>
+                        <button class="btn btn-primary" @click="loadCodes(1)">查询</button>
+                    </div>
+                    <div class="tbl-wrap">
+                        <table class="tbl">
+                            <thead>
+                                <tr>
+                                    <th>码</th>
+                                    <th>用户</th>
+                                    <th>来源</th>
+                                    <th>状态</th>
+                                    <th>备注 / 邀请人</th>
+                                    <th>发放时间</th>
+                                    <th style="width: 90px">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="row in codeList" :key="row.id">
+                                    <td class="cell-main serif-num">{{ row.code }}</td>
+                                    <td>{{ row.user_nickname }}</td>
+                                    <td><span class="tag" :class="codeSourceCls(row.source)">{{ codeSourceText(row.source) }}</span></td>
+                                    <td><span class="tag" :class="codeStatusCls(row.status)">{{ codeStatusText(row.status) }}</span></td>
+                                    <td class="cell-sub">
+                                        {{ row.remark || '-' }}
+                                        <template v-if="row.inviter_nickname"><br />邀请人：{{ row.inviter_nickname }}</template>
+                                    </td>
+                                    <td class="cell-sub">{{ fmtTime(row.createtime) }}</td>
+                                    <td>
+                                        <button v-if="row.status == 0 && auth('codes')" class="btn btn-danger btn-sm" @click="oneVoidCode(row)">作废</button>
+                                        <span v-else class="cell-sub">-</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div v-if="!codeList.length" class="empty">
+                            <svg class="glyph" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="14" rx="2.5" stroke-dasharray="3.2 3.2"/><path d="M9.5 12h5"/></svg>
+                            码池为空，报名 / 邀请 / 手动发码后此处展示
+                        </div>
+                    </div>
+                    <div class="pager">
+                        <span>共 {{ codeTotal }} 条</span>
+                        <button :disabled="codeQuery.page <= 1" @click="loadCodes(codeQuery.page - 1)">‹</button>
+                        <button :disabled="codeQuery.page >= codeMaxPage" @click="loadCodes(codeQuery.page + 1)">›</button>
+                    </div>
+                </div>
+                <div class="modal-foot">
+                    <button v-if="auth('codes')" class="btn btn-ghost" @click="openGrant()">手动发码</button>
+                    <button class="btn btn-ghost" @click="exportCodes">导出</button>
+                    <span style="flex: 1"></span>
+                    <button class="btn btn-ghost" @click="codesVisible = false">关闭</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 手动发码弹窗 -->
+        <div v-if="grantVisible" class="modal-mask fadein" @click.self="grantVisible = false">
+            <div class="modal glass pop" style="width: 460px">
+                <div class="modal-head">
+                    <h3>手动发码 · {{ codesRaffle?.collection_name }}</h3>
+                    <span class="close" @click="grantVisible = false">✕</span>
+                </div>
+                <div class="modal-body">
+                    <div class="form-row">
+                        <label>用户（ID 或手机号）*</label>
+                        <input v-model="grantForm.user" class="input" placeholder="如：12 或 13800000000" />
+                    </div>
+                    <div class="form-row">
+                        <label>发码数量 *</label>
+                        <input v-model="grantForm.num" class="input" type="number" min="1" max="100" />
+                    </div>
+                    <div class="form-row">
+                        <label>备注</label>
+                        <input v-model="grantForm.remark" class="input" placeholder="如：活动补偿 / 运营发放" />
+                    </div>
+                    <div class="cell-sub" style="padding: 4px 2px 0">码值按该活动锁定的码格式生成，发入码池后即刻参与开奖；白名单用户走「必中」通道，不占此处发码。</div>
+                </div>
+                <div class="modal-foot">
+                    <button class="btn btn-ghost" @click="grantVisible = false">取消</button>
+                    <button class="btn btn-primary" @click="submitGrant">发码</button>
                 </div>
             </div>
         </div>
@@ -317,6 +431,92 @@ const loadApplys = async (page = 1) => {
     const res = await api.applys({ raffle_id: applyActivity.value.id, keyword: applyQuery.keyword, status: applyQuery.status, page, limit: applyQuery.limit })
     applyList.value = res.data.list
     applyTotal.value = res.data.total
+}
+
+// ============ 抽签码池 ============
+const codesVisible = ref(false)
+const codesRaffle = ref<any>(null)
+const codeRaffle = ref<any>(null)
+const codeStat = reactive({ total: 0, join: 0, invite: 0, manual: 0, valid: 0, win: 0, void: 0 })
+const codeList = ref<any[]>([])
+const codeTotal = ref(0)
+const codeQuery = reactive({ keyword: '', source: -1, status: -1, page: 1, limit: 20 })
+const codeMaxPage = computed(() => Math.max(1, Math.ceil(codeTotal.value / codeQuery.limit)))
+
+const CODE_SRC: Record<number, [string, string]> = { 1: ['报名', 'tag-blue'], 2: ['邀请', 'tag-orange'], 3: ['手动', 'tag-purple'] }
+const codeSourceText = (s: number) => CODE_SRC[s]?.[0] || '未知'
+const codeSourceCls = (s: number) => CODE_SRC[s]?.[1] || 'tag-gray'
+const CODE_ST: Record<number, [string, string]> = { 0: ['有效', 'tag-green'], 1: ['已中', 'tag-blue'], 2: ['作废', 'tag-gray'] }
+const codeStatusText = (s: number) => CODE_ST[s]?.[0] || '未知'
+const codeStatusCls = (s: number) => CODE_ST[s]?.[1] || 'tag-gray'
+
+const openCodes = (row: any) => {
+    codesRaffle.value = row
+    codeQuery.keyword = ''
+    codeQuery.source = -1
+    codeQuery.status = -1
+    codesVisible.value = true
+    loadCodes(1)
+}
+const loadCodes = async (page = 1) => {
+    if (!codesRaffle.value) return
+    codeQuery.page = page
+    const res = await api.codes({
+        raffle_id: codesRaffle.value.id,
+        keyword: codeQuery.keyword,
+        source: codeQuery.source,
+        status: codeQuery.status,
+        page,
+        limit: codeQuery.limit,
+    })
+    codeList.value = res.data.list
+    codeTotal.value = res.data.total
+    Object.assign(codeStat, res.data.stat || {})
+    codeRaffle.value = res.data.raffle || null
+}
+const oneVoidCode = (row: any) => {
+    ElMessageBox.confirm(`确认作废抽签码「${row.code}」？作废后不再参与开奖`, '作废抽签码', { type: 'warning' }).then(async () => {
+        await api.voidCode(row.id)
+        ElMessage.success('已作废')
+        loadCodes(codeQuery.page)
+    })
+}
+const exportCodes = () => {
+    const rows = [['码', '用户', '手机号', '来源', '状态', '备注/邀请人', '发放时间']]
+    codeList.value.forEach((r: any) => {
+        rows.push([r.code, r.user_nickname, r.user_mobile || '', codeSourceText(r.source), codeStatusText(r.status), (r.remark || '') + (r.inviter_nickname ? '/' + r.inviter_nickname : ''), fmtTime(r.createtime)])
+    })
+    const csv = '\uFEFF' + rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    a.download = `抽签码-${codesRaffle.value?.collection_name || codesRaffle.value?.id}.csv`
+    a.click()
+    URL.revokeObjectURL(a.href)
+}
+
+// ============ 手动发码 ============
+const grantVisible = ref(false)
+const grantForm = reactive({ user: '', num: 1, remark: '' })
+const openGrant = () => {
+    grantForm.user = ''
+    grantForm.num = 1
+    grantForm.remark = ''
+    grantVisible.value = true
+}
+const submitGrant = async () => {
+    if (!grantForm.user.trim()) {
+        ElMessage.warning('请填写用户 ID 或手机号')
+        return
+    }
+    const res = await api.grantCode({
+        raffle_id: codesRaffle.value.id,
+        user: grantForm.user.trim(),
+        num: Number(grantForm.num) || 1,
+        remark: grantForm.remark.trim(),
+    })
+    ElMessage.success(`发码成功：${res.data?.user ?? ''} 获得 ${res.data?.codes?.length ?? 0} 个码`)
+    grantVisible.value = false
+    loadCodes(1)
 }
 
 onMounted(() => {

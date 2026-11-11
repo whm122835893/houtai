@@ -18,6 +18,8 @@ class Raffle extends Backend
 {
     protected object $model;
 
+    protected array $noNeedPermission = ['codes', 'grantcode', 'voidcode'];
+
     public function initialize(): void
     {
         parent::initialize();
@@ -272,5 +274,171 @@ class Raffle extends Backend
         unset($row);
 
         $this->success('', ['list' => $list, 'total' => $total]);
+    }
+
+    /**
+     * 抽签码池：统计 + 明细分页（码/用户/来源/状态/备注/邀请人/发放时间）
+     */
+    public function codes(): void
+    {
+        $raffleId = $this->request->get('raffle_id/d', 0);
+        $keyword  = trim((string) $this->request->get('keyword/s', ''));
+        $status   = $this->request->get('status/d', -1);
+        $source   = $this->request->get('source/d', -1);
+        $limit    = min(200, max(1, $this->request->get('limit/d', 20)));
+        $page     = max(1, $this->request->get('page/d', 1));
+
+        $raffle = $this->model->find($raffleId);
+        if (!$raffle) {
+            $this->error(__('Record not found'));
+        }
+
+        // 全量统计（不受筛选影响）
+        $statQ = Db::name('raffle_code')->where('raffle_id', $raffleId);
+        $stat  = [
+            'total'  => (clone $statQ)->count(),
+            'join'   => (clone $statQ)->where('source', 1)->count(),
+            'invite' => (clone $statQ)->where('source', 2)->count(),
+            'manual' => (clone $statQ)->where('source', 3)->count(),
+            'valid'  => (clone $statQ)->where('status', 0)->count(),
+            'win'    => (clone $statQ)->where('status', 1)->count(),
+            'void'   => (clone $statQ)->where('status', 2)->count(),
+        ];
+
+        $where = [['c.raffle_id', '=', $raffleId]];
+        if ($status >= 0) {
+            $where[] = ['c.status', '=', $status];
+        }
+        if ($source >= 0) {
+            $where[] = ['c.source', '=', $source];
+        }
+        if ($keyword !== '') {
+            $where[] = ['c.code|u.nickname|u.mobile', 'like', '%' . str_replace('%', '\%', $keyword) . '%'];
+        }
+
+        $query = Db::name('raffle_code')->alias('c')
+            ->leftJoin('user u', 'u.id = c.user_id')
+            ->leftJoin('user iu', 'iu.id = c.invite_from_user_id')
+            ->where($where);
+        $total = (clone $query)->count();
+        $list  = $query
+            ->field([
+                'c.id', 'c.code', 'c.status', 'c.source', 'c.remark', 'c.createtime', 'c.user_id',
+                'IFNULL(u.nickname, CONCAT("用户#", c.user_id)) as user_nickname',
+                'u.mobile as user_mobile',
+                'IFNULL(iu.nickname, "") as inviter_nickname',
+            ])
+            ->order('c.id', 'desc')
+            ->page($page, $limit)
+            ->select()->toArray();
+
+        $this->success('', [
+            'list'  => $list,
+            'total' => $total,
+            'stat'  => $stat,
+            'raffle'=> ['id' => (int) $raffle->id, 'quota' => $raffle->per_limit > 0 ? (int) floor($raffle->total / $raffle->per_limit) : 0, 'draw_mode' => (int) $raffle->draw_mode],
+        ]);
+    }
+
+    /**
+     * 手动发码：按用户 ID / 手机号发码入池（source=3）
+     */
+    public function grantcode(): void
+    {
+        if (!$this->request->isPost()) {
+            $this->error('请求方式错误');
+        }
+        $raffleId = $this->request->post('raffle_id/d', 0);
+        $userKey  = trim((string) $this->request->post('user/s', ''));
+        $num      = min(100, max(1, $this->request->post('num/d', 1)));
+        $remark   = trim((string) $this->request->post('remark/s', ''));
+
+        $raffle = $this->model->find($raffleId);
+        if (!$raffle) {
+            $this->error(__('Record not found'));
+        }
+        if ($userKey === '') {
+            $this->error('请填写用户 ID 或手机号');
+        }
+        if (preg_match('/^1[3-9]\d{9}$/', $userKey)) {
+            $user = Db::name('user')->where('mobile', $userKey)->find();
+        } else {
+            $user = Db::name('user')->where('id', (int) $userKey)->find();
+        }
+        if (!$user) {
+            $this->error('用户不存在');
+        }
+
+        // 按活动的码格式生成不重复码
+        $codes = [];
+        Db::startTrans();
+        try {
+            for ($i = 0; $i < $num; $i++) {
+                $code = $this->genCode((int) $raffle->code_fmt, (string) $raffle->code_prefix, $raffleId);
+                Db::name('raffle_code')->insert([
+                    'raffle_id'  => $raffleId,
+                    'user_id'    => (int) $user['id'],
+                    'source'     => 3,
+                    'code'       => $code,
+                    'status'     => 0,
+                    'remark'     => $remark ?: '后台手动发放',
+                    'createtime' => time(),
+                ]);
+                $codes[] = $code;
+            }
+            Db::commit();
+        } catch (Throwable $e) {
+            Db::rollback();
+            $this->error('发码失败：' . $e->getMessage());
+        }
+        OperLog::record('抽签发售', '手动发码', '活动#' . $raffleId, '用户#' . $user['id'] . ' ' . $num . ' 个');
+        $this->success('发码成功', ['codes' => $codes, 'user' => $user['nickname'] ?? ('用户#' . $user['id'])]);
+    }
+
+    /**
+     * 按格式生成唯一码：1=纯数字10位 2=纯字母8位(去易混淆) 3=前缀+数字
+     */
+    private function genCode(int $fmt, string $prefix, int $raffleId): string
+    {
+        $letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+        for ($try = 0; $try < 50; $try++) {
+            if ($fmt === 2) {
+                $code = '';
+                for ($i = 0; $i < 8; $i++) {
+                    $code .= $letters[random_int(0, 23)];
+                }
+            } elseif ($fmt === 3) {
+                $code = $prefix . str_pad((string) random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
+            } else {
+                $code = str_pad((string) random_int(0, 9999999999), 10, '0', STR_PAD_LEFT);
+            }
+            $exists = Db::name('raffle_code')->where('raffle_id', $raffleId)->where('code', $code)->count();
+            if (!$exists) {
+                return $code;
+            }
+        }
+        // 兜底：追加时间戳保证唯一
+        return ($fmt === 3 ? $prefix : '') . substr((string) time(), -8) . random_int(100, 999);
+    }
+
+    /**
+     * 作废有效码
+     */
+    public function voidcode(): void
+    {
+        if (!$this->request->isPost()) {
+            $this->error('请求方式错误');
+        }
+        $id = $this->request->post('id/d', 0);
+        $c  = Db::name('raffle_code')->where('id', $id)->find();
+        if (!$c) {
+            $this->error(__('Record not found'));
+        }
+        if ((int) $c['status'] !== 0) {
+            $this->error('仅「有效」状态的抽签码可作废');
+        }
+        Db::name('raffle_code')->where('id', $id)->update(['status' => 2]);
+        OperLog::record('抽签发售', '作废抽签码', '活动#' . $c['raffle_id'] . ' 码 ' . $c['code'], '');
+        $this->success('已作废');
     }
 }

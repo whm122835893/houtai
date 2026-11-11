@@ -10,5 +10,7 @@ use think\Model;
 class RegisterLog extends Model
 {
     protected $autoWriteTimestamp = true;
+    protected $createTime = 'createtime';
+    protected $updateTime = 'updatetime';
     protected $name = 'register_log';
 }

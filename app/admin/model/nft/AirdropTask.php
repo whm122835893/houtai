@@ -10,5 +10,7 @@ use think\Model;
 class AirdropTask extends Model
 {
     protected $autoWriteTimestamp = true;
+    protected $createTime = 'createtime';
+    protected $updateTime = 'updatetime';
     protected $name = 'airdrop_task';
 }

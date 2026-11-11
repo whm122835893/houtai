@@ -10,6 +10,8 @@ use think\Model;
 class User extends Model
 {
     protected $autoWriteTimestamp = true;
+    protected $createTime = 'createtime';
+    protected $updateTime = 'updatetime';
     protected $name = 'user';
 
     /**

@@ -69,6 +69,46 @@
             </div>
         </div>
 
+        <!-- 活动列表（签到 / 注册 / 邀请 / 抽奖场次统一视图） -->
+        <div class="glass rise" :style="{ '--i': 3 }" style="margin-top: 16px">
+            <div class="tbl-wrap">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>活动名称</th>
+                            <th>活动时间</th>
+                            <th>开关</th>
+                            <th>类型</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="row in actList" :key="row.type + '-' + (row.id || 0)">
+                            <td class="serif-num">{{ row.single ? '—' : row.id }}</td>
+                            <td class="cell-main">{{ row.name }}</td>
+                            <td class="cell-sub">
+                                <template v-if="row.start_time || row.end_time">
+                                    {{ fmtTime(row.start_time) }}<br />~ {{ fmtTime(row.end_time) }}
+                                </template>
+                                <template v-else>长期有效</template>
+                            </td>
+                            <td style="white-space: nowrap">
+                                <button class="btn btn-ghost btn-sm" @click="onActToggle(row)">{{ row.status == 1 ? '关闭' : '开启' }}</button>
+                                <span class="tag" :class="row.status == 1 ? 'tag-green' : 'tag-gray'" style="margin-left: 6px">{{ row.status == 1 ? '开启' : '已关闭' }}</span>
+                            </td>
+                            <td><span class="tag tag-blue">{{ actTypeText(row.type) }}</span></td>
+                            <td class="cell-sub">
+                                {{ row.type === 'lottery' ? '场次在「抽奖活动」中配置' : row.type === 'invite' ? '规则在「邀请有礼」中配置' : row.type === 'checkin' ? '规则在「签到活动」中配置' : '礼包在「注册活动」中配置' }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div v-if="!actList.length" class="empty">暂无活动</div>
+            </div>
+            <div class="card-pad"></div>
+        </div>
+
         <!-- 生成名单弹窗 -->
         <div v-if="formVisible" class="modal-mask fadein" @click.self="formVisible = false">
             <div class="modal glass pop" style="width: 640px">
@@ -292,6 +332,7 @@ import { fmtTime } from '/@/utils/nft'
 import * as api from '/@/api/backend/nft/roster'
 import * as wlApi from '/@/api/backend/nft/whitelist'
 import * as colApi from '/@/api/backend/nft/collection'
+import * as actApi from '/@/api/backend/nft/activity'
 
 defineOptions({ name: 'nft/roster' })
 
@@ -472,7 +513,33 @@ const submitFromRos = async () => {
 
 onMounted(() => {
     load()
+    loadActs()
     colApi.list({ page: 1, limit: 500 }).then((res) => (collections.value = res.data.list))
     api.list({ page: 1, limit: 500 }).then((res) => (rosters.value = res.data.list))
 })
+
+// ============ 活动列表（统一开关视图） ============
+const actList = ref<any[]>([])
+const ACT_TYPES: Record<string, string> = { invite: '邀请', checkin: '签到', register: '注册', lottery: '抽奖' }
+const actTypeText = (t: string) => ACT_TYPES[t] || t
+const loadActs = async () => {
+    try {
+        const res = await actApi.index()
+        actList.value = res.data.list || []
+    } catch {
+        actList.value = []
+    }
+}
+const onActToggle = (row: any) => {
+    const next = row.status == 1 ? 0 : 1
+    ElMessageBox.confirm(
+        `确认${next ? '开启' : '关闭'}活动「${row.name}」？${next ? '开启后 C 端即时生效' : '关闭后 C 端该活动暂停，配置保留'}`,
+        next ? '开启活动' : '关闭活动',
+        { type: 'warning' }
+    ).then(async () => {
+        await actApi.toggle({ type: row.type, id: row.id || undefined, status: next })
+        ElMessage.success(next ? '活动已开启，C 端即时生效' : '活动已关闭，C 端暂停')
+        loadActs()
+    })
+}
 </script>

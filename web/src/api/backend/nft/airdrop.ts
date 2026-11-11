@@ -24,3 +24,11 @@ export function del(ids: number[]) {
 export function revoke(id: number) {
     return createAxios({ url: url + 'revoke', method: 'post', data: { id } })
 }
+
+export function items(params: object = {}) {
+    return createAxios({ url: url + 'items', method: 'get', params })
+}
+
+export function revokeItems(ids: number[]) {
+    return createAxios({ url: url + 'revokeItems', method: 'post', data: { ids } })
+}

@@ -23,6 +23,8 @@ class Airdrop extends Backend
 {
     protected object $model;
 
+    protected array $noNeedPermission = ['items', 'revoke_items'];
+
     /** 规则名称映射 */
     public const RULES = [
         1  => '指定用户',
@@ -226,6 +228,21 @@ class Airdrop extends Backend
                     'createtime'    => $now,
                     'updatetime'    => $now,
                 ]);
+                $holdId = (int) (Db::name('hold')->where('sn', $sn)->value('id') ?: 0);
+                // 落发放明细（供「明细」弹窗与按用户回收使用）
+                $umobile = (string) Db::name('user')->where('id', $uid)->value('mobile');
+                Db::name('airdrop_item')->insert([
+                    'task_id'       => (int) $task->id,
+                    'user_id'       => $uid,
+                    'mobile'        => $umobile,
+                    'target_type'   => 1,
+                    'collection_id' => (int) $task->collection_id,
+                    'num'           => 1,
+                    'hold_id'       => $holdId,
+                    'status'        => 1,
+                    'grant_time'    => $now,
+                    'createtime'    => $now,
+                ]);
                 $success++;
             }
 
@@ -274,6 +291,8 @@ class Airdrop extends Backend
         try {
             $ids = array_column($holds, 'id');
             Db::name('hold')->where('id', 'in', $ids)->delete();
+            // 同步发放明细为已撤销
+            Db::name('airdrop_item')->where('hold_id', 'in', $ids)->where('status', 1)->update(['status' => 0, 'revoke_time' => time()]);
             $task->revoke_num = (int) $task->revoke_num + count($ids);
             $task->save();
             Db::commit();
@@ -284,6 +303,110 @@ class Airdrop extends Backend
 
         OperLog::record('定向发放', '撤销批次', '任务#' . $id, '回收 ' . count($ids) . ' 份');
         $this->success('撤销完成', ['revoked' => count($ids)]);
+    }
+
+    /**
+     * 发放明细分页（airdrop_item）：用户/份数/状态/发放时间/撤销时间
+     */
+    public function items(): void
+    {
+        $taskId  = $this->request->get('task_id/d', 0);
+        $status  = $this->request->get('status/d', -1);
+        $keyword = trim((string) $this->request->get('keyword/s', ''));
+        $limit   = min(200, max(1, $this->request->get('limit/d', 20)));
+        $page    = max(1, $this->request->get('page/d', 1));
+
+        $task = $this->model->find($taskId);
+        if (!$task) {
+            $this->error(__('Record not found'));
+        }
+
+        // 汇总（不受筛选影响）
+        $statQ = Db::name('airdrop_item')->where('task_id', $taskId);
+        $stat  = [
+            'total'  => (clone $statQ)->count(),
+            'granted'=> (clone $statQ)->where('status', 1)->count(),
+            'revoked'=> (clone $statQ)->where('status', 0)->count(),
+            'failed' => (clone $statQ)->where('status', 2)->count(),
+        ];
+
+        $where = [['i.task_id', '=', $taskId]];
+        if ($status >= 0) {
+            $where[] = ['i.status', '=', $status];
+        }
+        if ($keyword !== '') {
+            $where[] = ['u.nickname|i.mobile', 'like', '%' . str_replace('%', '\%', $keyword) . '%'];
+        }
+
+        $query = Db::name('airdrop_item')->alias('i')
+            ->leftJoin('user u', 'u.id = i.user_id')
+            ->where($where);
+        $total = (clone $query)->count();
+        $list  = $query
+            ->field([
+                'i.id', 'i.user_id', 'i.num', 'i.status', 'i.grant_time', 'i.revoke_time', 'i.target_type',
+                'IFNULL(u.nickname, CONCAT("用户#", i.user_id)) as nickname',
+                'IFNULL(u.mobile, i.mobile) as user_mobile',
+            ])
+            ->order('i.id', 'desc')
+            ->page($page, $limit)
+            ->select()->toArray();
+
+        $this->success('', ['list' => $list, 'total' => $total, 'stat' => $stat]);
+    }
+
+    /**
+     * 按用户回收：勾选发放明细逐条撤销（仍处于持有状态的持仓回收，已寄售/锁定的跳过）
+     */
+    public function revokeItems(): void
+    {
+        if (!$this->request->isPost()) {
+            $this->error('请求方式错误');
+        }
+        $ids = $this->request->post('ids/a', []);
+        if (!$ids) {
+            $this->error('请先勾选要撤销的发放记录');
+        }
+
+        $taskId  = 0;
+        $ok      = 0;
+        $skipped = 0;
+        Db::startTrans();
+        try {
+            $items = Db::name('airdrop_item')->where('id', 'in', $ids)->where('status', 1)->lock(true)->select()->toArray();
+            foreach ($items as $item) {
+                $taskId = (int) $item['task_id'];
+                if ((int) $item['target_type'] === 2) {
+                    // 盲盒资格：回收开盒资格，可投量回补（不回补为负）
+                    Db::name('airdrop_item')->where('id', (int) $item['id'])->update(['status' => 0, 'revoke_time' => time()]);
+                    Db::name('blindbox')->where('id', (int) $item['blindbox_id'])
+                        ->where('airdropped >= ' . max(1, (int) $item['num']))
+                        ->dec('airdropped', max(1, (int) $item['num']))->update();
+                    $ok++;
+                    continue;
+                }
+                $hold = $item['hold_id'] ? Db::name('hold')->where('id', (int) $item['hold_id'])->lock(true)->find() : null;
+                if (!$hold || (int) $hold['user_id'] !== (int) $item['user_id'] || (int) $hold['status'] !== 0) {
+                    $skipped++; // 已寄售/锁定/已转出，不可回收
+                    continue;
+                }
+                Db::name('hold')->where('id', (int) $hold['id'])->delete();
+                Db::name('airdrop_item')->where('id', (int) $item['id'])->update(['status' => 0, 'revoke_time' => time()]);
+                $ok++;
+            }
+            if ($taskId && $ok > 0) {
+                Db::name('airdrop_task')->where('id', $taskId)->inc('revoke_num', $ok)->update();
+            }
+            Db::commit();
+        } catch (Throwable $e) {
+            Db::rollback();
+            $this->error('回收失败：' . $e->getMessage());
+        }
+        if ($ok === 0) {
+            $this->error('没有可回收的记录（已寄售/锁定的不可回收）');
+        }
+        OperLog::record('定向发放', '按用户回收', '任务#' . $taskId, '回收 ' . $ok . ' 份，跳过 ' . $skipped . ' 份');
+        $this->success('已按用户回收 ' . $ok . ' 份，库存已回池', ['revoked' => $ok, 'skipped' => $skipped]);
     }
 
     /**

@@ -6,21 +6,42 @@
             <span class="en">INVITE REWARDS</span>
         </div>
 
-        <!-- 活动开关 -->
+        <!-- 活动信息（多场次表格样式） -->
         <div class="glass rise" :style="{ '--i': 1 }" style="margin-bottom: 14px">
-            <div class="card-pad" style="display: flex; align-items: center; gap: 12px; padding: 14px 20px">
-                <span class="cell-main">活动状态</span>
-                <el-switch :model-value="inviteEnabled == 1" @change="(v: any) => onSwitch(v)" />
-                <span class="cell-sub">关闭后 C 端邀请奖励暂停发放，已配置的规则保留</span>
+            <div class="tbl-wrap">
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>活动名称</th>
+                            <th>活动时间</th>
+                            <th>开关</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="serif-num">—</td>
+                            <td class="cell-main">邀请有礼</td>
+                            <td class="cell-sub">长期有效</td>
+                            <td>
+                                <button class="btn btn-ghost btn-sm" @click="onSwitch(inviteEnabled != 1)">{{ inviteEnabled == 1 ? '关闭' : '开启' }}</button>
+                                <span class="tag" :class="inviteEnabled == 1 ? 'tag-green' : 'tag-gray'" style="margin-left: 6px">{{ inviteEnabled == 1 ? '启用' : '停用' }}</span>
+                            </td>
+                            <td class="cell-sub">关闭后该场 C 端暂停发放，规则保留</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
+            <div class="card-pad"></div>
         </div>
 
         <!-- 奖励规则 -->
         <div class="glass rise" :style="{ '--i': 2 }" style="margin-bottom: 14px">
             <div class="card-head" style="padding-bottom: 14px">
                 <div>
-                    <h3>奖励规则</h3>
-                    <span class="en">REWARD RULES</span>
+                    <h3>奖励规则 · 邀请有礼</h3>
+                    <span class="en">Reward Rules</span>
                 </div>
                 <button v-if="auth('save')" class="btn btn-primary" @click="openRule()">添加规则</button>
             </div>
@@ -61,8 +82,8 @@
         <div class="glass rise" :style="{ '--i': 2 }">
             <div class="card-head" style="padding-bottom: 14px">
                 <div>
-                    <h3>邀请记录</h3>
-                    <span class="en">INVITE RECORDS</span>
+                    <h3>邀请记录 · 邀请有礼</h3>
+                    <span class="en">Records</span>
                 </div>
             </div>
             <div class="tbl-wrap">

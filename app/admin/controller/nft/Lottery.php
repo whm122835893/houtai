@@ -57,8 +57,11 @@ class Lottery extends Backend
         $ids = array_column($list->toArray(), 'id');
         $map = [];
         if ($ids) {
+            // 剩余奖池 = 非谢谢参与奖品的剩余库存合计（stock=-1 为无限，单独计数）
             $stats = Db::name('lottery_prize')
-                ->field('activity_id, count(*) as prize_count, sum(stock) as total_stock')
+                ->fieldRaw('activity_id, count(*) as prize_count,'
+                    . ' sum(CASE WHEN type <> 3 AND stock > 0 THEN stock ELSE 0 END) as pool_stock,'
+                    . ' sum(CASE WHEN type <> 3 AND stock < 0 THEN 1 ELSE 0 END) as pool_unlimited')
                 ->where('activity_id', 'in', $ids)
                 ->group('activity_id')
                 ->select()
@@ -66,8 +69,9 @@ class Lottery extends Backend
             $map = array_column($stats, null, 'activity_id');
         }
         foreach ($list as $row) {
-            $row->prize_count = (int) ($map[$row->id]['prize_count'] ?? 0);
-            $row->total_stock = (int) ($map[$row->id]['total_stock'] ?? 0);
+            $row->prize_count    = (int) ($map[$row->id]['prize_count'] ?? 0);
+            $row->pool_stock     = (int) ($map[$row->id]['pool_stock'] ?? 0);
+            $row->pool_unlimited = (int) ($map[$row->id]['pool_unlimited'] ?? 0);
             $row->chance_rules = $row->chance_rules ? json_decode($row->chance_rules, true) : (object) [];
         }
 

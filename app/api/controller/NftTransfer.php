@@ -42,7 +42,7 @@ class NftTransfer extends Frontend
             ->order('t.id', 'desc')->page($page, $limit)->select()->toArray();
         foreach ($list as &$row) {
             $row['direction'] = ((int) $row['from_user_id'] === (int) $uid) ? 'out' : 'in';
-            $row['status_txt'] = ['0' => '待接收', '1' => '已完成', '2' => '已撤销'][(string) $row['status']] ?? '未知';
+            $row['status_txt'] = ['0' => '待接收', '1' => '已完成', '2' => '已撤销', '3' => '已取消'][(string) $row['status']] ?? '未知';
         }
         unset($row);
         $this->success('', ['list' => $list, 'total' => $total]);
@@ -164,7 +164,7 @@ class NftTransfer extends Frontend
                 throw new \RuntimeException('仅「待接收」状态的转赠可撤销');
             }
             $now = time();
-            Db::name('transfer')->where('id', (int) $t['id'])->update(['status' => 2, 'updatetime' => $now]);
+            Db::name('transfer')->where('id', (int) $t['id'])->update(['status' => 3, 'updatetime' => $now]);
             Db::name('hold')->where('id', (int) $t['hold_id'])->where('status', 2)->update(['status' => 0, 'updatetime' => $now]);
             // 已收的手续费随撤销退回
             $feeYuan = (float) NftTrade::cfg('transfer_fee', '0');

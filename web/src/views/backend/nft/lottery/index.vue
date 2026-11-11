@@ -29,10 +29,9 @@
                             <th>ID</th>
                             <th>活动名称</th>
                             <th>次数获取方式</th>
-                            <th>奖品数 / 总库存</th>
                             <th>状态</th>
-                            <th>开始时间</th>
-                            <th>结束时间</th>
+                            <th>起止时间</th>
+                            <th>剩余奖池</th>
                             <th style="width: 300px">操作</th>
                         </tr>
                     </thead>
@@ -44,13 +43,13 @@
                                 <span v-for="t in chanceTags(row.chance_rules)" :key="t.label" class="tag" :class="t.cls" style="margin-right: 4px">{{ t.label }}</span>
                                 <span v-if="!chanceTags(row.chance_rules).length" class="cell-sub">未配置</span>
                             </td>
-                            <td class="cell-sub">
-                                <span class="serif-num">{{ row.prize_count }}</span> 个 / 库存
-                                <span class="serif-num">{{ row.total_stock }}</span>
-                            </td>
                             <td><span class="tag" :class="row.status == 1 ? 'tag-green' : 'tag-gray'">{{ row.status == 1 ? '开启' : '关闭' }}</span></td>
-                            <td class="cell-sub">{{ fmtTime(row.start_time) }}</td>
-                            <td class="cell-sub">{{ fmtTime(row.end_time) }}</td>
+                            <td class="cell-sub">{{ fmtTime(row.start_time) }}<br />~ {{ fmtTime(row.end_time) }}</td>
+                            <td>
+                                <span class="serif-num amount-in">{{ row.pool_stock }}</span> 份
+                                <span v-if="row.pool_unlimited > 0" class="cell-sub">（含 {{ row.pool_unlimited }} 种无限）</span>
+                                <div class="cell-sub">共 {{ row.prize_count }} 种奖品</div>
+                            </td>
                             <td>
                                 <button v-if="auth('prizes')" class="btn btn-ghost btn-sm" @click="openPrizes(row)">奖池配置</button>
                                 <button v-if="auth('chances')" class="btn btn-ghost btn-sm" @click="openChances(row)">次数流水</button>

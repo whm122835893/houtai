@@ -174,10 +174,11 @@
 | GET | `/api/nft_transfer/records` | 我的转赠记录（发出+收到） | 是 |
 | POST | `/api/nft_transfer/create` | 发起 `{hold_id, to_mobile}` | 是 |
 | POST | `/api/nft_transfer/accept` | 接收 `{transfer_no}`（接收方） | 是 |
-| POST | `/api/nft_transfer/cancel` | 撤销 `{transfer_no}`（发起方） | 是 |
+| POST | `/api/nft_transfer/cancel` | 取消 `{transfer_no}`（发起方，仅待接收） | 是 |
 
-- 单品开关：`collection.transfer_enabled`（后台藏品编辑控制）；手续费 `setting.transfer_fee`（元，0=免费，后台可改），撤销自动退回
-- 流程：发起 → 持仓锁定(status=2) → 接收过户 / 撤销回退；手机号定位接收方
+- 单品开关：`collection.transfer_enabled`（后台藏品编辑 / 转赠管理「单品转赠开关」控制）；手续费 `setting.transfer_fee`（元，0=免费，后台可改），取消自动退回
+- 流程：发起 → 持仓锁定(status=2) → 接收过户 / 取消回退；手机号定位接收方
+- 转赠状态：`0=待接收, 1=已完成, 2=已撤销(后台强制回退), 3=已取消(发起方)`；后台撤销会校验接收方仍持有且未寄售/再次转赠
 
 ## 9. 定时任务（运维）
 

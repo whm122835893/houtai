@@ -24,3 +24,15 @@ export function draw(id: number) {
 export function applys(params: object = {}) {
     return createAxios({ url: url + 'applys', method: 'get', params })
 }
+
+export function codes(params: object = {}) {
+    return createAxios({ url: url + 'codes', method: 'get', params })
+}
+
+export function grantCode(data: { raffle_id: number; user: string; num?: number; remark?: string }) {
+    return createAxios({ url: url + 'grantcode', method: 'post', data })
+}
+
+export function voidCode(id: number) {
+    return createAxios({ url: url + 'voidcode', method: 'post', data: { id } })
+}

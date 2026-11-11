@@ -73,6 +73,13 @@
                             </td>
                             <td>
                                 <button
+                                    v-if="auth('items') && (row.success_num > 0 || row.revoke_num > 0)"
+                                    class="btn btn-ghost btn-sm"
+                                    @click="openItems(row)"
+                                >
+                                    明细
+                                </button>
+                                <button
                                     v-if="auth('retry') && (row.status == 0 || row.status == 2)"
                                     class="btn btn-ghost btn-sm"
                                     @click="doRetry(row)"
@@ -185,6 +192,81 @@
                 <div class="modal-foot">
                     <button class="btn btn-ghost" @click="formVisible = false">取消</button>
                     <button class="btn btn-primary" :disabled="saving" @click="submitForm">保存</button>
+                </div>
+            </div>
+        </div>
+        <!-- 发放明细弹窗 -->
+        <div v-if="itemsVisible" class="modal-mask fadein" @click.self="itemsVisible = false">
+            <div class="modal glass pop" style="width: 720px">
+                <div class="modal-head">
+                    <h3>发放明细 · {{ itemsTask?.name }}</h3>
+                    <span class="close" @click="itemsVisible = false">✕</span>
+                </div>
+                <div class="modal-body" style="max-height: 58vh; overflow: auto">
+                    <div class="cell-sub" style="margin-bottom: 10px">
+                        计划 <b class="serif-num">{{ itemsTask?.num }}</b> 份 · 已发放 {{ itemStat.granted }} · 撤销 {{ itemStat.revoked }} · 跳过 {{ itemsTask?.fail_num || 0 }}；勾选记录可<b>按用户回收</b>（回收后库存回池，已寄售/锁定的不可回收）
+                    </div>
+                    <div class="filter-bar" style="padding: 0 0 12px">
+                        <input v-model="itemQuery.keyword" class="input" placeholder="用户昵称 / 手机号" @keyup.enter="loadItems(1)" />
+                        <select v-model="itemQuery.status" class="select">
+                            <option :value="-1">全部状态</option>
+                            <option :value="1">已发放</option>
+                            <option :value="0">已撤销</option>
+                            <option :value="2">发放失败</option>
+                        </select>
+                        <button class="btn btn-primary" @click="loadItems(1)">查询</button>
+                    </div>
+                    <div class="tbl-wrap">
+                        <table class="tbl">
+                            <thead>
+                                <tr>
+                                    <th style="width: 34px"></th>
+                                    <th>用户</th>
+                                    <th>份数</th>
+                                    <th>状态</th>
+                                    <th>发放时间</th>
+                                    <th>撤销时间</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="row in itemList" :key="row.id">
+                                    <td>
+                                        <input
+                                            v-if="row.status == 1"
+                                            v-model="row._ck"
+                                            type="checkbox"
+                                            style="cursor: pointer"
+                                            @change="syncSelTip"
+                                        />
+                                        <span v-else class="cell-sub">—</span>
+                                    </td>
+                                    <td>
+                                        <div class="cell-main">{{ row.nickname }}</div>
+                                        <div class="cell-sub">{{ row.user_mobile || '-' }} · ID {{ row.user_id }}</div>
+                                    </td>
+                                    <td class="serif-num">{{ row.num }}</td>
+                                    <td>
+                                        <span class="tag" :class="itemStatusCls(row.status)">{{ itemStatusText(row.status) }}</span>
+                                    </td>
+                                    <td class="cell-sub">{{ fmtTime(row.grant_time) }}</td>
+                                    <td class="cell-sub">{{ row.revoke_time ? fmtTime(row.revoke_time) : '-' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div v-if="!itemList.length" class="empty">该任务暂无发放明细</div>
+                    </div>
+                    <div class="pager">
+                        <span>共 {{ itemTotal }} 条</span>
+                        <button :disabled="itemQuery.page <= 1" @click="loadItems(itemQuery.page - 1)">‹</button>
+                        <button :disabled="itemQuery.page >= itemMaxPage" @click="loadItems(itemQuery.page + 1)">›</button>
+                    </div>
+                </div>
+                <div class="modal-foot">
+                    <span class="cell-sub">{{ selTip }}</span>
+                    <span style="flex: 1"></span>
+                    <button class="btn btn-ghost" @click="exportItems">导出明细</button>
+                    <button v-if="auth('items')" class="btn btn-danger" @click="doRevokeItems">撤销选中</button>
+                    <button class="btn btn-ghost" @click="itemsVisible = false">关闭</button>
                 </div>
             </div>
         </div>
@@ -361,6 +443,71 @@ const oneDel = (row: any) => {
     ElMessageBox.confirm(`确认删除任务「${row.name}」？删除后不可恢复`, '危险操作', { type: 'warning' }).then(() =>
         api.del([row.id]).then(() => load())
     )
+}
+
+// ============ 发放明细 / 按用户回收 ============
+const itemsVisible = ref(false)
+const itemsTask = ref<any>(null)
+const itemList = ref<any[]>([])
+const itemTotal = ref(0)
+const itemStat = reactive({ total: 0, granted: 0, revoked: 0, failed: 0 })
+const itemQuery = reactive({ keyword: '', status: -1, page: 1, limit: 20 })
+const itemMaxPage = computed(() => Math.max(1, Math.ceil(itemTotal.value / itemQuery.limit)))
+const selTip = ref('未勾选记录')
+
+const ITEM_ST: Record<number, [string, string]> = { 0: ['已撤销', 'tag-gray'], 1: ['已发放', 'tag-green'], 2: ['发放失败', 'tag-red'] }
+const itemStatusText = (s: number) => ITEM_ST[s]?.[0] || '未知'
+const itemStatusCls = (s: number) => ITEM_ST[s]?.[1] || 'tag-gray'
+
+const openItems = (row: any) => {
+    itemsTask.value = row
+    itemQuery.keyword = ''
+    itemQuery.status = -1
+    selTip.value = '未勾选记录'
+    itemsVisible.value = true
+    loadItems(1)
+}
+const loadItems = async (page = 1) => {
+    if (!itemsTask.value) return
+    itemQuery.page = page
+    const res = await api.items({ task_id: itemsTask.value.id, keyword: itemQuery.keyword, status: itemQuery.status, page, limit: itemQuery.limit })
+    itemList.value = (res.data.list || []).map((r: any) => ({ ...r, _ck: false }))
+    itemTotal.value = res.data.total
+    Object.assign(itemStat, res.data.stat || {})
+    syncSelTip()
+}
+const syncSelTip = () => {
+    const n = itemList.value.filter((r: any) => r._ck).length
+    selTip.value = n ? `已勾选 ${n} 条，回收后库存回池` : '未勾选记录'
+}
+const exportItems = () => {
+    const rows = [['用户', '手机号', '用户ID', '份数', '状态', '发放时间', '撤销时间']]
+    itemList.value.forEach((r: any) => {
+        rows.push([r.nickname, r.user_mobile || '', r.user_id, r.num, itemStatusText(r.status), fmtTime(r.grant_time), r.revoke_time ? fmtTime(r.revoke_time) : ''])
+    })
+    const csv = '\uFEFF' + rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    a.download = `发放明细-${itemsTask.value?.name || itemsTask.value?.id}.csv`
+    a.click()
+    URL.revokeObjectURL(a.href)
+}
+const doRevokeItems = () => {
+    const ids = itemList.value.filter((r: any) => r._ck).map((r: any) => r.id)
+    if (!ids.length) {
+        ElMessage.warning('请先勾选要撤销的发放记录')
+        return
+    }
+    ElMessageBox.confirm(
+        `确认撤销选中的 ${ids.length} 条发放记录？仍处于持有状态的持仓将被回收（已寄售/锁定的不可回收），撤销后库存回池；如属投错对象，请随后创建新任务发给正确名单`,
+        '按用户回收',
+        { type: 'warning' }
+    ).then(async () => {
+        const res = await api.revokeItems(ids)
+        ElMessage.success(res.data?.skipped > 0 ? `已回收 ${res.data.revoked} 份，${res.data.skipped} 份已寄售/锁定被跳过` : '已按用户回收，库存已回池')
+        loadItems(itemQuery.page)
+        load()
+    })
 }
 
 onMounted(() => {
