@@ -338,4 +338,114 @@ $where[] = ['deletetime', '=', 0];
         OperLog::record('藏品管理', '停止发售', '藏品#' . $id, $row->name . '，已售 ' . $row->sold . '/' . $row->stock . '，置为已售罄');
         $this->success();
     }
+
+    /**
+     * Excel/CSV 批量导入
+     * 列（与前端模板一致）：藏品名称* | 分类* | 发行方* | 作者 | 封面链接 | 售价(元)* | 市场价(元) | 发行量* | 详情 | 可转赠(是/否) | 发售时间 | 发售结束时间
+     * 逐行校验，坏行跳过并回报；新藏品 status=1（未发售），需在列表中手动开售
+     */
+    public function import(): void
+    {
+        if (!$this->request->isPost()) {
+            $this->error('请求方式错误');
+        }
+        $file = $this->request->file('file');
+        if (!$file) {
+            $this->error('请选择要导入的表格文件');
+        }
+        try {
+            $rows = \app\common\library\ImportReader::read($file->getPathname(), $file->getOriginalName());
+        } catch (Throwable $e) {
+            $this->error($e->getMessage());
+        }
+        if (count($rows) < 2) {
+            $this->error('表格除表头外至少需要 1 行数据');
+        }
+
+        $catMap = CategoryModel::column('id', 'name');
+        $ok = 0;
+        $errors = [];
+        foreach (array_slice($rows, 1) as $i => $row) {
+            $line = $i + 2; // 含表头的真实行号
+            $get = fn (int $idx): string => trim((string) ($row[$idx] ?? ''));
+            [$name, $catName, $publisher, $author, $cover, $price, $marketPrice, $stock, $detail, $resale, $saleTime, $saleEndTime] = [
+                $get(0), $get(1), $get(2), $get(3), $get(4), $get(5), $get(6), $get(7), $get(8), $get(9), $get(10), $get(11),
+            ];
+
+            if ($name === '') {
+                $errors[] = "第{$line}行：藏品名称不能为空";
+                continue;
+            }
+            if ($catName === '' || !isset($catMap[$catName])) {
+                $errors[] = "第{$line}行：分类「{$catName}」不存在，请先在分类管理中创建";
+                continue;
+            }
+            if ($publisher === '') {
+                $errors[] = "第{$line}行：发行方不能为空";
+                continue;
+            }
+            if ($price === '' || !is_numeric($price) || (float) $price <= 0) {
+                $errors[] = "第{$line}行：售价必须为大于 0 的数字";
+                continue;
+            }
+            if ($marketPrice !== '' && (!is_numeric($marketPrice) || (float) $marketPrice < 0)) {
+                $errors[] = "第{$line}行：市场价必须为不小于 0 的数字";
+                continue;
+            }
+            if ($stock === '' || (int) $stock < 1) {
+                $errors[] = "第{$line}行：发行量必须为大于 0 的整数";
+                continue;
+            }
+            $saleTs = 0;
+            if ($saleTime !== '') {
+                $saleTs = (int) strtotime($saleTime);
+                if (!$saleTs) {
+                    $errors[] = "第{$line}行：发售时间格式无法识别（示例 2026-12-01 10:00）";
+                    continue;
+                }
+            }
+            $saleEndTs = 0;
+            if ($saleEndTime !== '') {
+                $saleEndTs = (int) strtotime($saleEndTime);
+                if (!$saleEndTs) {
+                    $errors[] = "第{$line}行：发售结束时间格式无法识别";
+                    continue;
+                }
+                if ($saleTs && $saleEndTs <= $saleTs) {
+                    $errors[] = "第{$line}行：发售结束时间必须晚于发售时间";
+                    continue;
+                }
+            }
+
+            try {
+                $this->model->create([
+                    'name'         => mb_substr($name, 0, 100),
+                    'category_id'  => (int) $catMap[$catName],
+                    'publisher'    => mb_substr($publisher, 0, 255),
+                    'author'       => mb_substr($author, 0, 50),
+                    'cover'        => mb_substr($cover, 0, 255),
+                    'price'        => (int) bcmul(round((float) $price, 2), '100'),
+                    'market_price' => $marketPrice !== '' ? (int) bcmul(round((float) $marketPrice, 2), '100') : 0,
+                    'stock'        => (int) $stock,
+                    'detail'       => $detail,
+                    'resale'       => ($resale === '' || $resale === '是') ? 1 : 0,
+                    'sale_time'      => $saleTs,
+                    'sale_end_time'  => $saleEndTs,
+                    'status'         => 1,
+                    'createtime'     => time(),
+                    'updatetime'     => time(),
+                ]);
+                $ok++;
+            } catch (Throwable $e) {
+                $errors[] = "第{$line}行：写入失败（{$e->getMessage()}）";
+            }
+        }
+
+        OperLog::record('藏品管理', '批量导入', '', "成功 {$ok} 条，失败 " . count($errors) . ' 条');
+        $this->success($ok ? "导入完成：成功 {$ok} 条" . ($errors ? "，失败 " . count($errors) . " 条" : '') : '导入失败：没有有效数据', [
+            'success' => $ok,
+            'fail'    => count($errors),
+            'errors'  => array_slice($errors, 0, 50),
+        ]);
+    }
 }

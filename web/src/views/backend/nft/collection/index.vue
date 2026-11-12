@@ -25,6 +25,7 @@
             <button class="btn btn-ghost" @click="resetQuery">重置</button>
             <span style="flex: 1"></span>
             <button v-if="auth('add')" class="btn btn-primary" @click="openAdd">新增藏品</button>
+            <button v-if="auth('import')" class="btn btn-ghost" @click="openImport">导入</button>
             <div class="cell-sub" style="width: 100%">库存池 = 发行量 − 已售 − 空投已发放 − 盲盒投放 − 已销毁 + 已回收；空投、盲盒配置从库存池扣减，超发在保存时拦截；回收藏品回池可复用（销毁为永久减量）</div>
         </div>
 
@@ -247,6 +248,39 @@
                 </div>
             </div>
         </div>
+
+        <!-- 批量导入弹窗 -->
+        <div class="modal-mask" v-if="importVisible">
+            <div class="modal" style="width: 560px">
+                <div class="modal-head">
+                    <h3>批量导入藏品</h3>
+                    <span class="cell-sub">支持 .xlsx / .csv（UTF-8）</span>
+                </div>
+                <div class="modal-body">
+                    <div class="form-row">
+                        <label
+                            >第一步：下载模板并按列填写
+                            <button class="btn btn-ghost btn-sm" style="margin-left: 8px" @click="downloadTemplate">下载模板</button>
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <label>第二步：选择填好的表格文件</label>
+                        <input type="file" class="input" accept=".xlsx,.csv" @change="(e: any) => (importFile = e.target.files[0])" />
+                    </div>
+                    <div class="cell-sub">说明：分类需已存在（按名称匹配）；售价为元；发售时间格式 2026-12-01 10:00（可空）；导入后藏品为「未发售」状态，需在列表中手动开售</div>
+                    <div v-if="importResult" class="pre-box" style="margin-top: 10px">
+                        <div><b>{{ importResult.success }}</b> 条成功，<b>{{ importResult.fail }}</b> 条失败</div>
+                        <div v-for="(er, i) in importResult.errors" :key="i" class="cell-sub" style="color: var(--danger)">{{ er }}</div>
+                    </div>
+                </div>
+                <div class="modal-foot">
+                    <button class="btn btn-ghost" @click="importVisible = false">关闭</button>
+                    <button class="btn btn-primary" :disabled="!importFile || importing" @click="submitImport">
+                        {{ importing ? '导入中…' : '开始导入' }}
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -450,6 +484,47 @@ const oneDel = (row: any) => {
             load()
         })
     )
+}
+
+/** 批量导入 */
+const importVisible = ref(false)
+const importFile = ref<File | null>(null)
+const importing = ref(false)
+const importResult = ref<{ success: number; fail: number; errors: string[] } | null>(null)
+
+const openImport = () => {
+    importFile.value = null
+    importResult.value = null
+    importVisible.value = true
+}
+
+const downloadTemplate = () => {
+    const header = '藏品名称*,分类*,发行方*,作者,封面链接,售价(元)*,市场价(元),发行量*,详情,可转赠(是/否),发售时间,发售结束时间'
+    const demo = '星辰大海·首发,数字艺术,优码云,大湾区靓仔,,128,168,1000,藏品详情文本,是,2026-12-01 10:00,2026-12-31 23:59'
+    const blob = new Blob(['\uFEFF' + header + '\n' + demo + '\n'], { type: 'text/csv;charset=utf-8' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = '藏品导入模板.csv'
+    a.click()
+    URL.revokeObjectURL(a.href)
+}
+
+const submitImport = async () => {
+    if (!importFile.value) return
+    importing.value = true
+    importResult.value = null
+    try {
+        const res: any = await api.importData(importFile.value)
+        importResult.value = res.data ?? { success: 0, fail: 1, errors: [res.msg || '导入失败'] }
+        if ((importResult.value?.success ?? 0) > 0) {
+            ElMessage.success(`成功导入 ${importResult.value?.success} 条`)
+            load()
+        }
+    } catch (e: any) {
+        ElMessage.error(e?.message || '导入失败')
+    } finally {
+        importing.value = false
+    }
 }
 
 onMounted(() => {

@@ -267,4 +267,91 @@ class User extends Backend
         OperLog::record('用户管理', '钱包调整', '用户#' . $id, $amount . ' 元，' . $remark);
         $this->success();
     }
+
+    /**
+     * Excel/CSV 批量导入
+     * 列（与前端模板一致）：昵称* | 账号* | 手机号 | 邮箱 | 密码(可选,默认同账号) | 标签(逗号分隔)
+     * 逐行校验（复用 User 验证器 add 场景），坏行跳过并回报
+     */
+    public function import(): void
+    {
+        if (!$this->request->isPost()) {
+            $this->error('请求方式错误');
+        }
+        $file = $this->request->file('file');
+        if (!$file) {
+            $this->error('请选择要导入的表格文件');
+        }
+        try {
+            $rows = \app\common\library\ImportReader::read($file->getPathname(), $file->getOriginalName());
+        } catch (Throwable $e) {
+            $this->error($e->getMessage());
+        }
+        if (count($rows) < 2) {
+            $this->error('表格除表头外至少需要 1 行数据');
+        }
+
+        $validator = validate(\app\admin\validate\nft\User::class);
+        $ok = 0;
+        $errors = [];
+        $seen = []; // 文件内账号查重
+        foreach (array_slice($rows, 1) as $i => $row) {
+            $line = $i + 2;
+            $get = fn (int $idx): string => trim((string) ($row[$idx] ?? ''));
+            [$nickname, $username, $mobile, $email, $password, $tags] = [
+                $get(0), $get(1), $get(2), $get(3), $get(4), $get(5),
+            ];
+
+            if ($nickname === '' || $username === '') {
+                $errors[] = "第{$line}行：昵称与账号不能为空";
+                continue;
+            }
+            if (isset($seen[$username])) {
+                $errors[] = "第{$line}行：账号「{$username}」在表格中重复（第 {$seen[$username]} 行已出现）";
+                continue;
+            }
+            $seen[$username] = $line;
+            if ($mobile !== '' && !preg_match('/^1\d{10}$/', $mobile)) {
+                $errors[] = "第{$line}行：手机号格式错误";
+                continue;
+            }
+            if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $errors[] = "第{$line}行：邮箱格式错误";
+                continue;
+            }
+
+            $data = [
+                'nickname' => mb_substr($nickname, 0, 50),
+                'username' => mb_substr($username, 0, 50),
+                'mobile'   => $mobile,
+                'email'    => $email,
+                'tags'     => $tags,
+                'status'   => 1,
+            ];
+            try {
+                $validator->scene('add')->check($data);
+            } catch (Throwable $e) {
+                $errors[] = "第{$line}行：{$e->getMessage()}";
+                continue;
+            }
+
+            $data['invite_code'] = strtoupper(substr(md5(uniqid((string) mt_rand(), true)), 0, 8));
+            $data['password']    = hash_password($password !== '' ? $password : $username);
+            $data['salt']        = '';
+            $data['join_time']   = time();
+            try {
+                $this->model->create($data);
+                $ok++;
+            } catch (Throwable $e) {
+                $errors[] = "第{$line}行：写入失败（{$e->getMessage()}）";
+            }
+        }
+
+        OperLog::record('用户管理', '批量导入', '', "成功 {$ok} 条，失败 " . count($errors) . ' 条');
+        $this->success($ok ? "导入完成：成功 {$ok} 条" . ($errors ? "，失败 " . count($errors) . " 条" : '') : '导入失败：没有有效数据', [
+            'success' => $ok,
+            'fail'    => count($errors),
+            'errors'  => array_slice($errors, 0, 50),
+        ]);
+    }
 }

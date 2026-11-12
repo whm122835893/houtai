@@ -19,6 +19,7 @@
             <span style="flex: 1"></span>
             <button v-if="auth('export')" class="btn btn-ghost" @click="doExport">导出</button>
             <button v-if="auth('add')" class="btn btn-ghost" @click="openAdd">新增会员</button>
+            <button v-if="auth('import')" class="btn btn-ghost" @click="openImport">导入</button>
             <button v-if="auth('del') && selectedIds.length" class="btn btn-danger btn-sm" @click="batchDel">
                 批量删除({{ selectedIds.length }})
             </button>
@@ -178,6 +179,39 @@
                 </div>
             </div>
         </div>
+
+        <!-- 批量导入弹窗 -->
+        <div class="modal-mask" v-if="importVisible">
+            <div class="modal" style="width: 560px">
+                <div class="modal-head">
+                    <h3>批量导入用户</h3>
+                    <span class="cell-sub">支持 .xlsx / .csv（UTF-8）</span>
+                </div>
+                <div class="modal-body">
+                    <div class="form-row">
+                        <label
+                            >第一步：下载模板并按列填写
+                            <button class="btn btn-ghost btn-sm" style="margin-left: 8px" @click="downloadTemplate">下载模板</button>
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <label>第二步：选择填好的表格文件</label>
+                        <input type="file" class="input" accept=".xlsx,.csv" @change="(e: any) => (importFile = e.target.files[0])" />
+                    </div>
+                    <div class="cell-sub">说明：账号唯一；手机号/邮箱可选但需合法；密码可空（默认为账号本身）；导入后用户为启用状态</div>
+                    <div v-if="importResult" class="pre-box" style="margin-top: 10px">
+                        <div><b>{{ importResult.success }}</b> 条成功，<b>{{ importResult.fail }}</b> 条失败</div>
+                        <div v-for="(er, i) in importResult.errors" :key="i" class="cell-sub" style="color: var(--danger)">{{ er }}</div>
+                    </div>
+                </div>
+                <div class="modal-foot">
+                    <button class="btn btn-ghost" @click="importVisible = false">关闭</button>
+                    <button class="btn btn-primary" :disabled="!importFile || importing" @click="submitImport">
+                        {{ importing ? '导入中…' : '开始导入' }}
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -263,6 +297,47 @@ const doKick = (row: any) => {
     ElMessageBox.confirm(`确认强制下线用户「${row.nickname || row.username}」？其所有登录态将被清除`, '操作确认', { type: 'warning' }).then(() =>
         api.kick(row.id).then(() => ElMessage.success('已强制下线'))
     )
+}
+
+/** 批量导入 */
+const importVisible = ref(false)
+const importFile = ref<File | null>(null)
+const importing = ref(false)
+const importResult = ref<{ success: number; fail: number; errors: string[] } | null>(null)
+
+const openImport = () => {
+    importFile.value = null
+    importResult.value = null
+    importVisible.value = true
+}
+
+const downloadTemplate = () => {
+    const header = '昵称*,账号*,手机号,邮箱,密码(可选,默认同账号),标签(逗号分隔)'
+    const demo = '张三,zhangsan,13800138000,zs@example.com,,"内测,达人"'
+    const blob = new Blob(['\uFEFF' + header + '\n' + demo + '\n'], { type: 'text/csv;charset=utf-8' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = '用户导入模板.csv'
+    a.click()
+    URL.revokeObjectURL(a.href)
+}
+
+const submitImport = async () => {
+    if (!importFile.value) return
+    importing.value = true
+    importResult.value = null
+    try {
+        const res: any = await api.importData(importFile.value)
+        importResult.value = res.data ?? { success: 0, fail: 1, errors: [res.msg || '导入失败'] }
+        if ((importResult.value?.success ?? 0) > 0) {
+            ElMessage.success(`成功导入 ${importResult.value?.success} 条`)
+            load()
+        }
+    } catch (e: any) {
+        ElMessage.error(e?.message || '导入失败')
+    } finally {
+        importing.value = false
+    }
 }
 const doExport = () => {
     api.exportCsv({ keyword: query.keyword || '', status: query.status ?? -1 }).then((res: any) => {

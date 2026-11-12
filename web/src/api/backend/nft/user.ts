@@ -44,3 +44,10 @@ export function kick(id: number) {
 export function exportCsv(params: object = {}) {
     return createAxios({ url: url + 'export', method: 'get', params, responseType: 'blob' })
 }
+
+/** Excel/CSV 批量导入（multipart 上传） */
+export function importData(file: File) {
+    const fd = new FormData()
+    fd.append('file', file)
+    return createAxios({ url: url + 'import', method: 'post', data: fd })
+}

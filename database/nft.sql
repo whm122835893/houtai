@@ -1038,3 +1038,10 @@ INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,ke
 (211,'button','强制下线','nft/user/kick','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (242,'button','启停','nft/banner/status','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (220,'button','删除盲盒','nft/blindbox/del','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+
+-- ============================================================
+-- 2026-11-12 增量：藏品/用户 Excel 批量导入按钮权限
+-- ============================================================
+INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
+(213,'button','批量导入','nft/collection/import','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(211,'button','批量导入','nft/user/import','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
