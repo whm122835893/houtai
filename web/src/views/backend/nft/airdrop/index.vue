@@ -154,6 +154,10 @@
                             <option value="">请选择凭证藏品（持有即可空投，持有 N 份投 N 份）</option>
                             <option v-for="c in collections" :key="c.id" :value="String(c.id)">{{ c.name }}（#{{ c.id }}）</option>
                         </select>
+                        <select v-else-if="form.rule_type == 13" v-model="form.rule_value" class="select">
+                            <option value="">请选择发放名录快照（生成后冻结，不可修改）</option>
+                            <option v-for="r in rosters" :key="r.id" :value="String(r.id)">{{ r.name }}（{{ r.user_count }} 人）</option>
+                        </select>
                         <input v-else-if="form.rule_type == 8" v-model="form.rule_value" class="input" type="date" />
                         <input v-else-if="[3, 5, 11, 7].includes(form.rule_type)" v-model="form.rule_value" class="input" type="number" :min="0" :placeholder="ruleParamLabel" />
                         <input v-else-if="form.rule_type == 10" v-model="form.rule_value" class="input" placeholder="标签名，如：vip" />
@@ -302,6 +306,7 @@ const ruleOptions: Record<number, string> = {
     9: '随机抽样（全体用户随机抽）',
     10: '按用户标签（含指定标签）',
     11: '邀请排行（邀请数 Top N）',
+    13: '按名单（引用发放名录快照）',
 }
 
 const ruleMap: Record<number, { text: string; cls: string }> = {
@@ -316,6 +321,7 @@ const ruleMap: Record<number, { text: string; cls: string }> = {
     9: { text: '随机抽样', cls: 'tag-orange' },
     10: { text: '按标签', cls: 'tag-green' },
     11: { text: '邀请排行', cls: 'tag-orange' },
+    13: { text: '按名单', cls: 'tag-green' },
 }
 const statusMap: Record<number, { text: string; cls: string }> = {
     0: { text: '待发放', cls: 'tag-orange' },
@@ -328,6 +334,9 @@ const statusMeta = (s: number) => statusMap[s] || { text: '-', cls: 'tag-gray' }
 const ruleValueBrief = (row: any) => {
     const v = row.rule_value || ''
     if (!v) return '-'
+    if (row.rule_type == 13) {
+        return row.rule_value_brief || '名单 #' + v
+    }
     if (row.rule_type == 4) {
         const c = collections.value.find((x) => x.id == v)
         return c ? '凭证：' + c.name : '凭证藏品 #' + v
@@ -340,7 +349,7 @@ const ruleValueBrief = (row: any) => {
 
 const ruleParamLabel = computed(() => {
     const t = Number(form.rule_type)
-    return { 1: '规则参数（每行一个用户ID）*', 3: '邀请数门槛 *', 4: '凭证藏品 *', 5: '持仓数量门槛 *', 6: '白名单（用户ID/手机号，每行一个）*', 7: '累计消费门槛（元）*', 8: '注册早于日期 *', 10: '标签名 *', 11: '排行取前 N 名 *' }[t] || '规则参数'
+    return { 1: '规则参数（每行一个用户ID）*', 3: '邀请数门槛 *', 4: '凭证藏品 *', 5: '持仓数量门槛 *', 6: '白名单（用户ID/手机号，每行一个）*', 7: '累计消费门槛（元）*', 8: '注册早于日期 *', 10: '标签名 *', 11: '排行取前 N 名 *', 13: '目标名单 *' }[t] || '规则参数'
 })
 
 // 切换目标规则时清空旧参数
@@ -378,6 +387,15 @@ const loadCollections = async () => {
         collections.value = res.data.list || []
     } catch {
         collections.value = []
+    }
+}
+const rosters = ref<any[]>([])
+const loadRosters = async () => {
+    try {
+        const res = await nftApi('nft.Roster', 'index', { limit: 100 })
+        rosters.value = res.data.list || []
+    } catch {
+        rosters.value = []
     }
 }
 
@@ -513,5 +531,6 @@ const doRevokeItems = () => {
 onMounted(() => {
     load()
     loadCollections()
+    loadRosters()
 })
 </script>

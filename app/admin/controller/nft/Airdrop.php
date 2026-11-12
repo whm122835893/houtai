@@ -15,6 +15,7 @@ use app\admin\model\nft\OperLog;
  * 1=指定用户(用户ID逗号分隔) 2=全部用户 3=按邀请数(门槛) 4=持有指定藏品(凭证藏品ID,持有N份投N份)
  * 5=持仓门槛(持仓>=N) 6=白名单导入(用户ID或手机号逗号分隔) 7=按消费金额(累计消费>=N元)
  * 8=按注册时间(某日期前注册) 9=随机抽样(全体用户随机抽) 10=按用户标签(含指定标签) 11=邀请排行(Top N)
+ * 13=按名单(引用发放名录 roster 快照，发放对象=roster_item)
  *
  * 发放机制：claim_mode 到账方式(0直接到账/1需领取) dup_policy 重复策略(1跳过/2换发抽奖次数/3强制叠加)
  *           plan_time 定时空投 reason 空投凭证文案 revoke 批次撤销
@@ -38,6 +39,7 @@ class Airdrop extends Backend
         9  => '随机抽样',
         10 => '按用户标签',
         11 => '邀请排行',
+        13 => '按名单',
     ];
 
     public function initialize(): void
@@ -87,6 +89,11 @@ class Airdrop extends Backend
             $row->collection_name = $collections[$row->collection_id] ?? '';
             $row->rule_name       = self::RULES[(int) $row->rule_type] ?? '-';
             $row->claim_pending   = (int) ($claimMap[$row->id] ?? 0);
+            if ((int) $row->rule_type === 13) {
+                // 按名单规则：补充名录名称与人数，供前端展示
+                $r = Db::name('roster')->where('id', (int) $row->rule_value)->find();
+                $row->rule_value_brief = $r ? $r['name'] . '（' . $r['user_count'] . ' 人）' : '名单已删除';
+            }
         }
 
         $this->success('', ['list' => $list, 'total' => $total]);
@@ -111,7 +118,7 @@ class Airdrop extends Backend
             // 规则参数校验
             $ruleType  = (int) $data['rule_type'];
             $ruleValue = trim((string) ($data['rule_value'] ?? ''));
-            $needValue = [1, 3, 4, 5, 6, 7, 8, 10, 11];
+            $needValue = [1, 3, 4, 5, 6, 7, 8, 10, 11, 13];
             if (in_array($ruleType, $needValue) && $ruleValue === '') {
                 $this->error('请填写规则参数');
             }
@@ -120,6 +127,16 @@ class Airdrop extends Backend
                 $exists = Db::name('collection')->where('id', (int) $ruleValue)->count();
                 if (!$exists) {
                     $this->error('凭证藏品不存在');
+                }
+            }
+            if ($ruleType == 13) {
+                // 引用的发放名录必须存在且未删除
+                $roster = Db::name('roster')->where('id', (int) $ruleValue)->where('is_deleted', 0)->find();
+                if (!$roster) {
+                    $this->error('引用的发放名录不存在');
+                }
+                if ((int) $roster['user_count'] <= 0) {
+                    $this->error('该名录快照人数为 0，无法用于发放');
                 }
             }
             if ($ruleType == 8 && strtotime($ruleValue) === false) {
@@ -142,7 +159,7 @@ class Airdrop extends Backend
     }
 
     /**
-     * 执行/重试发放（含全部 11 种规则解析）
+     * 执行/重试发放（含全部 12 种规则解析）
      */
     public function retry(): void
     {
@@ -520,6 +537,18 @@ class Airdrop extends Backend
 
             case 10: // 按用户标签
                 $ids = $enabled()->whereLike('tags', '%' . $ruleValue . '%')->order('id', 'asc')->column('id');
+                return array_slice($ids, $done, $remain);
+
+            case 13: // 按名单：发放名录 roster 快照（roster_item 即冻结明细）
+                $roster = Db::name('roster')->where('id', (int) $ruleValue)->where('is_deleted', 0)->find();
+                if (!$roster) {
+                    return [];
+                }
+                $ids = Db::name('roster_item')
+                    ->where('roster_id', (int) $ruleValue)
+                    ->order('id', 'asc')
+                    ->column('user_id');
+                $ids = array_values(array_filter(array_map('intval', $ids), fn ($v) => $v > 0));
                 return array_slice($ids, $done, $remain);
         }
         return [];

@@ -15,7 +15,7 @@ class Airdrop extends Validate
         'name'          => 'require|max:100',
         'collection_id' => 'require|integer|gt:0',
         'num'           => 'require|integer|gt:0',
-        'rule_type'     => 'require|in:1,2,3',
+        'rule_type'     => 'require|in:1,2,3,4,5,6,7,8,9,10,11,13',
     ];
 
     protected $message = [
