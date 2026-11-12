@@ -1,0 +1,19 @@
+# 数藏后台 生产环境 crontab 配置示例
+# 安装方式：crontab -e 粘贴以下内容（路径按实际部署目录调整）
+# 前提：项目可执行 php think（PHP CLI >= 8.0）
+
+# ── 1. 业务维护：每分钟 ───────────────────────────────────────────
+# 藏品售罄自动置位（库存池归零/超发售截止时间 → 已售罄）
+# 待支付订单超时自动取消（默认 15 分钟，可在后台 设置 中调整）
+* * * * * cd /www/wwwroot/buildadmin && php think nft:maintain >> runtime/log/maintain.log 2>&1
+
+# ── 2. 数据库备份：每日 03:30 ────────────────────────────────────
+# gzip 压缩全量备份到项目 backups/ 目录，默认保留 14 天（可用环境变量 BACKUP_RETAIN_DAYS 覆盖）
+30 3 * * * cd /www/wwwroot/buildadmin && bash scripts/backup-db.sh >> runtime/log/backup.log 2>&1
+
+# ── 3. 数据一致性巡检：每日 04:05 ────────────────────────────────
+# 钱包账本自洽/余额衔接/收支汇总、库存池口径、孤儿持仓、负余额
+# 退出码 1 = 存在 FAIL，可接告警（如 curl 通知钉钉/企微机器人）
+5 4 * * * cd /www/wwwroot/buildadmin && php think nft:check >> runtime/log/check.log 2>&1
+# 可选告警（巡检失败时推送，替换 WEBHOOK 为实际地址）：
+# 10 4 * * * cd /www/wwwroot/buildadmin && php think nft:check > /dev/null 2>&1 || curl -s "$WEBHOOK" -d '{"msgtype":"text","text":{"content":"数藏后台巡检 FAIL，请查看 runtime/log/check.log"}}' -H "Content-Type: application/json"

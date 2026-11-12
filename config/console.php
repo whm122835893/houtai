@@ -6,5 +6,6 @@ return [
     // 指令定义
     'commands' => [
         'nft:maintain' => 'app\command\NftMaintain',
+        'nft:check'    => 'app\command\NftCheck',
     ],
 ];
