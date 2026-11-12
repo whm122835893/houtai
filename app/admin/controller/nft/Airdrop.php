@@ -75,6 +75,10 @@ class Airdrop extends Backend
         $collectionIds = array_values(array_unique(array_column($list->toArray(), 'collection_id')));
         $collections   = $collectionIds ? Db::name('collection')->where('id', 'in', $collectionIds)->column('name', 'id') : [];
 
+        // 盲盒目标行（target_type=2）的名称映射
+        $boxIds = array_values(array_unique(array_filter(array_column($list->toArray(), 'blindbox_id'))));
+        $boxes  = $boxIds ? Db::name('blindbox')->where('id', 'in', $boxIds)->column('name', 'id') : [];
+
         // 各任务待领取数（领取式空投）
         $taskIds   = array_column($list->toArray(), 'id');
         $claimMap  = $taskIds ? Db::name('hold')
@@ -87,6 +91,11 @@ class Airdrop extends Backend
 
         foreach ($list as $row) {
             $row->collection_name = $collections[$row->collection_id] ?? '';
+            if ((int) $row->target_type === 2) {
+                $row->target_name = '盲盒 · ' . ($boxes[$row->blindbox_id] ?? ('#' . $row->blindbox_id));
+            } else {
+                $row->target_name = $row->collection_name ?: ('#' . $row->collection_id);
+            }
             $row->rule_name       = self::RULES[(int) $row->rule_type] ?? '-';
             $row->claim_pending   = (int) ($claimMap[$row->id] ?? 0);
             if ((int) $row->rule_type === 13) {

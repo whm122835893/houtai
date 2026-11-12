@@ -46,7 +46,7 @@
                                 <div class="cell-main">{{ row.name }}</div>
                                 <div v-if="row.reason" class="cell-sub">凭证：{{ row.reason }}</div>
                             </td>
-                            <td>{{ row.collection_name || ('#' + row.collection_id) }}</td>
+                            <td>{{ row.target_name || row.collection_name || ('#' + row.collection_id) }}</td>
                             <td class="serif-num">{{ row.num }}</td>
                             <td>
                                 <span class="tag" :class="ruleMeta(row.rule_type).cls">{{ ruleMeta(row.rule_type).text }}</span>
