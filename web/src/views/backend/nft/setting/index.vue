@@ -35,8 +35,41 @@
             </div>
         </div>
 
+        <!-- C 端主题色 -->
+        <div class="glass rise" :style="{ '--i': 2 }" style="margin-bottom: 16px">
+            <div class="card-head">
+                <h3>C 端主题色</h3>
+                <span class="en">THEME</span>
+            </div>
+            <div class="theme-body">
+                <div class="form-row">
+                    <label>C 端主题色（后台全站颜色跟随 C 端：主色 / 渐变 / 光晕 / 阴影一并切换；点色块即时预览，保存后持久生效）</label>
+                    <div class="theme-dots">
+                        <button
+                            v-for="[c, n] in THEME_PRESETS"
+                            :key="c"
+                            class="theme-dot"
+                            :class="{ active: brand.site_theme.toLowerCase() === c }"
+                            :style="{ background: c }"
+                            :title="n"
+                            @click="previewTheme(c)"
+                        ></button>
+                        <input v-model="brand.site_theme" class="input theme-input" placeholder="#4a8ff7" maxlength="7" @input="previewTheme(brand.site_theme)" />
+                    </div>
+                    <div class="brand-tip">自定义任意色值（与 C 端取色一致即可）；低饱和色（白/灰主题）自动将光晕与背景中性化</div>
+                </div>
+                <div class="group-foot" style="border-top: none; padding-top: 0">
+                    <span class="cell-sub">保存后对全部登录管理员的浏览器生效</span>
+                    <button v-if="auth('save')" class="btn btn-primary btn-sm" :disabled="savingBrand" @click="saveBrand">
+                        {{ savingBrand ? '保存中…' : '保存主题色' }}
+                    </button>
+                    <span v-else class="cell-sub">仅超级管理员可保存</span>
+                </div>
+            </div>
+        </div>
+
         <!-- 参数分组 -->
-        <div v-for="(group, gi) in groups" :key="group.name" class="glass rise" :style="{ '--i': gi + 2 }" style="margin-bottom: 16px">
+        <div v-for="(group, gi) in groups" :key="group.name" class="glass rise" :style="{ '--i': gi + 3 }" style="margin-bottom: 16px">
             <div class="card-head">
                 <h3>{{ group.title }}</h3>
                 <span class="en">{{ group.name }}</span>
@@ -68,10 +101,11 @@ import { ElMessage } from 'element-plus'
 import { auth } from '/@/utils/common'
 import BaInput from '/@/components/baInput/index.vue'
 import * as api from '/@/api/backend/nft/setting'
+import { THEME_PRESETS, applyNftTheme, setCachedTheme, DEFAULT_THEME } from '/@/utils/nft-theme'
 
 defineOptions({ name: 'nft/setting' })
 
-const brand = reactive<{ site_logo: string; site_name: string }>({ site_logo: '', site_name: '' })
+const brand = reactive<{ site_logo: string; site_name: string; site_theme: string }>({ site_logo: '', site_name: '', site_theme: DEFAULT_THEME })
 const groups = ref<any[]>([])
 const savingBrand = ref(false)
 const savingGroup = ref('')
@@ -80,15 +114,34 @@ const load = async () => {
     const res = await api.index()
     brand.site_logo = res.data.brand.site_logo || ''
     brand.site_name = res.data.brand.site_name || ''
+    brand.site_theme = res.data.brand.site_theme || DEFAULT_THEME
     groups.value = res.data.groups || []
+    applyNftTheme(brand.site_theme)
+}
+
+/** 点色块 / 输入色值：即时预览（不落库） */
+const previewTheme = (hex: string) => {
+    if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+        applyNftTheme(hex)
+    }
 }
 
 const saveBrand = async () => {
     savingBrand.value = true
     try {
-        const res = await api.save({ data: { site_logo: brand.site_logo, site_name: brand.site_name } })
+        const res = await api.save({
+            data: {
+                site_logo: brand.site_logo,
+                site_name: brand.site_name,
+                site_theme: brand.site_theme,
+            },
+        })
         if (res.data.site_name) {
             document.title = res.data.site_name
+        }
+        if (res.data.site_theme) {
+            applyNftTheme(res.data.site_theme)
+            setCachedTheme(res.data.site_theme)
         }
         ElMessage.success('品牌信息已保存，全站生效')
     } finally {
@@ -151,6 +204,38 @@ onMounted(() => load())
 }
 .brand-save {
     align-self: flex-end;
+}
+.theme-body {
+    padding: 6px 20px 14px;
+}
+.theme-dots {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.theme-dot {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    box-shadow: 0 2px 8px rgba(31, 59, 104, 0.18);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+}
+.theme-dot:hover {
+    transform: scale(1.12);
+}
+.theme-dot.active {
+    border-color: var(--ink);
+    transform: scale(1.12);
+    box-shadow: 0 2px 10px rgba(31, 59, 104, 0.3);
+}
+.theme-input {
+    width: 120px;
+    margin-left: 6px;
+    font-family: 'Source Serif Pro', Georgia, serif;
 }
 .group-body {
     padding: 14px 20px 0;

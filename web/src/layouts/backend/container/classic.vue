@@ -12,16 +12,23 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import PrototypeAside from '/@/layouts/backend/components/prototype-aside.vue'
 import PrototypeHeader from '/@/layouts/backend/components/prototype-header.vue'
 import CloseFullScreen from '/@/layouts/backend/components/closeFullScreen.vue'
 import Main from '/@/layouts/backend/router-view/main.vue'
 import { useNavTabs } from '/@/stores/navTabs'
 import { prototypeShell as shell, closeMobile } from '/@/layouts/backend/components/prototypeShell'
+import { initNftTheme } from '/@/utils/nft-theme'
 
 defineOptions({
     name: 'layout/container/classic',
 })
 
 const navTabs = useNavTabs()
+
+onMounted(() => {
+    // C 端主题色引擎：缓存秒生效 + 服务端值异步校正（后台全站颜色跟随 C 端主色）
+    initNftTheme()
+})
 </script>
