@@ -8,6 +8,8 @@
 --glass-border:1px solid rgba(255,255,255,.72);
 --glass-shadow:0 8px 28px rgba(31,59,104,.07),inset 0 1px 0 rgba(255,255,255,.9);
 --r-lg:16px;--r-md:12px;--r-sm:8px;--sidebar-w:232px;
+/* 侧边栏独立色彩（默认与页面主色一致；「自主配色」模式下由 JS 覆写） */
+--side-rgb:74,143,247;--side-deep-rgb:47,111,224;--side-light-rgb:86,163,252;--side-deep:#2f6fe0;--side-grad:linear-gradient(135deg,#56a3fc 0%,#3d7ff0 100%);
 }
 button{font-family:inherit}
 body{font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;color:var(--ink);font-size:14px;
@@ -54,6 +56,12 @@ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/sv
 .user-info b{font-size:13px;display:block}
 .user-info span{font-size:11px;color:var(--ink-muted)}
 .chip-btns{display:flex;gap:6px}
+/* 自主配色：侧边栏独立色彩（#sidebar 作用域覆写，默认值与 --acc-* 同源） */
+#sidebar .logo{background:var(--side-grad);box-shadow:0 6px 16px rgba(var(--side-deep-rgb),.4)}
+#sidebar .nav-item:hover{background:rgba(var(--side-rgb),.1)}
+#sidebar .nav-item.active{background:var(--side-grad);box-shadow:0 6px 16px rgba(var(--side-deep-rgb),.35)}
+#sidebar .avatar{background:var(--side-grad)}
+#sidebar .collapse-btn{border-color:rgba(var(--side-rgb),.4);color:var(--side-deep)}
 
 main{flex:1;padding:0 24px 24px;display:flex;flex-direction:column;min-width:0}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 4px 14px;position:sticky;top:0;z-index:50;

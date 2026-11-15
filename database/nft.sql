@@ -954,6 +954,9 @@ CREATE TABLE IF NOT EXISTS `agreement` (
 -- ------------------------------------------------------------
 INSERT INTO `setting` (`name`,`group`,`title`,`value`,`createtime`,`updatetime`) VALUES
 ('site_theme','brand','C端主题主色(后台主色跟随)','#4a8ff7',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('admin_theme_mode','brand','后台配色模式(sync_c=同步C端/custom=自主配色)','sync_c',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('admin_theme_color','brand','后台页面主色(自主配色模式)','#4a8ff7',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('admin_sidebar_color','brand','后台侧边栏色(空=跟随页面主色)','',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 ('mod_invite','activity','邀请模块总开关(关闭后C端整体隐藏,场次配置保留)','1',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 ('mod_checkin','activity','签到模块总开关','1',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 ('mod_register','activity','注册模块总开关','1',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),

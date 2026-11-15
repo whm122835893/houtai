@@ -43,7 +43,7 @@ class Setting extends Backend
     {
         $rows = $this->model->order('id', 'asc')->select();
 
-        $brand  = ['site_logo' => '', 'site_name' => '', 'site_theme' => '#4a8ff7'];
+        $brand = ['site_logo' => '', 'site_name' => '', 'site_theme' => '#4a8ff7', 'admin_theme_mode' => 'sync_c', 'admin_theme_color' => '#4a8ff7', 'admin_sidebar_color' => ''];
         $groups = [];
         foreach ($rows as $row) {
             $group = (string) $row['group'];
@@ -102,8 +102,14 @@ class Setting extends Backend
             if ($known[$name] === $value) {
                 continue; // 值未变化
             }
-            if ($name === 'site_theme' && !preg_match('/^#[0-9a-fA-F]{6}$/', $value)) {
+            if (in_array($name, ['site_theme', 'admin_theme_color']) && !preg_match('/^#[0-9a-fA-F]{6}$/', $value)) {
                 $this->error('主题色格式错误，应为 #RRGGBB 十六进制色值');
+            }
+            if ($name === 'admin_sidebar_color' && $value !== '' && !preg_match('/^#[0-9a-fA-F]{6}$/', $value)) {
+                $this->error('侧边栏色格式错误，应为 #RRGGBB 十六进制色值，或留空跟随页面主色');
+            }
+            if ($name === 'admin_theme_mode' && !in_array($value, ['sync_c', 'custom'])) {
+                $this->error('配色模式不合法（sync_c=同步C端 / custom=自主配色）');
             }
             $this->model->where('name', $name)->update([
                 'value'      => $value,
@@ -126,15 +132,39 @@ class Setting extends Backend
             OperLog::record('运营参数', '保存参数', '', '共更新 ' . $changedNum . ' 项');
         }
 
-        $this->success('', ['changed' => $changedNum, 'site_name' => $siteName, 'site_theme' => $themeColor]);
+        // 配色模式 / 自主配色变更单独记录
+        if (isset($data['admin_theme_mode']) && (string) $data['admin_theme_mode'] !== $known['admin_theme_mode']) {
+            $modeCn  = ['sync_c' => '同步 C 端', 'custom' => '自主配色'];
+            $modeVal = (string) $data['admin_theme_mode'];
+            if (isset($modeCn[$modeVal])) {
+                OperLog::record('运营参数', '切换配色模式', 'admin_theme_mode', '后台配色切换为「' . $modeCn[$modeVal] . '」');
+            }
+        }
+
+        $this->success('', [
+            'changed'             => $changedNum,
+            'site_name'           => $siteName,
+            'site_theme'          => $themeColor,
+            'admin_theme_mode'    => isset($data['admin_theme_mode']) ? (string) $data['admin_theme_mode'] : '',
+            'admin_theme_color'   => isset($data['admin_theme_color']) ? (string) $data['admin_theme_color'] : '',
+            'admin_sidebar_color' => array_key_exists('admin_sidebar_color', $data) ? (string) $data['admin_sidebar_color'] : '',
+        ]);
     }
 
     /**
-     * 当前 C 端主题色（轻量接口，任何登录管理员可调）
+     * 当前配色方案（轻量接口，任何登录管理员可调）
+     * 返回：site_theme（C 端主题色）+ 后台配色模式与自主配色值
      */
     public function theme(): void
     {
-        $value = (string) ($this->model->where('name', 'site_theme')->value('value') ?: '');
-        $this->success('', ['site_theme' => preg_match('/^#[0-9a-fA-F]{6}$/', $value) ? $value : '#4a8ff7']);
+        $rows  = $this->model->where('name', 'in', ['site_theme', 'admin_theme_mode', 'admin_theme_color', 'admin_sidebar_color'])->column('value', 'name');
+        $hex   = fn ($v) => preg_match('/^#[0-9a-fA-F]{6}$/', (string) $v) ? $v : '';
+        $mode  = (string) ($rows['admin_theme_mode'] ?? 'sync_c');
+        $this->success('', [
+            'site_theme'          => $hex($rows['site_theme'] ?? '') ?: '#4a8ff7',
+            'admin_theme_mode'    => in_array($mode, ['sync_c', 'custom']) ? $mode : 'sync_c',
+            'admin_theme_color'   => $hex($rows['admin_theme_color'] ?? '') ?: '#4a8ff7',
+            'admin_sidebar_color' => $hex($rows['admin_sidebar_color'] ?? ''),
+        ]);
     }
 }
