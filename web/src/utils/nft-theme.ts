@@ -45,15 +45,15 @@ const deriveTheme = (rgb: number[]) => {
     return { soft, deep, light, s1, s2 }
 }
 
-/** 记录最近一次页面主色派生结果（侧边栏「跟随页面」时复用） */
-let lastPage = deriveTheme(hex2rgb(DEFAULT_THEME)!)
+/** 记录最近一次页面主色 RGB（侧边栏「跟随页面」时复用同一派生） */
+let lastPageRgb = hex2rgb(DEFAULT_THEME)!
 
 /** 应用页面主题色到 documentElement（即时生效，无需刷新） */
 export function applyNftTheme(hex: string) {
     const rgb = hex2rgb(hex)
     if (!rgb) return
+    lastPageRgb = rgb
     const d = deriveTheme(rgb)
-    lastPage = d
     const V = document.documentElement.style
     V.setProperty('--blue', hx(rgb))
     V.setProperty('--blue-deep', hx(d.deep))
@@ -73,13 +73,14 @@ export function applyNftTheme(hex: string) {
  */
 export function applyNftSidebar(hex: string) {
     const rgb = hex2rgb(hex)
-    const d = deriveTheme(rgb || lastPage)
+    const base = rgb || lastPageRgb
+    const d = deriveTheme(base)
     const V = document.documentElement.style
-    V.setProperty('--side-rgb', rgb ? rgb.map(Math.round).join(',') : V.getPropertyValue('--acc-rgb') || '74,143,247')
+    V.setProperty('--side-rgb', base.map(Math.round).join(','))
     V.setProperty('--side-deep-rgb', d.deep.map(Math.round).join(','))
     V.setProperty('--side-light-rgb', d.light.map(Math.round).join(','))
     V.setProperty('--side-deep', hx(d.deep))
-    V.setProperty('--side-grad', `linear-gradient(135deg,${hx(d.light)} 0%,${hx(rgb || hex2rgb(V.getPropertyValue('--blue') || DEFAULT_THEME)!)} 100%)`)
+    V.setProperty('--side-grad', `linear-gradient(135deg,${hx(d.light)} 0%,${hx(base)} 100%)`)
 }
 
 const CACHE_KEY = 'nft-theme-color'
