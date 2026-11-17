@@ -16,7 +16,7 @@
 | | ↳ 优先购 | 藏品支持优先购窗口（优先购开始时间 → 开售时间），资格三种：持有指定藏品凭证 / 白名单用户 / 不启用，每人限购可配，窗口结束自动全员开放 |
 | | 分类管理 | 排序、停用启用、被引用删除拦截（提示数量） |
 | | 订单管理 | 一级购/市场购、类型与状态 tag、详情含支付信息 |
-| | 抽签发售 | 报名期→截止抽签→中签购买期；中签名额=发售量÷每人限购，报名不足全中；随机抽签事务化、报名/中签记录可查；活动表 ba_nft_raffle + 报名表 ba_nft_raffle_apply |
+| | 抽签发售 | 报名期→截止抽签→中签购买期；中签名额=发售量÷每人限购，报名不足全中；随机抽签事务化、报名/中签记录可查；活动表 `raffle` + 报名表 `raffle_apply` |
 | | 市场寄售 | 挂单列表（在售/已售/已下架）、下架（事务回滚持仓）、求购单 |
 | | 持仓查询 | NFT 编号/所属藏品/持有人/来源/状态，按用户或藏品筛选 |
 | | 定向发放 | 创建任务（藏品+份数+规则）、执行/重试、进度展示 |
@@ -58,8 +58,8 @@ php think run             # 访问 http://localhost:8000 完成可视化安装
 mysql -u用户名 -p 数据库名 < database/nft.sql
 ```
 
-> 该脚本创建 20 张 `ba_nft_*` 业务表 + 17 个菜单/全部按钮权限（`ba_admin_rule`，ID 从 200 起）+ 运营参数初始数据。
-> 若你的 BuildAdmin 表前缀不是 `ba_`，请先全局替换前缀再导入。
+> 该脚本创建 41 张**裸名业务表（无前缀，如 `collection`、`airdrop_item`）** + 全部菜单/按钮权限（裸名 `admin_rule`，ID 从 200 起）+ 运营参数初始数据。
+> 本项目约定安装 BuildAdmin 时表前缀**留空**（即 `.env` 中 `PREFIX =`）；若你的安装用了其它前缀，请先全局替换本脚本中的表名再导入。
 
 ### 3. 覆盖复制本目录文件到 BuildAdmin 项目
 
@@ -111,13 +111,13 @@ pnpm run dev      # 开发调试；生产 pnpm run build 后产物发布到 publ
 - **权限**：
   - 写按钮统一 `v-if="auth('nft/xxx/动作')"`；给运营人员配「只读」角色时只勾选各页 `index` 按钮即可隐藏全部写操作；
   - 运营参数、数据清理两页后端强制 `isSuperAdmin()`（401 拦截）。
-- **操作日志**：所有写操作自动写入 `ba_nft_oper_log`（模型 `OperLog::record()`）。
+- **操作日志**：所有写操作自动写入 `oper_log`（模型 `OperLog::record()`）。
 - **主题**：设计系统全部在 `web/src/styles/nft-glass.scss`（`.glass .stat-card .tbl .btn .tag .pager .modal .bars` 等），页面只写少量私有样式；≤768px 自动切换移动端布局。
 
 ## 五、C 端（Vue）对接
 
-- 本 SQL 的 20 张表即 C 端数据模型：藏品 `ba_nft_collection`、持仓 `ba_nft_hold`、订单 `ba_nft_order`、寄售 `ba_nft_market_order`、公告 `ba_nft_notice`、轮播 `ba_nft_banner`、品牌与运营参数 `ba_nft_setting`。
-- 在 BuildAdmin 的 `app/api/controller/` 下新增 C 端控制器（如 `Nft.php`），用 `Db::name('nft_setting')` 等读取数据即可；品牌 logo/名称保存后 C 端直接读 `ba_nft_setting` 即时生效。
+- 本 SQL 的 41 张裸名表即 C 端数据模型：藏品 `collection`、持仓 `hold`、订单 `order`、寄售 `market_order`、公告 `notice`、轮播 `banner`、品牌与运营参数 `setting`（全部无前缀）。
+- 在 BuildAdmin 的 `app/api/controller/` 下新增 C 端控制器（如 `Nft.php`），用 `Db::name('setting')` 等读取数据即可（前缀为空，name 即裸表名）；品牌 logo/名称保存后 C 端直接读 `setting` 即时生效。
 - C 端购买/寄售/抽奖等写业务建议复用 `app/admin/controller/nft/` 内同等事务逻辑（铸造持仓、扣减库存、写流水），或抽到 `app/common/service/` 供两端调用。
 
 ## 六、二次开发
