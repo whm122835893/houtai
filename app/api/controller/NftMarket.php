@@ -4,6 +4,8 @@ namespace app\api\controller;
 
 use Throwable;
 use think\facade\Db;
+use app\common\library\Kyc;
+use app\common\library\NftChain;
 use app\common\controller\Frontend;
 use app\common\service\NftTrade;
 
@@ -85,6 +87,9 @@ class NftMarket extends Frontend
         if ((int) NftTrade::cfg('market_open', '1') !== 1) {
             $this->error('二级市场当前关闭');
         }
+        if (($kycBlock = Kyc::tradeBlockReason((int) $this->auth->id)) !== '') {
+            $this->error($kycBlock); // 未实名禁交易(开关 kyc_block_trade)
+        }
         $holdId = $this->request->post('hold_id/d', 0);
         $price  = (int) round((float) $this->request->post('price/f', 0) * 100);
 
@@ -148,6 +153,9 @@ class NftMarket extends Frontend
         if ((int) NftTrade::cfg('market_open', '1') !== 1) {
             $this->error('二级市场当前关闭');
         }
+        if (($kycBlock = Kyc::tradeBlockReason((int) $this->auth->id)) !== '') {
+            $this->error($kycBlock); // 未实名禁交易(开关 kyc_block_trade)
+        }
         $id = $this->request->post('id/d', 0);
 
         Db::startTrans();
@@ -199,6 +207,7 @@ class NftMarket extends Frontend
             Db::rollback();
             $this->error($e->getMessage() ?: '购买失败');
         }
+        NftChain::enqueue('order', (int) $mo['id'], '', '市场购买成交'); // 上链记录(开关 chain_enabled)
         $this->success('购买成功，藏品已入仓', [
             'order_no' => $orderNo ?? '',
             'hold_id'  => (int) $hold['id'] ?? 0,

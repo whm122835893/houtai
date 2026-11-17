@@ -1048,3 +1048,86 @@ INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,ke
 INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
 (213,'button','批量导入','nft/collection/import','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (211,'button','批量导入','nft/user/import','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+
+-- ============================================================
+-- 2026-11-17 增量：实名审核(KYC) + 区块链管理
+-- ============================================================
+-- 用户实名认证表
+CREATE TABLE IF NOT EXISTS `user_kyc` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` bigint unsigned NOT NULL DEFAULT 0 COMMENT '用户ID',
+  `real_name` varchar(64) NOT NULL DEFAULT '' COMMENT '真实姓名',
+  `idcard` varchar(32) NOT NULL DEFAULT '' COMMENT '身份证号',
+  `idcard_front` varchar(255) NOT NULL DEFAULT '' COMMENT '身份证人像面',
+  `idcard_back` varchar(255) NOT NULL DEFAULT '' COMMENT '身份证国徽面',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '0待审 1通过 2驳回',
+  `source` tinyint NOT NULL DEFAULT 1 COMMENT '1用户提交 2后台补录',
+  `audit_mode` varchar(16) NOT NULL DEFAULT '' COMMENT '审核方式 manual/auto/third',
+  `audit_remark` varchar(255) NOT NULL DEFAULT '' COMMENT '审核备注/驳回理由',
+  `audit_uid` bigint unsigned NOT NULL DEFAULT 0 COMMENT '审核管理员ID(0=系统自动)',
+  `audit_time` bigint NOT NULL DEFAULT 0 COMMENT '审核时间',
+  `createtime` bigint NOT NULL DEFAULT 0,
+  `updatetime` bigint NOT NULL DEFAULT 0,
+  `deletetime` bigint NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  KEY `status` (`status`),
+  KEY `idcard` (`idcard`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户实名认证';
+
+-- 区块链上链记录表
+CREATE TABLE IF NOT EXISTS `chain_record` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `biz_type` varchar(24) NOT NULL DEFAULT '' COMMENT '业务类型 order/transfer/mint/synthesis/swap',
+  `biz_id` bigint unsigned NOT NULL DEFAULT 0 COMMENT '业务单据ID',
+  `chain` varchar(24) NOT NULL DEFAULT '' COMMENT '链标识',
+  `address` varchar(64) NOT NULL DEFAULT '' COMMENT '用户钱包地址',
+  `tx_hash` varchar(128) NOT NULL DEFAULT '' COMMENT '交易哈希',
+  `block_no` bigint NOT NULL DEFAULT 0 COMMENT '区块高度',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '0待上链 1成功 2失败',
+  `remark` varchar(255) NOT NULL DEFAULT '' COMMENT '备注',
+  `createtime` bigint NOT NULL DEFAULT 0,
+  `updatetime` bigint NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `biz` (`biz_type`,`biz_id`),
+  KEY `status` (`status`),
+  KEY `hash` (`tx_hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='区块链上链记录';
+
+-- 实名/区块链运营参数
+INSERT INTO `setting` (`name`,`group`,`title`,`value`,`createtime`,`updatetime`) VALUES
+('kyc_mode','kyc','审核模式(manual=人工审核/auto=自动通过/third=第三方接口)','manual',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('kyc_check_dup','kyc','身份证占用查重(1=同一证件仅可绑定一个账号)','1',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('kyc_block_trade','kyc','未实名禁交易(1=下单/寄售/转赠需先实名)','0',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('kyc_third_url','kyc','第三方实名接口地址(留空=转人工审核)','',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('kyc_third_key','kyc','第三方实名接口密钥','',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('chain_enabled','chain','上链开关(1=业务单据生成上链记录)','0',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('chain_name','chain','链名称(如:长安链/FabricBFT/BSN)','',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('chain_net','chain','网络环境(main=主网/test=测试网)','test',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('chain_rpc','chain','节点 RPC 地址','',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('chain_contract','chain','合约地址/链码名称','',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('chain_scan','chain','区块链浏览器地址(记录页拼接哈希跳转)','',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('chain_platform_wallet','chain','平台钱包地址','',UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+
+-- 菜单：实名审核(业务管理) + 区块链管理(系统)
+INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
+(210,'menu','实名审核','nft/kyc','nft/kyc','','tab','','/src/views/backend/nft/kyc/index.vue',1,'none','实名认证审核(自动/手动/第三方)',90,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+SET @kycMenu = LAST_INSERT_ID();
+INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
+(250,'menu','区块链管理','nft/chain','nft/chain','','tab','','/src/views/backend/nft/chain/index.vue',1,'none','链配置与上链记录',60,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+SET @chainMenu = LAST_INSERT_ID();
+INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
+(@kycMenu,'button','查看','nft/kyc/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(@kycMenu,'button','审核','nft/kyc/audit','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(@kycMenu,'button','补录','nft/kyc/add','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(@kycMenu,'button','导出','nft/kyc/export','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+SET @chainMenu = LAST_INSERT_ID();
+INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
+(@chainMenu,'button','查看','nft/chain/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(@chainMenu,'button','配置保存','nft/chain/config','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(@chainMenu,'button','补录哈希','nft/chain/record','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(@chainMenu,'button','重试','nft/chain/retry','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+
+-- 实名审核设置按钮
+INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
+(364,'button','审核设置','nft/kyc/cfg','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());

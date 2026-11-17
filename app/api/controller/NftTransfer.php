@@ -4,6 +4,8 @@ namespace app\api\controller;
 
 use Throwable;
 use think\facade\Db;
+use app\common\library\Kyc;
+use app\common\library\NftChain;
 use app\common\controller\Frontend;
 use app\common\service\NftTrade;
 
@@ -53,6 +55,9 @@ class NftTransfer extends Frontend
      */
     public function create(): void
     {
+        if (($kycBlock = Kyc::tradeBlockReason((int) $this->auth->id)) !== '') {
+            $this->error($kycBlock); // 未实名禁交易(开关 kyc_block_trade)
+        }
         $holdId   = $this->request->post('hold_id/d', 0);
         $toMobile = trim((string) $this->request->post('to_mobile/s', ''));
 
@@ -123,6 +128,9 @@ class NftTransfer extends Frontend
      */
     public function accept(): void
     {
+        if (($kycBlock = Kyc::tradeBlockReason((int) $this->auth->id)) !== '') {
+            $this->error($kycBlock); // 未实名禁交易(开关 kyc_block_trade)
+        }
         $no = trim((string) $this->request->post('transfer_no/s', ''));
         Db::startTrans();
         try {
@@ -145,6 +153,7 @@ class NftTransfer extends Frontend
             Db::rollback();
             $this->error($e->getMessage() ?: '接收失败');
         }
+        NftChain::enqueue('transfer', (int) $t['id'], '', '转赠接收完成'); // 上链记录(开关 chain_enabled)
         $this->success('接收成功，藏品已入仓');
     }
 

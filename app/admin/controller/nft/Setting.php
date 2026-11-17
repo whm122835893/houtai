@@ -24,6 +24,8 @@ class Setting extends Backend
         'trade'    => '交易参数',
         'activity' => '活动参数',
         'reward'   => '奖励参数',
+        'kyc'      => '实名认证',
+        'chain'    => '区块链',
     ];
 
     public function initialize(): void
@@ -52,6 +54,10 @@ class Setting extends Backend
 
             if ($group === 'brand') {
                 $brand[$name] = $name === 'site_logo' && $value !== '' ? full_url($value) : $value;
+                continue;
+            }
+            // kyc/chain 组由「实名审核」「区块链管理」专属页面管理，运营参数页不展示
+            if (in_array($group, ['kyc', 'chain'])) {
                 continue;
             }
             if (!isset($groups[$group])) {
