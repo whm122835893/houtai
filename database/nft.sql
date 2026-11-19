@@ -1131,3 +1131,23 @@ INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,ke
 -- 实名审核设置按钮
 INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
 (364,'button','审核设置','nft/kyc/cfg','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+
+-- ============================================================
+-- 验证码中心：分场景独立开关（存 config 表，get_sys_config 可直接读取并自动清缓存）
+-- 场景：后台登录 / C端登录 / C端注册 / 短信邮件验证码发送前
+-- 形式：click=点选式(与后台登录共用 BuildAdmin 点选验证码) graphic=字符图形(4位数字)
+-- ============================================================
+INSERT INTO `config` (`name`,`group`,`title`,`tip`,`type`,`value`,`content`,`rule`,`extend`,`allow_del`,`weigh`) VALUES
+('captcha_admin_login','captcha','后台管理员登录验证码','开启后管理员登录需先通过点选式验证码','switch','1','0:关闭,1:开启','','',0,0),
+('captcha_user_login','captcha','C端会员登录验证码','开启后 C 端登录接口需携带验证码参数','switch','1','0:关闭,1:开启','','',0,0),
+('captcha_user_register','captcha','C端会员注册验证码','开启后 C 端注册接口需携带验证码参数','switch','1','0:关闭,1:开启','','',0,0),
+('captcha_ems_send','captcha','验证码短信/邮件前置验证','开启后发送短信/邮件验证码前需先通过点选式验证码','switch','1','0:关闭,1:开启','','',0,0),
+('captcha_mode','captcha','验证码形式','click=点选式(点对文字) graphic=字符图形(4位数字)','radio','click','click:点选式,graphic:字符图形','','',0,0);
+
+-- 菜单：验证码设置(系统)
+INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
+(250,'menu','验证码设置','nft/captcha','nft/captcha','','tab','','/src/views/backend/nft/captcha/index.vue',1,'none','分场景验证码独立开关配置',50,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+SET @captchaMenu = LAST_INSERT_ID();
+INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
+(@captchaMenu,'button','查看','nft/captcha/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(@captchaMenu,'button','保存配置','nft/captcha/cfg','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());

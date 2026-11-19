@@ -39,17 +39,22 @@ class Ems extends Frontend
             $this->error(__('Mail sending service unavailable'));
         }
 
-        $validate = Validate::rule([
-            'email'       => 'require|email',
-            'event'       => 'require',
-            'captchaId'   => 'require',
-            'captchaInfo' => 'require'
-        ])->message([
-            'email'       => 'email format error',
-            'event'       => 'Parameter error',
-            'captchaId'   => 'Captcha error',
-            'captchaInfo' => 'Captcha error'
-        ]);
+        $captchaOn = \app\common\library\CaptchaCenter::sceneOn('ems_send');
+        $rules     = [
+            'email' => 'require|email',
+            'event' => 'require',
+        ];
+        $messages = [
+            'email' => 'email format error',
+            'event' => 'Parameter error',
+        ];
+        if ($captchaOn) {
+            $rules['captchaId']     = 'require';
+            $rules['captchaInfo']   = 'require';
+            $messages['captchaId']   = 'Captcha error';
+            $messages['captchaInfo'] = 'Captcha error';
+        }
+        $validate = Validate::rule($rules)->message($messages);
         if (!$validate->check($params)) {
             $this->error(__($validate->getError()));
         }
@@ -59,11 +64,13 @@ class Ems extends Frontend
             $this->error(__('Parameter error'));
         }
 
-        // 检查验证码
-        $captchaObj   = new Captcha();
-        $clickCaptcha = new ClickCaptcha();
-        if (!$clickCaptcha->check($params['captchaId'], $params['captchaInfo'])) {
-            $this->error(__('Captcha error'));
+        // 检查验证码（后台「验证码设置」独立开关 captcha_ems_send 控制，关闭时跳过）
+        $captchaObj = new Captcha();
+        if (\app\common\library\CaptchaCenter::sceneOn('ems_send')) {
+            $clickCaptcha = new ClickCaptcha();
+            if (!$clickCaptcha->check($params['captchaId'], $params['captchaInfo'])) {
+                $this->error(__('Captcha error'));
+            }
         }
 
         // 检查频繁发送

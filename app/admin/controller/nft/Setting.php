@@ -56,8 +56,8 @@ class Setting extends Backend
                 $brand[$name] = $name === 'site_logo' && $value !== '' ? full_url($value) : $value;
                 continue;
             }
-            // kyc/chain 组由「实名审核」「区块链管理」专属页面管理，运营参数页不展示
-            if (in_array($group, ['kyc', 'chain'])) {
+            // kyc/chain/captcha 组由「实名审核」「区块链管理」「验证码设置」专属页面管理，运营参数页不展示
+            if (in_array($group, ['kyc', 'chain', 'captcha'])) {
                 continue;
             }
             if (!isset($groups[$group])) {

@@ -64,7 +64,7 @@ class Index extends Backend
             ], $this->auth::LOGIN_RESPONSE_CODE);
         }
 
-        $captchaSwitch = Config::get('buildadmin.admin_login_captcha');
+        $captchaSwitch = \app\common\library\CaptchaCenter::sceneOn('admin_login');
 
         // 检查提交
         if ($this->request->isPost()) {

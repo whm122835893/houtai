@@ -3,6 +3,7 @@
 namespace app\api\controller;
 
 use app\common\controller\Frontend;
+use app\common\library\CaptchaCenter;
 use think\facade\Db;
 
 /**
@@ -35,6 +36,12 @@ class NftAuth extends Frontend
         }
         if (strlen((string) $password) < 6 || strlen((string) $password) > 32) {
             $this->error('密码长度需在 6 ~ 32 位之间');
+        }
+
+        // 注册验证码（后台「验证码设置」独立开关，关闭时不校验）
+        $captchaMsg = CaptchaCenter::verifyRequest('user_register', $this->request);
+        if ($captchaMsg !== '') {
+            $this->error($captchaMsg);
         }
 
         $extend = [];
@@ -152,6 +159,12 @@ class NftAuth extends Frontend
         $password = (string) $this->request->post('password/s', '');
         if ($username === '' || $password === '') {
             $this->error('请输入用户名和密码');
+        }
+
+        // 登录验证码（后台「验证码设置」独立开关，关闭时不校验）
+        $captchaMsg = CaptchaCenter::verifyRequest('user_login', $this->request);
+        if ($captchaMsg !== '') {
+            $this->error($captchaMsg);
         }
 
         $res = $this->auth->login($username, $password, false);
