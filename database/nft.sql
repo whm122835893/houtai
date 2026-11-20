@@ -529,10 +529,7 @@ INSERT INTO `setting` (`name`,`group`,`title`,`value`,`createtime`,`updatetime`)
 ('transfer_fee','trade','转赠手续费(元,0=免费)','0',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 ('order_auto_cancel','trade','订单自动取消(分钟)','15',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 ('market_open','trade','二级市场开关','1',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-('lottery_daily_times','activity','每日抽奖次数','3',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-('synthesis_daily_times','activity','每日合成次数','5',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-('invite_reward_enable','reward','邀请奖励开关','1',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-('register_reward_chance','reward','注册奖励抽奖次数','1',UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+('invite_reward_enable','reward','邀请奖励开关','1',UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- ------------------------------------------------------------
 -- 四、签到活动 / 注册活动（v2 追加）

@@ -56,8 +56,11 @@ class Setting extends Backend
                 $brand[$name] = $name === 'site_logo' && $value !== '' ? full_url($value) : $value;
                 continue;
             }
-            // kyc/chain/captcha 组由「实名审核」「区块链管理」「验证码设置」专属页面管理，运营参数页不展示
-            if (in_array($group, ['kyc', 'chain', 'captcha'])) {
+            // 专属页面管理的组不在运营参数页重复展示：
+            // kyc/chain/captcha → 实名审核/区块链管理/验证码设置
+            // checkin/register → 签到活动/注册活动（结构化 UI 管理同一批参数，裸文本框易误改）
+            // thirdparty → 第三方服务页（sms_config 为 JSON，不宜裸编辑）
+            if (in_array($group, ['kyc', 'chain', 'captcha', 'checkin', 'register', 'thirdparty'])) {
                 continue;
             }
             if (!isset($groups[$group])) {
