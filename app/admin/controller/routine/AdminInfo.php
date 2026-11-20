@@ -14,7 +14,7 @@ class AdminInfo extends Backend
      */
     protected object $model;
 
-    protected string|array $preExcludeFields = ['username', 'last_login_time', 'password', 'salt', 'status'];
+    protected string|array $preExcludeFields = ['username', 'last_login_time', 'password', 'salt', 'status', 'old_password'];
 
     protected array $authAllowFields = ['id', 'username', 'nickname', 'avatar', 'email', 'mobile', 'motto', 'last_login_time'];
 
@@ -67,10 +67,19 @@ class AdminInfo extends Backend
             }
 
             if (!empty($data['password'])) {
+                // 改密必须验证旧密码，防止会话被劫持后密码被直接篡改
+                $oldPassword = (string) ($data['old_password'] ?? '');
+                if ($oldPassword === '') {
+                    $this->error('修改密码必须先验证旧密码');
+                }
+                if (!verify_password($oldPassword, $row->password, ['salt' => $row->salt])) {
+                    $this->error('旧密码不正确');
+                }
+                unset($data['old_password']);
                 $this->model->resetPassword($this->auth->id, $data['password']);
             }
 
-            $data   = $this->excludeFields($data);
+            $data = $this->excludeFields($data);
             $result = false;
             $this->model->startTrans();
             try {

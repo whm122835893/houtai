@@ -62,6 +62,13 @@
                                     v-model="state.adminInfo.motto"
                                 ></el-input>
                             </el-form-item>
+                            <el-form-item label="旧密码" prop="old_password">
+                                <el-input
+                                    type="password"
+                                    placeholder="修改密码时必填，用于验证身份"
+                                    v-model="state.adminInfo.old_password"
+                                ></el-input>
+                            </el-form-item>
                             <el-form-item :label="t('routine.adminInfo.New password')" prop="password">
                                 <el-input
                                     type="password"
@@ -196,6 +203,19 @@ const rules: Partial<Record<string, FormItemRule[]>> = reactive({
     email: [buildValidatorData({ name: 'email', title: t('routine.adminInfo.e-mail address') })],
     mobile: [buildValidatorData({ name: 'mobile', message: t('Please enter the correct field', { field: t('routine.adminInfo.phone number') }) })],
     password: [buildValidatorData({ name: 'password' })],
+    // 填写新密码时旧密码必填（与后端双重校验）
+    old_password: [
+        {
+            validator: (rule: any, val: string, callback: Function) => {
+                if (state.adminInfo.password && !val) {
+                    callback(new Error('修改密码必须先填写旧密码'))
+                } else {
+                    callback()
+                }
+            },
+            trigger: 'blur',
+        },
+    ],
 })
 
 const onAvatarBeforeUpload = (file: any) => {
