@@ -4,8 +4,11 @@ namespace app\admin\controller\nft;
 
 use Throwable;
 use app\common\controller\Backend;
+use app\admin\model\Config;
 use app\admin\model\nft\Setting as SettingModel;
 use app\admin\model\nft\OperLog;
+use think\facade\Cache;
+use think\facade\Db;
 
 /**
  * 运营参数（仅超级管理员）
@@ -56,11 +59,11 @@ class Setting extends Backend
                 $brand[$name] = $name === 'site_logo' && $value !== '' ? full_url($value) : $value;
                 continue;
             }
-            // 专属页面管理的组不在运营参数页重复展示：
+            // 专属页面/入口管理的组不在运营参数页重复展示：
             // kyc/chain/captcha → 实名审核/区块链管理/验证码设置
-            // checkin/register → 签到活动/注册活动（结构化 UI 管理同一批参数，裸文本框易误改）
-            // thirdparty → 第三方服务页（sms_config 为 JSON，不宜裸编辑）
-            if (in_array($group, ['kyc', 'chain', 'captcha', 'checkin', 'register', 'thirdparty'])) {
+            // checkin/register/thirdparty → 签到活动/注册活动/第三方服务
+            // activity/reward → 仅剩模块总开关与邀请奖励开关，统一收口到「活动中心」
+            if (in_array($group, ['kyc', 'chain', 'captcha', 'checkin', 'register', 'thirdparty', 'activity', 'reward'])) {
                 continue;
             }
             if (!isset($groups[$group])) {
@@ -148,6 +151,13 @@ class Setting extends Backend
             if (isset($modeCn[$modeVal])) {
                 OperLog::record('运营参数', '切换配色模式', 'admin_theme_mode', '后台配色切换为「' . $modeCn[$modeVal] . '」');
             }
+        }
+
+        // 平台名称同步 BuildAdmin 原生 config 表（后台 Index.php 读的是那边，双表不一致会导致标题不联动）
+        // config 表无 updatetime 字段，用 Db 直写并手动清 sys_config 缓存
+        if ($siteName !== '') {
+            Db::name('config')->where('name', 'site_name')->update(['value' => $siteName]);
+            Cache::tag(Config::$cacheTag)->clear();
         }
 
         $this->success('', [

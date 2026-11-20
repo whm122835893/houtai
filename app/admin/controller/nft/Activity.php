@@ -184,6 +184,7 @@ class Activity extends Backend
         $now    = time();
 
         // 模块总开关（mod_invite / mod_checkin / mod_register / mod_lottery / mod_synthesis）
+        // 同步写 C 端真实消费键，否则开关只改展示状态、C 端不生效
         if ($type === 'mod') {
             $key = $this->request->param('id/s', '');
             $allow = ['invite', 'checkin', 'register', 'lottery', 'synthesis'];
@@ -191,7 +192,16 @@ class Activity extends Backend
                 $this->error('未知模块');
             }
             $this->model->where('name', 'mod_' . $key)->update(['value' => (string) $status, 'updatetime' => $now]);
-            OperLog::record('活动中心', $status ? '开启模块' : '关闭模块', 'mod_' . $key, '');
+            // C 端功能开关键（lottery/synthesis 无独立键，跟随场次状态）
+            $legacyMap = [
+                'invite'   => 'invite_reward_enable',
+                'checkin'  => 'ck_enabled',
+                'register' => 'rg_enabled',
+            ];
+            if (isset($legacyMap[$key])) {
+                $this->model->where('name', $legacyMap[$key])->update(['value' => (string) $status, 'updatetime' => $now]);
+            }
+            OperLog::record('活动中心', $status ? '开启模块' : '关闭模块', 'mod_' . $key, '已同步 C 端生效键' . (isset($legacyMap[$key]) ? '：' . $legacyMap[$key] : ''));
             $this->success();
         }
 
