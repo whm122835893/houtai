@@ -109,6 +109,40 @@
                     </div>
                 </template>
 
+                <!-- C 端配色扩展 -->
+                <div class="form-row">
+                    <label>C 端背景模式（C 端下次拉取配置生效）</label>
+                    <div class="theme-dots" style="gap: 8px">
+                        <button class="side-follow" :class="{ active: brand.site_bg_mode === 'light' }" @click="brand.site_bg_mode = 'light'">亮色</button>
+                        <button class="side-follow" :class="{ active: brand.site_bg_mode === 'dark' }" @click="brand.site_bg_mode = 'dark'">暗色</button>
+                        <button class="side-follow" :class="{ active: brand.site_bg_mode === 'system' }" @click="brand.site_bg_mode = 'system'">跟随系统</button>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label>C 端辅色（按钮渐变第二色，留空 = 主色自动派生）</label>
+                    <div class="theme-dots">
+                        <button class="side-follow" :class="{ active: !brand.site_accent }" @click="brand.site_accent = ''">主色派生</button>
+                        <button
+                            v-for="[c, n] in THEME_PRESETS"
+                            :key="'ac' + c"
+                            class="theme-dot"
+                            :class="{ active: brand.site_accent.toLowerCase() === c }"
+                            :style="{ background: c }"
+                            :title="n"
+                            @click="brand.site_accent = c"
+                        ></button>
+                        <input v-model="brand.site_accent" class="input theme-input" placeholder="留空=主色派生" maxlength="7" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label>金刚区图标样式（C 端渲染底板形状；入口清单在「金刚区管理」页维护）</label>
+                    <div class="theme-dots" style="gap: 8px">
+                        <button class="side-follow" :class="{ active: brand.kk_icon_shape === 'circle' }" @click="brand.kk_icon_shape = 'circle'">圆形底板</button>
+                        <button class="side-follow" :class="{ active: brand.kk_icon_shape === 'squircle' }" @click="brand.kk_icon_shape = 'squircle'">圆角方形</button>
+                        <button class="side-follow" :class="{ active: brand.kk_icon_shape === 'plain' }" @click="brand.kk_icon_shape = 'plain'">无底板</button>
+                    </div>
+                </div>
+
                 <div class="group-foot" style="border-top: none; padding-top: 0">
                     <span class="cell-sub">自主配色模式下页面颜色与侧边栏颜色可分别选择，随时可换</span>
                     <button v-if="auth('save')" class="btn btn-primary btn-sm" :disabled="savingBrand" @click="saveBrand">
@@ -156,10 +190,13 @@ import { THEME_PRESETS, applyScheme, applyNftTheme, applyNftSidebar, DEFAULT_THE
 
 defineOptions({ name: 'nft/setting' })
 
-const brand = reactive<{ site_logo: string; site_name: string; site_theme: string; admin_theme_mode: string; admin_theme_color: string; admin_sidebar_color: string }>({
+const brand = reactive<{ site_logo: string; site_name: string; site_theme: string; site_bg_mode: string; site_accent: string; kk_icon_shape: string; admin_theme_mode: string; admin_theme_color: string; admin_sidebar_color: string }>({
     site_logo: '',
     site_name: '',
     site_theme: DEFAULT_THEME,
+    site_bg_mode: 'light',
+    site_accent: '',
+    kk_icon_shape: 'squircle',
     admin_theme_mode: DEFAULT_MODE,
     admin_theme_color: DEFAULT_THEME,
     admin_sidebar_color: '',
@@ -173,6 +210,9 @@ const load = async () => {
     brand.site_logo = res.data.brand.site_logo || ''
     brand.site_name = res.data.brand.site_name || ''
     brand.site_theme = res.data.brand.site_theme || DEFAULT_THEME
+    brand.site_bg_mode = res.data.brand.site_bg_mode || 'light'
+    brand.site_accent = res.data.brand.site_accent || ''
+    brand.kk_icon_shape = res.data.brand.kk_icon_shape || 'squircle'
     brand.admin_theme_mode = res.data.brand.admin_theme_mode || DEFAULT_MODE
     brand.admin_theme_color = res.data.brand.admin_theme_color || DEFAULT_THEME
     brand.admin_sidebar_color = res.data.brand.admin_sidebar_color || ''
@@ -218,6 +258,9 @@ const saveBrand = async () => {
                 site_logo: brand.site_logo,
                 site_name: brand.site_name,
                 site_theme: brand.site_theme,
+                site_bg_mode: brand.site_bg_mode,
+                site_accent: brand.site_accent,
+                kk_icon_shape: brand.kk_icon_shape,
                 admin_theme_mode: brand.admin_theme_mode,
                 admin_theme_color: brand.admin_theme_color,
                 admin_sidebar_color: brand.admin_sidebar_color,

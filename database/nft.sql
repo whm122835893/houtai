@@ -1148,3 +1148,50 @@ SET @captchaMenu = LAST_INSERT_ID();
 INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
 (@captchaMenu,'button','查看','nft/captcha/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (@captchaMenu,'button','保存配置','nft/captcha/cfg','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+
+-- ============================================================
+-- C端首页装修：金刚区（不同 C 端客户端可按 platform 过滤各自的入口配置）
+-- icon 为空时由 /api/nfthome/icon/{key} 按主题色动态渲染内置 SVG 图标
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `home_kingkong` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `title` varchar(50) NOT NULL DEFAULT '' COMMENT '入口名称',
+  `icon` varchar(255) NOT NULL DEFAULT '' COMMENT '自定义图标(附件URL,空=内置SVG)',
+  `icon_key` varchar(50) NOT NULL DEFAULT 'market' COMMENT '内置图标键(market/transfer/invite/checkin/lottery/synthesis/blindbox/collection/profile)',
+  `link_type` varchar(20) NOT NULL DEFAULT 'page' COMMENT '跳转类型:page=站内页面,url=外部链接,none=无',
+  `link_value` varchar(255) NOT NULL DEFAULT '' COMMENT '页面标识或链接',
+  `badge_type` varchar(20) NOT NULL DEFAULT 'none' COMMENT '角标:none=无,dot=红点,num=数字',
+  `badge_value` int NOT NULL DEFAULT 0 COMMENT '角标数字(badge_type=num时)',
+  `platform` varchar(20) NOT NULL DEFAULT 'all' COMMENT '适用端:all=全部,h5=网页端,mp=小程序,app=APP',
+  `weigh` int NOT NULL DEFAULT 0 COMMENT '排序(越大越前)',
+  `status` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '状态:0=隐藏,1=显示',
+  `createtime` bigint NULL DEFAULT NULL COMMENT '创建时间',
+  `updatetime` bigint NULL DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_status_plat` (`status`, `platform`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='C端首页金刚区';
+
+INSERT INTO `home_kingkong` (`title`,`icon`,`icon_key`,`link_type`,`link_value`,`badge_type`,`badge_value`,`platform`,`weigh`,`status`,`createtime`,`updatetime`) VALUES
+('市场','market','page','market','none',0,'all',90,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('转赠','transfer','page','transfer','none',0,'all',80,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('邀请','invite','page','invite','none',0,'all',70,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('签到','checkin','page','checkin','none',0,'all',60,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('抽奖','lottery','page','lottery','none',0,'all',50,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('合成','synthesis','page','synthesis','none',0,'all',40,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('盲盒','blindbox','page','blindbox','none',0,'all',30,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+
+-- 金刚区样式与C端配色扩展（brand 组，随运营参数品牌卡/配色卡管理）
+INSERT INTO `setting` (`name`,`group`,`title`,`value`,`createtime`,`updatetime`) VALUES
+('site_bg_mode','brand','C端背景模式(light=亮色/dark=暗色/system=跟随系统)','light',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('site_accent','brand','C端辅色(空=主色派生)','',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+('kk_icon_shape','brand','金刚区图标样式(circle=圆形底板,squircle=圆角方形,plain=无底板)','squircle',UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+
+-- 菜单：金刚区管理（运营组 240）
+INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
+(240,'menu','金刚区管理','nft/kingkong','nft/kingkong','fa fa-th-large','tab','','/src/views/backend/nft/kingkong/index.vue',1,'none','C端首页金刚区入口配置(支持多端 platform)',73,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+SET @kkMenu = LAST_INSERT_ID();
+INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
+(@kkMenu,'button','查看','nft/kingkong/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(@kkMenu,'button','添加/编辑','nft/kingkong/save','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(@kkMenu,'button','删除','nft/kingkong/del','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(@kkMenu,'button','显隐/排序/样式','nft/kingkong/status','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());

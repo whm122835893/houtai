@@ -48,7 +48,7 @@ class Setting extends Backend
     {
         $rows = $this->model->order('id', 'asc')->select();
 
-        $brand = ['site_logo' => '', 'site_name' => '', 'site_theme' => '#4a8ff7', 'admin_theme_mode' => 'sync_c', 'admin_theme_color' => '#4a8ff7', 'admin_sidebar_color' => ''];
+        $brand = ['site_logo' => '', 'site_name' => '', 'site_theme' => '#4a8ff7', 'site_bg_mode' => 'light', 'site_accent' => '', 'kk_icon_shape' => 'squircle', 'admin_theme_mode' => 'sync_c', 'admin_theme_color' => '#4a8ff7', 'admin_sidebar_color' => ''];
         $groups = [];
         foreach ($rows as $row) {
             $group = (string) $row['group'];
@@ -122,6 +122,15 @@ class Setting extends Backend
             }
             if ($name === 'admin_theme_mode' && !in_array($value, ['sync_c', 'custom'])) {
                 $this->error('配色模式不合法（sync_c=同步C端 / custom=自主配色）');
+            }
+            if ($name === 'site_bg_mode' && !in_array($value, ['light', 'dark', 'system'], true)) {
+                $this->error('C端背景模式不合法（light/dark/system）');
+            }
+            if ($name === 'site_accent' && $value !== '' && !preg_match('/^#[0-9a-fA-F]{6}$/', $value)) {
+                $this->error('辅色格式错误，应为 #RRGGBB 或留空（主色派生）');
+            }
+            if ($name === 'kk_icon_shape' && !in_array($value, ['circle', 'squircle', 'plain'], true)) {
+                $this->error('金刚区图标样式不合法（circle/squircle/plain）');
             }
             $this->model->where('name', $name)->update([
                 'value'      => $value,
