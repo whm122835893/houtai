@@ -35,11 +35,11 @@
             </div>
         </div>
 
-        <!-- 配色方案 -->
+        <!-- 后台配色 -->
         <div class="glass rise" :style="{ '--i': 2 }" style="margin-bottom: 16px">
             <div class="card-head">
-                <h3>配色方案</h3>
-                <span class="en">THEME</span>
+                <h3>后台配色</h3>
+                <span class="en">ADMIN THEME</span>
             </div>
             <div class="theme-body">
                 <div class="form-row">
@@ -58,20 +58,7 @@
 
                 <!-- 同步 C 端模式 -->
                 <div v-if="brand.admin_theme_mode === 'sync_c'" class="form-row">
-                    <label>C 端主题色（后台全站颜色跟随 C 端：主色 / 渐变 / 光晕 / 阴影一并切换；点色块即时预览，保存后持久生效）</label>
-                    <div class="theme-dots">
-                        <button
-                            v-for="[c, n] in THEME_PRESETS"
-                            :key="c"
-                            class="theme-dot"
-                            :class="{ active: brand.site_theme.toLowerCase() === c }"
-                            :style="{ background: c }"
-                            :title="n"
-                            @click="previewTheme(c)"
-                        ></button>
-                        <input v-model="brand.site_theme" class="input theme-input" placeholder="#4a8ff7" maxlength="7" @input="previewTheme(brand.site_theme)" />
-                    </div>
-                    <div class="brand-tip">自定义任意色值（与 C 端取色一致即可）；低饱和色（白/灰主题）自动将光晕与背景中性化</div>
+                    <div class="brand-tip">后台颜色跟随下方「C 端配色」卡中的 C 端主题色：在 C 端配色卡修改主色后，后台的主色 / 渐变 / 光晕 / 阴影一并同步变化</div>
                 </div>
 
                 <!-- 自主配色模式 -->
@@ -109,6 +96,40 @@
                     </div>
                 </template>
 
+                <div class="group-foot" style="border-top: none; padding-top: 0">
+                    <span class="cell-sub">仅影响后台界面，与 C 端配色互不干扰</span>
+                    <button v-if="auth('save')" class="btn btn-primary btn-sm" :disabled="savingAdmin" @click="saveAdminTheme">
+                        {{ savingAdmin ? '保存中…' : '保存后台配色' }}
+                    </button>
+                    <span v-else class="cell-sub">仅超级管理员可保存</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- C 端配色 -->
+        <div class="glass rise" :style="{ '--i': 3 }" style="margin-bottom: 16px">
+            <div class="card-head">
+                <h3>C 端配色</h3>
+                <span class="en">CLIENT THEME</span>
+            </div>
+            <div class="theme-body">
+                <div class="form-row">
+                    <label>C 端主题色（C 端主色，通过配置接口下发；点色块即时预览，保存后持久生效）</label>
+                    <div class="theme-dots">
+                        <button
+                            v-for="[c, n] in THEME_PRESETS"
+                            :key="c"
+                            class="theme-dot"
+                            :class="{ active: brand.site_theme.toLowerCase() === c }"
+                            :style="{ background: c }"
+                            :title="n"
+                            @click="previewCTheme(c)"
+                        ></button>
+                        <input v-model="brand.site_theme" class="input theme-input" placeholder="#4a8ff7" maxlength="7" @input="previewCTheme(brand.site_theme)" />
+                    </div>
+                    <div class="brand-tip">自定义任意色值；低饱和色（白/灰主题）自动将光晕与背景中性化；后台配色为「同步 C 端」模式时，后台颜色随之联动</div>
+                </div>
+
                 <!-- C 端配色扩展 -->
                 <div class="form-row">
                     <label>C 端背景模式（C 端下次拉取配置生效）</label>
@@ -144,9 +165,9 @@
                 </div>
 
                 <div class="group-foot" style="border-top: none; padding-top: 0">
-                    <span class="cell-sub">自主配色模式下页面颜色与侧边栏颜色可分别选择，随时可换</span>
-                    <button v-if="auth('save')" class="btn btn-primary btn-sm" :disabled="savingBrand" @click="saveBrand">
-                        {{ savingBrand ? '保存中…' : '保存配色方案' }}
+                    <span class="cell-sub">以上配置仅影响 C 端展示，后台界面不受影响</span>
+                    <button v-if="auth('save')" class="btn btn-primary btn-sm" :disabled="savingClient" @click="saveClientTheme">
+                        {{ savingClient ? '保存中…' : '保存 C 端配色' }}
                     </button>
                     <span v-else class="cell-sub">仅超级管理员可保存</span>
                 </div>
@@ -154,7 +175,7 @@
         </div>
 
         <!-- 参数分组 -->
-        <div v-for="(group, gi) in groups" :key="group.name" class="glass rise" :style="{ '--i': gi + 3 }" style="margin-bottom: 16px">
+        <div v-for="(group, gi) in groups" :key="group.name" class="glass rise" :style="{ '--i': gi + 4 }" style="margin-bottom: 16px">
             <div class="card-head">
                 <h3>{{ group.title }}</h3>
                 <span class="en">{{ group.name }}</span>
@@ -203,6 +224,8 @@ const brand = reactive<{ site_logo: string; site_name: string; site_theme: strin
 })
 const groups = ref<any[]>([])
 const savingBrand = ref(false)
+const savingAdmin = ref(false)
+const savingClient = ref(false)
 const savingGroup = ref('')
 
 const load = async () => {
@@ -230,10 +253,12 @@ const switchMode = (mode: string) => {
     }
 }
 
-/** 点色块 / 输入色值：即时预览（不落库） */
-const previewTheme = (hex: string) => {
+/** C 端主题色预览：只改 C 端主色；后台为「同步 C 端」模式时联动预览后台 */
+const previewCTheme = (hex: string) => {
     if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
-        applyNftTheme(hex)
+        if (brand.admin_theme_mode === 'sync_c') {
+            applyNftTheme(hex)
+        }
     }
 }
 /** 自主配色：页面颜色预览 */
@@ -257,23 +282,53 @@ const saveBrand = async () => {
             data: {
                 site_logo: brand.site_logo,
                 site_name: brand.site_name,
-                site_theme: brand.site_theme,
-                site_bg_mode: brand.site_bg_mode,
-                site_accent: brand.site_accent,
-                kk_icon_shape: brand.kk_icon_shape,
-                admin_theme_mode: brand.admin_theme_mode,
-                admin_theme_color: brand.admin_theme_color,
-                admin_sidebar_color: brand.admin_sidebar_color,
             },
         })
         if (res.data.site_name) {
             document.title = res.data.site_name
         }
-        // 以本地状态为准应用最终方案（含模式 + 页面色 + 侧边栏色）
-        applyScheme(brand.admin_theme_mode, brand.admin_theme_color, brand.admin_sidebar_color, brand.site_theme)
-        ElMessage.success('配色方案已保存，全站生效')
+        ElMessage.success('品牌信息已保存')
     } finally {
         savingBrand.value = false
+    }
+}
+
+/** 保存后台配色：只提交后台三项（模式/页面色/侧边栏色），不影响 C 端 */
+const saveAdminTheme = async () => {
+    savingAdmin.value = true
+    try {
+        await api.save({
+            data: {
+                admin_theme_mode: brand.admin_theme_mode,
+                admin_theme_color: brand.admin_theme_color,
+                admin_sidebar_color: brand.admin_sidebar_color,
+            },
+        })
+        applyScheme(brand.admin_theme_mode, brand.admin_theme_color, brand.admin_sidebar_color, brand.site_theme)
+        ElMessage.success('后台配色已保存，仅后台界面生效')
+    } finally {
+        savingAdmin.value = false
+    }
+}
+
+/** 保存 C 端配色：只提交 C 端四项，通过配置接口下发给 C 端 */
+const saveClientTheme = async () => {
+    savingClient.value = true
+    try {
+        await api.save({
+            data: {
+                site_theme: brand.site_theme,
+                site_bg_mode: brand.site_bg_mode,
+                site_accent: brand.site_accent,
+                kk_icon_shape: brand.kk_icon_shape,
+            },
+        })
+        if (brand.admin_theme_mode === 'sync_c') {
+            applyScheme('sync_c', '', '', brand.site_theme)
+        }
+        ElMessage.success('C 端配色已保存，C 端下次拉取配置时生效')
+    } finally {
+        savingClient.value = false
     }
 }
 
