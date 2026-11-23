@@ -350,7 +350,8 @@ INSERT IGNORE INTO `notice_category` (`id`,`title`,`weigh`,`status`,`createtime`
 (2,'活动',50,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (3,'系统',40,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
--- 轮播 (
+-- 轮播
+CREATE TABLE IF NOT EXISTS `banner` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `title` varchar(100) NOT NULL DEFAULT '' COMMENT '标题',
   `image` varchar(255) NOT NULL DEFAULT '' COMMENT '图片',
