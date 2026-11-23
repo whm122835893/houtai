@@ -6,8 +6,30 @@
             <span class="en">MARKET</span>
         </div>
 
+        <!-- 交易手续费 -->
+        <div class="glass rise" :style="{ '--i': 1 }" style="margin-bottom: 16px">
+            <div class="card-head">
+                <h3>交易手续费</h3>
+                <span class="en">FEE</span>
+            </div>
+            <div class="fee-body">
+                <div class="fee-row">
+                    <label>寄售手续费率（%）</label>
+                    <template v-if="isSuper">
+                        <input v-model="feeRate" class="input fee-input" placeholder="0~100，最多两位小数" maxlength="6" />
+                        <button class="btn btn-primary btn-sm" :disabled="savingFee" @click="saveFee">{{ savingFee ? '保存中…' : '保存费率' }}</button>
+                    </template>
+                    <template v-else>
+                        <span class="serif-num">{{ feeRate }}%</span>
+                        <span class="cell-sub">仅超级管理员可修改</span>
+                    </template>
+                </div>
+                <div class="brand-tip">卖家成交后按此费率扣除手续费（成交价 × 费率），净入 = 成交价 − 手续费；修改后新成交订单即按新费率结算</div>
+            </div>
+        </div>
+
         <!-- Tab 切换 -->
-        <div class="glass filter-bar rise" :style="{ '--i': 1 }">
+        <div class="glass filter-bar rise" :style="{ '--i': 2 }">
             <button class="btn" :class="tab === 'orders' ? 'btn-primary' : 'btn-ghost'" @click="switchTab('orders')">挂单列表</button>
             <button class="btn" :class="tab === 'buys' ? 'btn-primary' : 'btn-ghost'" @click="switchTab('buys')">求购单</button>
             <template v-if="tab === 'orders'">
@@ -23,7 +45,7 @@
         </div>
 
         <!-- 挂单列表 -->
-        <div v-if="tab === 'orders'" class="glass rise" :style="{ '--i': 2 }">
+        <div v-if="tab === 'orders'" class="glass rise" :style="{ '--i': 3 }">
             <div class="tbl-wrap">
                 <table class="tbl">
                     <thead>
@@ -79,7 +101,7 @@
         </div>
 
         <!-- 求购单列表（只读） -->
-        <div v-if="tab === 'buys'" class="glass rise" :style="{ '--i': 2 }">
+        <div v-if="tab === 'buys'" class="glass rise" :style="{ '--i': 3 }">
             <div class="tbl-wrap">
                 <table class="tbl">
                     <thead>
@@ -121,9 +143,36 @@ import { computed, reactive, ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { auth } from '/@/utils/common'
 import { fen2yuan, fmtTime } from '/@/utils/nft'
+import { useAdminInfo } from '/@/stores/adminInfo'
 import * as api from '/@/api/backend/nft/market'
 
 defineOptions({ name: 'nft/market' })
+
+const adminInfo = useAdminInfo()
+const isSuper = computed(() => !!adminInfo.super)
+
+/* 寄售手续费率（原运营参数「交易参数」组，收口到本页维护） */
+const feeRate = ref('5')
+const savingFee = ref(false)
+const loadFee = async () => {
+    const res = await api.fee()
+    feeRate.value = String(res.data.rate ?? '5')
+}
+const saveFee = async () => {
+    const v = feeRate.value.trim()
+    if (!/^(0|[1-9]\d{0,2})(\.\d{1,2})?$/.test(v) || parseFloat(v) > 100) {
+        ElMessage.warning('手续费率应为 0~100 的数字（最多两位小数）')
+        return
+    }
+    savingFee.value = true
+    try {
+        const res = await api.feeSave(v)
+        feeRate.value = String(res.data.rate ?? v)
+        ElMessage.success('手续费率已保存，新成交订单按新费率结算')
+    } finally {
+        savingFee.value = false
+    }
+}
 
 const statusText: Record<number, string> = { 0: '在售', 1: '已售', 2: '已下架' }
 const statusCls: Record<number, string> = { 0: 'tag-green', 1: 'tag-blue', 2: 'tag-gray' }
@@ -182,5 +231,27 @@ const doOff = (row: any) => {
     )
 }
 
-onMounted(() => loadOrders())
+onMounted(() => {
+    loadOrders()
+    loadFee()
+})
 </script>
+
+<style scoped>
+.fee-body {
+    padding: 16px 20px 18px;
+}
+.fee-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.fee-row label {
+    font-size: 13px;
+    color: var(--ink-2, #5a6b85);
+}
+.fee-input {
+    width: 180px;
+}
+</style>

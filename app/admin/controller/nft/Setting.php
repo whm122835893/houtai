@@ -66,6 +66,10 @@ class Setting extends Backend
             if (in_array($group, ['kyc', 'chain', 'captcha', 'checkin', 'register', 'thirdparty', 'activity', 'reward'])) {
                 continue;
             }
+            // 寄售手续费率收口到「市场寄售」页维护，不在运营参数页重复展示
+            if ($name === 'sell_fee_rate') {
+                continue;
+            }
             if (!isset($groups[$group])) {
                 $groups[$group] = [
                     'name'  => $group,
@@ -116,6 +120,9 @@ class Setting extends Backend
             }
             if (in_array($name, ['site_theme', 'admin_theme_color']) && !preg_match('/^#[0-9a-fA-F]{6}$/', $value)) {
                 $this->error('主题色格式错误，应为 #RRGGBB 十六进制色值');
+            }
+            if ($name === 'sell_fee_rate' && (!preg_match('/^(0|[1-9]\d{0,2})(\.\d{1,2})?$/', $value) || (float) $value > 100)) {
+                $this->error('寄售手续费率不合法，应为 0~100 的数字（最多两位小数）');
             }
             if ($name === 'admin_sidebar_color' && $value !== '' && !preg_match('/^#[0-9a-fA-F]{6}$/', $value)) {
                 $this->error('侧边栏色格式错误，应为 #RRGGBB 十六进制色值，或留空跟随页面主色');

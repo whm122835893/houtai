@@ -16,3 +16,11 @@ export function off(id: number) {
 export function buys(params: object = {}) {
     return createAxios({ url: url + 'buys', method: 'get', params })
 }
+
+export function fee() {
+    return createAxios({ url: url + 'fee', method: 'get' })
+}
+
+export function feeSave(rate: string) {
+    return createAxios({ url: url + 'feeSave', method: 'post', data: { rate } })
+}

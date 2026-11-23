@@ -26,6 +26,42 @@ class Market extends Backend
     }
 
     /**
+     * 当前寄售手续费率（setting.sell_fee_rate，%）
+     */
+    public function fee(): void
+    {
+        $rate = (string) Db::name('setting')->where('name', 'sell_fee_rate')->value('value');
+        $this->success('', ['rate' => $rate !== '' ? $rate : '5']);
+    }
+
+    /**
+     * 保存寄售手续费率（仅超级管理员；范围 0~100，最多两位小数）
+     */
+    public function feeSave(): void
+    {
+        if (!$this->auth->isSuperAdmin()) {
+            $this->error('仅超级管理员可修改手续费率', [], 401);
+        }
+        $rate = $this->request->post('rate/s', '');
+        if ($rate === '' || !preg_match('/^(0|[1-9]\d{0,2})(\.\d{1,2})?$/', $rate) || (float) $rate > 100) {
+            $this->error('手续费率不合法，应为 0~100 的数字（最多两位小数）');
+        }
+        $old = (string) Db::name('setting')->where('name', 'sell_fee_rate')->value('value');
+        if ($old === '') {
+            $this->error('参数不存在（sell_fee_rate）');
+        }
+        if ($old === $rate) {
+            $this->success('手续费率未变化', ['rate' => $rate]);
+        }
+        Db::name('setting')->where('name', 'sell_fee_rate')->update([
+            'value'      => $rate,
+            'updatetime' => time(),
+        ]);
+        OperLog::record('市场寄售', '修改手续费率', 'sell_fee_rate', '寄售手续费率由 ' . $old . '% 变更为 ' . $rate . '%');
+        $this->success('手续费率已保存，新挂单成交即按新费率结算', ['rate' => $rate]);
+    }
+
+    /**
      * 挂单列表
      */
     public function index(): void
