@@ -333,8 +333,24 @@ CREATE TABLE IF NOT EXISTS `notice` (
   KEY `idx_category` (`category`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='公告表';
 
--- 轮播
-CREATE TABLE IF NOT EXISTS `banner` (
+-- 公告分类
+CREATE TABLE IF NOT EXISTS `notice_category` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `title` varchar(50) NOT NULL DEFAULT '' COMMENT '分类名称',
+  `weigh` int(10) NOT NULL DEFAULT 50 COMMENT '权重(越大越前)',
+  `status` tinyint(3) unsigned NOT NULL DEFAULT 1 COMMENT '状态:0=隐藏,1=显示',
+  `createtime` bigint(16) DEFAULT NULL COMMENT '创建时间',
+  `updatetime` bigint(16) DEFAULT NULL COMMENT '更新时间',
+  `deletetime` bigint(16) unsigned NOT NULL DEFAULT 0 COMMENT '删除时间',
+  PRIMARY KEY (`id`),
+  KEY `status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='公告分类表';
+INSERT IGNORE INTO `notice_category` (`id`,`title`,`weigh`,`status`,`createtime`,`updatetime`) VALUES
+(1,'公告',60,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(2,'活动',50,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(3,'系统',40,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+
+-- 轮播 (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `title` varchar(100) NOT NULL DEFAULT '' COMMENT '标题',
   `image` varchar(255) NOT NULL DEFAULT '' COMMENT '图片',
@@ -413,6 +429,7 @@ INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_t
 INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
 (240,0,'menu_dir','内容运营','nft/content','nft/content','fa fa-newspaper-o',NULL,'','',0,'none','',96,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (241,240,'menu','公告管理','nft/notice','nft/notice','fa fa-bullhorn','tab','','/src/views/backend/nft/notice/index.vue',1,'none','',75,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(383,240,'menu','公告分类','nft/noticeCategory','nft/noticeCategory','fa fa-tags','tab','','/src/views/backend/nft/noticeCategory/index.vue',1,'none','',72,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (242,240,'menu','轮播管理','nft/banner','nft/banner','fa fa-image','tab','','/src/views/backend/nft/banner/index.vue',1,'none','',74,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 顶级目录：系统
@@ -505,6 +522,10 @@ INSERT INTO `admin_rule` (`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,
 (241,'button','添加','nft/notice/add','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (241,'button','编辑','nft/notice/edit','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (241,'button','删除','nft/notice/del','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(383,'button','查看','nft/noticeCategory/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(383,'button','添加/编辑','nft/noticeCategory/save','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(383,'button','删除','nft/noticeCategory/del','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(383,'button','显隐','nft/noticeCategory/status','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 -- 轮播管理
 (242,'button','查看','nft/banner/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (242,'button','添加','nft/banner/add','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),

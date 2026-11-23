@@ -11,9 +11,7 @@
             <input v-model="query.keyword" class="input" placeholder="标题关键词" @keyup.enter="load(1)" />
             <select v-model="query.category" class="select">
                 <option :value="0">全部分类</option>
-                <option :value="1">公告</option>
-                <option :value="2">活动</option>
-                <option :value="3">系统</option>
+                <option v-for="c in cats" :key="c.id" :value="c.id">{{ c.title }}</option>
             </select>
             <select v-model="query.status" class="select">
                 <option :value="-1">全部状态</option>
@@ -93,9 +91,7 @@
                         <div class="form-row" style="flex: 1">
                             <label>分类</label>
                             <select v-model="form.category" class="select">
-                                <option :value="1">公告</option>
-                                <option :value="2">活动</option>
-                                <option :value="3">系统</option>
+                                <option v-for="c in cats" :key="c.id" :value="c.id">{{ c.title }}</option>
                             </select>
                         </div>
                         <div class="form-row" style="flex: 1">
@@ -141,8 +137,18 @@ import * as api from '/@/api/backend/nft/notice'
 
 defineOptions({ name: 'nft/notice' })
 
-const categoryMap: Record<number, string> = { 1: '公告', 2: '活动', 3: '系统' }
-const categoryText = (c: number) => categoryMap[c] || '未知'
+const cats = ref<any[]>([])
+const catMap = computed<Record<number, string>>(() => {
+    const m: Record<number, string> = {}
+    for (const c of cats.value) m[c.id] = c.title
+    return m
+})
+const categoryText = (c: number) => catMap.value[c] || '未知'
+
+const loadCats = async () => {
+    const res = await api.list({ page: 1, limit: 1 })
+    cats.value = res.data.cats || []
+}
 
 const list = ref<any[]>([])
 const total = ref(0)
@@ -180,7 +186,7 @@ const tsToLocal = (ts: number | string | null | undefined): string => {
 }
 
 const openAdd = () => {
-    Object.assign(form, { id: 0, title: '', category: 1, is_top: 0, status: 1, content: '', publish_time: '' })
+    Object.assign(form, { id: 0, title: '', category: cats.value[0]?.id || 0, is_top: 0, status: 1, content: '', publish_time: '' })
     formVisible.value = true
 }
 const openEdit = (row: any) => {
@@ -220,5 +226,8 @@ const oneDel = (row: any) => {
     )
 }
 
-onMounted(() => load())
+onMounted(() => {
+    load()
+    loadCats()
+})
 </script>

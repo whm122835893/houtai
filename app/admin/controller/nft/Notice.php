@@ -6,6 +6,7 @@ use Throwable;
 use app\common\controller\Backend;
 use app\admin\model\nft\Notice as NoticeModel;
 use app\admin\model\nft\OperLog;
+use think\facade\Db;
 
 /**
  * 公告管理
@@ -31,8 +32,7 @@ class Notice extends Backend
         $limit    = $this->request->get('limit/d', 10);
         $page     = $this->request->get('page/d', 1);
 
-$where[] = ['deletetime', '=', 0];
-        $where = [];
+        $where = [['deletetime', '=', 0]];
         if ($keyword !== '') {
             $where[] = ['title', 'like', '%' . str_replace('%', '\%', $keyword) . '%'];
         }
@@ -51,7 +51,29 @@ $where[] = ['deletetime', '=', 0];
             ->page($page, $limit)
             ->select();
 
-        $this->success('', ['list' => $list, 'total' => $total]);
+        $this->success('', ['list' => $list, 'total' => $total, 'cats' => $this->cats()]);
+    }
+
+    /**
+     * 可用公告分类（从 notice_category 表读取，供下拉与展示）
+     */
+    private function cats(): array
+    {
+        return Db::name('notice_category')
+            ->where('deletetime', 0)
+            ->field(['id', 'title', 'status'])
+            ->order('weigh', 'desc')
+            ->order('id', 'asc')
+            ->select()
+            ->toArray();
+    }
+
+    /**
+     * 校验分类 ID 有效
+     */
+    private function validCat(int $cid): bool
+    {
+        return (bool) Db::name('notice_category')->where('id', $cid)->where('deletetime', 0)->count();
     }
 
     /**
@@ -66,7 +88,10 @@ $where[] = ['deletetime', '=', 0];
             } catch (Throwable $e) {
                 $this->error($e->getMessage());
             }
-            $data['category']     = (int) ($data['category'] ?? 1) ?: 1;
+            $data['category']     = (int) ($data['category'] ?? 0);
+            if (!$data['category'] || !$this->validCat($data['category'])) {
+                $this->error('请选择有效的公告分类');
+            }
             $data['is_top']       = (int) ($data['is_top'] ?? 0) ? 1 : 0;
             $data['status']       = (int) ($data['status'] ?? 1) ? 1 : 0;
             $data['publish_time'] = !empty($data['publish_time']) ? strtotime($data['publish_time']) : time();
@@ -95,7 +120,10 @@ $where[] = ['deletetime', '=', 0];
             } catch (Throwable $e) {
                 $this->error($e->getMessage());
             }
-            $data['category']     = (int) ($data['category'] ?? 1) ?: 1;
+            $data['category']     = (int) ($data['category'] ?? 0);
+            if (!$data['category'] || !$this->validCat($data['category'])) {
+                $this->error('请选择有效的公告分类');
+            }
             $data['is_top']       = (int) ($data['is_top'] ?? 0) ? 1 : 0;
             $data['status']       = (int) ($data['status'] ?? 1) ? 1 : 0;
             $data['publish_time'] = !empty($data['publish_time']) ? strtotime($data['publish_time']) : $row->publish_time;
