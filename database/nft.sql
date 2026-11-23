@@ -417,7 +417,7 @@ INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_t
 
 -- 顶级目录：系统
 INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
-(250,0,'menu_dir','系统','nft/system','nft/system','fa fa-cog',NULL,'','',0,'none','',95,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(250,0,'menu_dir','系统配置','nft/system','nft/system','fa fa-cog',NULL,'','',0,'none','',88,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (251,240,'menu','系统装修','nft/setting','nft/setting','fa fa-sliders','tab','','/src/views/backend/nft/setting/index.vue',1,'none','',71,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (252,250,'menu','数据清理','nft/cleanup','nft/cleanup','fa fa-trash-o','tab','','/src/views/backend/nft/cleanup/index.vue',1,'none','',69,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (253,250,'menu','日志审计','nft/operlog','nft/operlog','fa fa-shield','tab','','/src/views/backend/nft/operlog/index.vue',1,'none','',68,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
@@ -1195,3 +1195,10 @@ INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,ke
 (@kkMenu,'button','添加/编辑','nft/kingkong/save','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (@kkMenu,'button','删除','nft/kingkong/del','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (@kkMenu,'button','显隐/排序/样式','nft/kingkong/status','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+
+-- 常规管理并入系统配置分组（框架菜单在安装迁移中创建，导入本种子时统一归组）
+UPDATE admin_rule SET title='系统配置', weigh=88 WHERE id=250 AND type='menu_dir';
+UPDATE admin_rule SET pid=250, weigh=85 WHERE id=45;
+UPDATE admin_rule SET pid=250, weigh=84 WHERE id=48;
+UPDATE admin_rule SET pid=250, weigh=83 WHERE id=52;
+DELETE FROM admin_rule WHERE id=44 AND title='常规管理';
