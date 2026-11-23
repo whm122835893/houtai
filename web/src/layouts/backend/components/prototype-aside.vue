@@ -138,11 +138,13 @@ interface NavGroup {
 }
 
 /* 以可折叠一级菜单（含二级子项）呈现的分组，其余分组保持小标题平铺样式 */
-const COLLAPSIBLE_GROUPS = ['业务管理']
+const COLLAPSIBLE_GROUPS = ['业务管理', '活动运营', '内容运营']
 
 /* 分组图标（svg path 片段） */
 const GROUP_ICONS: Record<string, string> = {
     业务管理: '<rect x="2" y="7" width="20" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+    活动运营: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>',
+    内容运营: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 8h18M7 4v4M11 4v4M15 4v4"/>',
 }
 
 const openGroups = reactive<Record<string, boolean>>({})
