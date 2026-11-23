@@ -6,17 +6,39 @@
             <div class="brand-text"><b>灵境数藏</b><span>ADMIN CONSOLE</span></div>
         </div>
         <template v-for="group in groups" :key="group.label">
-            <div class="group-label">{{ group.label }}</div>
-            <button
-                v-for="item in group.items"
-                :key="item.name"
-                class="nav-item"
-                :class="{ active: item.name === route.name }"
-                @click="onNav(item.name)"
-            >
-                <svg viewBox="0 0 24 24" v-html="item.icon"></svg>
-                <span class="nav-text">{{ item.title }}</span>
-            </button>
+            <!-- 可折叠一级菜单：点击展开/收起，子项为二级菜单 -->
+            <template v-if="group.collapsible">
+                <button class="nav-item nav-group" :class="{ active: isGroupActive(group) }" @click="toggleGroup(group.label)">
+                    <svg viewBox="0 0 24 24" v-html="group.icon"></svg>
+                    <span class="nav-text">{{ group.label }}</span>
+                    <svg class="nav-chev" :class="{ open: !!openGroups[group.label] }" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+                <div v-show="openGroups[group.label]" class="nav-sub">
+                    <button
+                        v-for="item in group.items"
+                        :key="item.name"
+                        class="nav-item nav-subitem"
+                        :class="{ active: item.name === route.name }"
+                        @click="onNav(item.name)"
+                    >
+                        <svg viewBox="0 0 24 24" v-html="item.icon"></svg>
+                        <span class="nav-text">{{ item.title }}</span>
+                    </button>
+                </div>
+            </template>
+            <template v-else>
+                <div class="group-label">{{ group.label }}</div>
+                <button
+                    v-for="item in group.items"
+                    :key="item.name"
+                    class="nav-item"
+                    :class="{ active: item.name === route.name }"
+                    @click="onNav(item.name)"
+                >
+                    <svg viewBox="0 0 24 24" v-html="item.icon"></svg>
+                    <span class="nav-text">{{ item.title }}</span>
+                </button>
+            </template>
         </template>
         <div class="user-chip">
             <div class="avatar">{{ (adminInfo.nickname || '管').slice(0, 1) }}</div>
@@ -33,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, reactive, watch } from 'vue'
 import { useRouter, useRoute, type RouteRecordRaw } from 'vue-router'
 import { Local } from '/@/utils/storage'
 import { ADMIN_INFO } from '/@/stores/constant/cacheKey'
@@ -110,8 +132,32 @@ interface NavItem {
 }
 interface NavGroup {
     label: string
+    icon: string
     items: NavItem[]
+    collapsible?: boolean
 }
+
+/* 以可折叠一级菜单（含二级子项）呈现的分组，其余分组保持小标题平铺样式 */
+const COLLAPSIBLE_GROUPS = ['业务管理']
+
+/* 分组图标（svg path 片段） */
+const GROUP_ICONS: Record<string, string> = {
+    业务管理: '<rect x="2" y="7" width="20" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+}
+
+const openGroups = reactive<Record<string, boolean>>({})
+
+const toggleGroup = (label: string) => {
+    if (shell.collapsed) {
+        /* 折叠态点击分组：先展开侧边栏并展开该分组 */
+        toggleCollapse()
+        openGroups[label] = true
+        return
+    }
+    openGroups[label] = !openGroups[label]
+}
+
+const isGroupActive = (group: NavGroup) => group.items.some((i) => i.name === route.name)
 
 const titleOverride: Record<string, string> = {
     dashboard: '数据仪表盘',
@@ -136,20 +182,29 @@ const groups = computed<NavGroup[]>(() => {
     const routes = navTabs.state.tabsViewRoutes || []
     for (const r of routes) {
         const name = String(r.name || '')
+        const label = String(r.meta?.title || name)
+        const collapsible = COLLAPSIBLE_GROUPS.includes(label)
         if (name === 'dashboard') {
             /* 框架顶层「控制台」并入原型「概览」分组，置顶 */
             list.push({
                 label: '概览',
+                icon: ICONS.dashboard,
                 items: [{ name, title: '数据仪表盘', icon: ICONS.dashboard }],
             })
             continue
         }
         if (r.children && r.children.length) {
-            list.push({ label: String(r.meta?.title || name), items: toItems(r.children) })
+            list.push({
+                label,
+                icon: collapsible ? GROUP_ICONS[label] || pickIcon(name) : '',
+                items: toItems(r.children),
+                collapsible,
+            })
         } else {
             /* 无子级的顶层菜单（模块市场/CRUD 等）直接成项 */
             list.push({
-                label: String(r.meta?.title || name),
+                label,
+                icon: pickIcon(name),
                 items: [{ name, title: String(r.meta?.title || name), icon: pickIcon(name) }],
             })
         }
@@ -162,6 +217,19 @@ const groups = computed<NavGroup[]>(() => {
     const tail = valid.filter((g) => !priority.includes(g.label))
     return [...head, ...tail]
 })
+
+/* 当前路由落在可折叠分组内时自动展开该分组 */
+watch(
+    () => route.name,
+    () => {
+        for (const g of groups.value) {
+            if (g.collapsible && g.items.some((i) => i.name === route.name)) {
+                openGroups[g.label] = true
+            }
+        }
+    },
+    { immediate: true }
+)
 
 const onNav = (name: string) => {
     router.push({ name })
