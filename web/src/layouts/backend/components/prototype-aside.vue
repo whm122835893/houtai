@@ -138,7 +138,7 @@ interface NavGroup {
 }
 
 /* 以可折叠一级菜单（含二级子项）呈现的分组，其余分组保持小标题平铺样式 */
-const COLLAPSIBLE_GROUPS = ['业务管理', '活动运营', '内容运营', '系统', '权限管理', '会员管理', '常规管理']
+const COLLAPSIBLE_GROUPS = ['业务管理', '活动运营', '内容运营', '系统', '权限管理', '会员管理', '常规管理', '数据安全管理']
 
 /* 分组图标（svg path 片段） */
 const GROUP_ICONS: Record<string, string> = {
@@ -149,6 +149,7 @@ const GROUP_ICONS: Record<string, string> = {
     权限管理: '<path d="M12 2 4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5z"/>',
     会员管理: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5"/><circle cx="17" cy="9" r="3"/><path d="M15.5 14.7c3 .3 6 2 6 5.3"/>',
     常规管理: '<circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.06-.4.1-.8.1-1.2z"/>',
+    数据安全管理: '<rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
 }
 
 const openGroups = reactive<Record<string, boolean>>({})
