@@ -418,7 +418,7 @@ INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_t
 -- 顶级目录：系统
 INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
 (250,0,'menu_dir','系统','nft/system','nft/system','fa fa-cog',NULL,'','',0,'none','',95,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(251,250,'menu','运营参数','nft/setting','nft/setting','fa fa-sliders','tab','','/src/views/backend/nft/setting/index.vue',1,'none','',70,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(251,240,'menu','系统装修','nft/setting','nft/setting','fa fa-sliders','tab','','/src/views/backend/nft/setting/index.vue',1,'none','',71,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (252,250,'menu','数据清理','nft/cleanup','nft/cleanup','fa fa-trash-o','tab','','/src/views/backend/nft/cleanup/index.vue',1,'none','',69,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (253,250,'menu','日志审计','nft/operlog','nft/operlog','fa fa-shield','tab','','/src/views/backend/nft/operlog/index.vue',1,'none','',68,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
