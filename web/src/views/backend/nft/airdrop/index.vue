@@ -140,8 +140,8 @@
                             <option v-for="(label, t) in ruleOptions" :key="t" :value="Number(t)">{{ label }}</option>
                         </select>
                     </div>
-                    <!-- 规则参数（按类型显示） -->
-                    <div class="form-row">
+                    <!-- 规则参数（按类型显示；14 为组合条件单独渲染） -->
+                    <div v-if="form.rule_type != 14" class="form-row">
                         <label>{{ ruleParamLabel }}</label>
                         <textarea
                             v-if="[1, 6].includes(form.rule_type)"
@@ -163,6 +163,35 @@
                         <input v-else-if="form.rule_type == 10" v-model="form.rule_value" class="input" placeholder="标签名，如：vip" />
                         <input v-else class="input" value="全部启用用户，无需参数" disabled />
                     </div>
+                    <!-- 类型 14：按持仓编号尾号（藏品尾号空投） -->
+                    <template v-if="form.rule_type == 14">
+                        <div class="form-grid">
+                            <div class="form-row">
+                                <label>凭证藏品 *</label>
+                                <select v-model.number="rule14.col" class="select">
+                                    <option :value="0">请选择藏品</option>
+                                    <option v-for="c in collections" :key="c.id" :value="c.id">{{ c.name }}（#{{ c.id }}）</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <label>编号尾号</label>
+                                <select v-model.number="rule14.tail" class="select">
+                                    <option :value="-1">不限</option>
+                                    <option v-for="n in 10" :key="n - 1" :value="n - 1">{{ n - 1 }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <label>发放模式 *</label>
+                            <select v-model.number="rule14.mode" class="select">
+                                <option :value="1">每人 1 份（命中用户各投 1 份）</option>
+                                <option :value="2">1:1 按尾号持仓（持有几份尾号藏品投几份）</option>
+                            </select>
+                            <div class="cell-sub" style="margin-top: 6px">
+                                按启用用户的有效持仓（含寄售中）实时圈人；发放份数需 ≥ 命中{{ rule14.mode == 2 ? '持仓份数' : '人数' }}
+                            </div>
+                        </div>
+                    </template>
                     <div class="form-grid">
                         <div class="form-row">
                             <label>到账方式</label>
@@ -307,6 +336,7 @@ const ruleOptions: Record<number, string> = {
     10: '按用户标签（含指定标签）',
     11: '邀请排行（邀请数 Top N）',
     13: '按名单（引用发放名录快照）',
+    14: '按持仓编号尾号（尾号筛选，模式可选）',
 }
 
 const ruleMap: Record<number, { text: string; cls: string }> = {
@@ -322,6 +352,7 @@ const ruleMap: Record<number, { text: string; cls: string }> = {
     10: { text: '按标签', cls: 'tag-green' },
     11: { text: '邀请排行', cls: 'tag-orange' },
     13: { text: '按名单', cls: 'tag-green' },
+    14: { text: '尾号空投', cls: 'tag-orange' },
 }
 const statusMap: Record<number, { text: string; cls: string }> = {
     0: { text: '待发放', cls: 'tag-orange' },
@@ -337,6 +368,16 @@ const ruleValueBrief = (row: any) => {
     if (row.rule_type == 13) {
         return row.rule_value_brief || '名单 #' + v
     }
+    if (row.rule_type == 14) {
+        if (row.rule_value_brief) return row.rule_value_brief
+        try {
+            const c = JSON.parse(v)
+            const col = collections.value.find((x) => x.id == c.col)
+            return (col ? col.name : '藏品#' + c.col) + ' · 尾号' + (c.tail >= 0 ? ' ' + c.tail : '不限') + ' · ' + (c.mode == 2 ? '1:1 按尾号持仓' : '每人 1 份')
+        } catch {
+            return '按持仓编号尾号'
+        }
+    }
     if (row.rule_type == 4) {
         const c = collections.value.find((x) => x.id == v)
         return c ? '凭证：' + c.name : '凭证藏品 #' + v
@@ -349,7 +390,7 @@ const ruleValueBrief = (row: any) => {
 
 const ruleParamLabel = computed(() => {
     const t = Number(form.rule_type)
-    return { 1: '规则参数（每行一个用户ID）*', 3: '邀请数门槛 *', 4: '凭证藏品 *', 5: '持仓数量门槛 *', 6: '白名单（用户ID/手机号，每行一个）*', 7: '累计消费门槛（元）*', 8: '注册早于日期 *', 10: '标签名 *', 11: '排行取前 N 名 *', 13: '目标名单 *' }[t] || '规则参数'
+    return { 1: '规则参数（每行一个用户ID）*', 3: '邀请数门槛 *', 4: '凭证藏品 *', 5: '持仓数量门槛 *', 6: '白名单（用户ID/手机号，每行一个）*', 7: '累计消费门槛（元）*', 8: '注册早于日期 *', 10: '标签名 *', 11: '排行取前 N 名 *', 13: '目标名单 *', 14: '凭证藏品 / 尾号 / 模式 *' }[t] || '规则参数'
 })
 
 // 切换目标规则时清空旧参数
@@ -357,8 +398,12 @@ watch(
     () => form.rule_type,
     () => {
         form.rule_value = ''
+        Object.assign(rule14, { col: 0, tail: -1, mode: 1 })
     }
 )
+
+// 类型 14 组合条件（凭证藏品 / 尾号 / 模式）
+const rule14 = reactive({ col: 0, tail: -1, mode: 1 })
 
 const maxPage = computed(() => Math.max(1, Math.ceil(total.value / query.limit)))
 const pageBtns = computed(() => {
@@ -415,6 +460,14 @@ const submitForm = async () => {
         ElMessage.warning('换发抽奖次数策略需填写换发次数')
         return
     }
+    let ruleValue = form.rule_value
+    if (Number(form.rule_type) === 14) {
+        if (!rule14.col) {
+            ElMessage.warning('请选择凭证藏品')
+            return
+        }
+        ruleValue = JSON.stringify({ col: Number(rule14.col), tail: Number(rule14.tail), mode: Number(rule14.mode) })
+    }
     saving.value = true
     try {
         await api.add({
@@ -422,6 +475,7 @@ const submitForm = async () => {
             collection_id: Number(form.collection_id),
             num: Number(form.num),
             rule_type: Number(form.rule_type),
+            rule_value: ruleValue,
             claim_mode: Number(form.claim_mode),
             dup_policy: Number(form.dup_policy),
             dup_reward: Number(form.dup_reward) || 0,

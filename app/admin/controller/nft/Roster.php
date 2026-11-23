@@ -17,7 +17,7 @@ class Roster extends Backend
     /**
      * 圈人条件类型（与原型 ROS_TYPES 一致）
      */
-    private const ROS_TYPES = [1 => '按签到', 2 => '持仓指定藏品', 3 => '注册用户', 4 => '邀请好友', 5 => '手动导入'];
+    private const ROS_TYPES = [1 => '按签到', 2 => '持仓指定藏品', 3 => '注册用户', 4 => '邀请好友', 5 => '手动导入', 6 => '按手机号尾号'];
 
     /**
      * 名录列表（含是否被空投引用标记：airdrop_task rule_type=13 且 rule_value=roster id）
@@ -74,6 +74,9 @@ class Roster extends Backend
         }
         if ($ct === 5 && trim((string) ($p['list'] ?? '')) === '') {
             $this->error('请粘贴用户 ID / 手机号');
+        }
+        if ($ct === 6 && trim((string) ($p['mtails'] ?? '')) === '') {
+            $this->error('请填写手机尾号');
         }
 
         $result = $this->compute($ct, $p);
@@ -285,6 +288,8 @@ class Roster extends Backend
             'iend'   => trim((string) $this->request->param('iend/s', '')),
             'istart' => trim((string) $this->request->param('istart/s', '')),
             'list'   => (string) $this->request->param('list/s', ''),
+            'mdigits' => $this->request->param('mdigits/d', 1),
+            'mtails'  => trim((string) $this->request->param('mtails/s', '')),
         ];
     }
 
@@ -309,7 +314,43 @@ class Roster extends Backend
         if ($ct === 5) {
             return $this->computeManual($p);
         }
+        if ($ct === 6) {
+            return $this->computeMobileTail($p);
+        }
         return ['items' => [], 'cond_desc' => '', 'raw_count' => 0];
+    }
+
+    /**
+     * 条件类型 6：按手机号尾号（末 1 位 / 末 2 位可选，尾号值支持多个）
+     */
+    private function computeMobileTail(array $p): array
+    {
+        $digits = (int) ($p['mdigits'] ?? 1) === 2 ? 2 : 1;
+        // 拆分尾号值：逗号 / 换行 / 空格均可，仅保留与位数一致的纯数字
+        $tails = array_values(array_unique(array_filter(
+            array_map('trim', preg_split('/[\n,，\s]+/', (string) ($p['mtails'] ?? '')) ?: []),
+            fn ($t) => ctype_digit($t) && strlen($t) === $digits
+        )));
+        if (!$tails) {
+            return ['items' => [], 'cond_desc' => '手机尾号', 'raw_count' => 0];
+        }
+
+        // ctype_digit 已保证尾号值安全，可直接拼入 IN
+        $in    = implode(',', $tails);
+        $users = Db::name('user')
+            ->where('status', 1)
+            ->whereRaw("mobile <> '' AND RIGHT(mobile, {$digits}) IN ({$in})")
+            ->field('id,nickname,mobile')
+            ->order('id', 'asc')
+            ->select()
+            ->toArray();
+
+        $tailTxt = '手机号末 ' . $digits . ' 位 = ' . implode(' / ', $tails);
+        $items   = [];
+        foreach ($users as $u) {
+            $items[] = ['user_id' => (int) $u['id'], 'mobile' => (string) $u['mobile'], 'reason' => $tailTxt];
+        }
+        return ['items' => $items, 'cond_desc' => $tailTxt, 'raw_count' => count($items)];
     }
 
     /**

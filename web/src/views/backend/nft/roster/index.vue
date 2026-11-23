@@ -208,6 +208,19 @@
                         <label>用户 ID / 手机号（每行一个）*</label>
                         <textarea v-model="form.list" class="input" rows="5" placeholder="10001&#10;13800138000"></textarea>
                     </div>
+                    <!-- 类型 6：手机尾号 -->
+                    <div v-if="form.cond_type === 6" class="form-row">
+                        <label>尾号位数 *</label>
+                        <select v-model.number="form.mdigits" class="select">
+                            <option :value="1">末 1 位</option>
+                            <option :value="2">末 2 位</option>
+                        </select>
+                    </div>
+                    <div v-if="form.cond_type === 6" class="form-row">
+                        <label>尾号值 *（多个用逗号分隔，如 {{ form.mdigits === 2 ? '88,66' : '8,6' }}）</label>
+                        <input v-model="form.mtails" class="input" :placeholder="form.mdigits === 2 ? '88,66' : '8,6'" />
+                        <div class="cell-sub" style="margin-top: 6px">尾号值位数需与所选位数一致；仅统计启用且有手机号的用户</div>
+                    </div>
                     <div class="form-row">
                         <span class="cell-sub" style="color: var(--blue)">{{ estCount > 0 ? `预览：命中 ${estCount} 人` : '' }}</span>
                     </div>
@@ -336,7 +349,7 @@ import * as actApi from '/@/api/backend/nft/activity'
 
 defineOptions({ name: 'nft/roster' })
 
-const rosTypes: Record<number, string> = { 1: '按签到', 2: '持仓指定藏品', 3: '注册用户', 4: '邀请好友', 5: '手动导入' }
+const rosTypes: Record<number, string> = { 1: '按签到', 2: '持仓指定藏品', 3: '注册用户', 4: '邀请好友', 5: '手动导入', 6: '按手机号尾号' }
 const rosTypeText = (t: number) => rosTypes[t] || '-'
 
 const list = ref<any[]>([])
@@ -393,6 +406,8 @@ const openRosForm = () => {
         iend: '',
         istart: '',
         list: '',
+        mdigits: 1,
+        mtails: '',
     })
     estCount.value = 0
     formVisible.value = true
@@ -430,6 +445,8 @@ const buildParams = () => ({
     iend: form.iend,
     istart: form.istart,
     list: form.list,
+    mdigits: form.mdigits,
+    mtails: form.mtails,
 })
 
 const submitForm = async () => {
@@ -444,6 +461,10 @@ const submitForm = async () => {
     }
     if (form.cond_type === 5 && !(form.list || '').trim()) {
         ElMessage.warning('请粘贴用户 ID / 手机号')
+        return
+    }
+    if (form.cond_type === 6 && !(form.mtails || '').trim()) {
+        ElMessage.warning('请填写手机尾号')
         return
     }
     const res = await api.save(buildParams())

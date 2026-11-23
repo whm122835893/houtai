@@ -16,6 +16,7 @@ use app\admin\model\nft\OperLog;
  * 5=持仓门槛(持仓>=N) 6=白名单导入(用户ID或手机号逗号分隔) 7=按消费金额(累计消费>=N元)
  * 8=按注册时间(某日期前注册) 9=随机抽样(全体用户随机抽) 10=按用户标签(含指定标签) 11=邀请排行(Top N)
  * 13=按名单(引用发放名录 roster 快照，发放对象=roster_item)
+ * 14=按持仓编号尾号(rule_value JSON: {col:凭证藏品ID, tail:尾号0~9/-1不限, mode:1每人1份/2按尾号持仓1:1展开})
  *
  * 发放机制：claim_mode 到账方式(0直接到账/1需领取) dup_policy 重复策略(1跳过/2换发抽奖次数/3强制叠加)
  *           plan_time 定时空投 reason 空投凭证文案 revoke 批次撤销
@@ -40,6 +41,7 @@ class Airdrop extends Backend
         10 => '按用户标签',
         11 => '邀请排行',
         13 => '按名单',
+        14 => '按持仓编号尾号',
     ];
 
     public function initialize(): void
@@ -103,6 +105,14 @@ class Airdrop extends Backend
                 $r = Db::name('roster')->where('id', (int) $row->rule_value)->find();
                 $row->rule_value_brief = $r ? $r['name'] . '（' . $r['user_count'] . ' 人）' : '名单已删除';
             }
+            if ((int) $row->rule_type === 14) {
+                // 按持仓编号尾号：补充凭证藏品名 / 尾号 / 模式简述
+                $conf  = $this->decodeJsonRule((string) $row->rule_value) ?: [];
+                $cname = Db::name('collection')->where('id', (int) ($conf['col'] ?? 0))->value('name') ?: ('藏品#' . ($conf['col'] ?? 0));
+                $tailT = isset($conf['tail']) && (int) $conf['tail'] >= 0 ? '尾号 ' . (int) $conf['tail'] : '尾号不限';
+                $modeT = (int) ($conf['mode'] ?? 1) === 2 ? '1:1 按尾号持仓' : '每人 1 份';
+                $row->rule_value_brief = $cname . ' · ' . $tailT . ' · ' . $modeT;
+            }
         }
 
         $this->success('', ['list' => $list, 'total' => $total]);
@@ -127,7 +137,7 @@ class Airdrop extends Backend
             // 规则参数校验
             $ruleType  = (int) $data['rule_type'];
             $ruleValue = trim((string) ($data['rule_value'] ?? ''));
-            $needValue = [1, 3, 4, 5, 6, 7, 8, 10, 11, 13];
+            $needValue = [1, 3, 4, 5, 6, 7, 8, 10, 11, 13, 14];
             if (in_array($ruleType, $needValue) && $ruleValue === '') {
                 $this->error('请填写规则参数');
             }
@@ -151,8 +161,48 @@ class Airdrop extends Backend
             if ($ruleType == 8 && strtotime($ruleValue) === false) {
                 $this->error('注册时间格式错误');
             }
+            if ($ruleType == 14) {
+                // 按持仓编号尾号：参数校验 + 命中份数与发放份数比对
+                // 注：全局输入过滤器按读取次数重复做实体转义，需循环解码到稳定再解析，入库统一归一化为干净 JSON
+                $conf = $this->decodeJsonRule($ruleValue);
+                if (!is_array($conf)) {
+                    $this->error('规则参数格式错误');
+                }
+                $col  = (int) ($conf['col'] ?? 0);
+                $tail = (int) ($conf['tail'] ?? -1);
+                $mode = (int) ($conf['mode'] ?? 1);
+                if ($col <= 0 || !Db::name('collection')->where('id', $col)->count()) {
+                    $this->error('请选择凭证藏品');
+                }
+                if ($tail < -1 || $tail > 9) {
+                    $this->error('编号尾号取值 0~9（-1 = 不限）');
+                }
+                if (!in_array($mode, [1, 2])) {
+                    $this->error('发放模式错误');
+                }
+                // 入库统一归一化为干净 JSON（避免实体转义串直接落库）
+                $data['rule_value'] = json_encode($conf, JSON_UNESCAPED_UNICODE);
+                $holds = Db::name('hold')->alias('h')
+                    ->leftJoin('user u', 'u.id = h.user_id')
+                    ->where('h.collection_id', $col)
+                    ->where('h.status', '<>', 3)
+                    ->where('u.status', 1)
+                    ->when($tail >= 0, fn ($q) => $q->whereLike('h.sn', '%' . $tail))
+                    ->field('h.user_id')
+                    ->select()->toArray();
+                $need = $mode == 2 ? count($holds) : (count($holds) ? count(array_unique(array_column($holds, 'user_id'))) : 0);
+                if ($need <= 0) {
+                    $this->error($tail >= 0 ? '该藏品没有编号尾数为 ' . $tail . ' 的有效持仓，无需发放' : '该藏品当前无有效持仓，无需发放');
+                }
+                if ((int) $data['num'] < $need) {
+                    $modeTxt = $mode == 2 ? '份尾号持仓' : '名命中用户';
+                    $this->error('当前规则命中 ' . $need . ' ' . $modeTxt . '，发放份数请 ≥ ' . $need);
+                }
+            }
 
-            $data['rule_value'] = $ruleValue;
+            if ($ruleType != 14) {
+                $data['rule_value'] = $ruleValue; // 14 的 rule_value 已在上方归一化为干净 JSON
+            }
             $data['dup_reward'] = max(0, (int) ($data['dup_reward'] ?? 0));
             $data['plan_time']  = !empty($data['plan_time']) ? strtotime($data['plan_time']) : null;
             if ($data['dup_policy'] == 2 && $data['dup_reward'] <= 0) {
@@ -458,6 +508,23 @@ class Airdrop extends Backend
     }
 
     /**
+     * 规则 JSON 解码：循环反转义（全局过滤器按读取次数重复实体转义）到稳定后解析
+     */
+    private function decodeJsonRule(string $value): ?array
+    {
+        $decoded = $value;
+        for ($i = 0; $i < 5; $i++) {
+            $once = htmlspecialchars_decode_improve($decoded, ENT_QUOTES);
+            if ($once === $decoded) {
+                break;
+            }
+            $decoded = $once;
+        }
+        $conf = json_decode($decoded, true);
+        return is_array($conf) ? $conf : null;
+    }
+
+    /**
      * 按规则解析目标用户 ID 列表（可含重复：规则 4 按持有件数展开）
      */
     private function resolveUsers(int $ruleType, string $ruleValue, int $num, int $remain, int $done): array
@@ -559,6 +626,22 @@ class Airdrop extends Backend
                     ->column('user_id');
                 $ids = array_values(array_filter(array_map('intval', $ids), fn ($v) => $v > 0));
                 return array_slice($ids, $done, $remain);
+
+            case 14: // 按持仓编号尾号：tail>=0 时筛选 sn 末位匹配的有效持仓（mode 1 每人 1 份 / mode 2 按持仓 1:1 展开）
+                $conf = $this->decodeJsonRule($ruleValue);
+                $col  = (int) ($conf['col'] ?? 0);
+                $tail = (int) ($conf['tail'] ?? -1);
+                $mode = (int) ($conf['mode'] ?? 1);
+                $holds = Db::name('hold')->alias('h')
+                    ->leftJoin('user u', 'u.id = h.user_id')
+                    ->where('h.collection_id', $col)
+                    ->where('h.status', '<>', 3)
+                    ->where('u.status', 1)
+                    ->when($tail >= 0, fn ($q) => $q->whereLike('h.sn', '%' . $tail))
+                    ->order('h.user_id', 'asc')
+                    ->column('h.user_id');
+                $list = $mode == 2 ? array_map('intval', $holds) : array_values(array_unique(array_map('intval', $holds)));
+                return array_slice($list, $done, $remain);
         }
         return [];
     }
