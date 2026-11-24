@@ -6,28 +6,8 @@
             <span class="en">HOME GRID</span>
         </div>
 
-        <!-- 金刚区总开关 -->
-        <div class="glass rise" :style="{ '--i': 1 }">
-            <div class="card-head">
-                <h3>金刚区总开关</h3>
-            </div>
-            <div class="card-pad" style="display: flex; align-items: center; gap: 16px; padding: 4px 20px 16px">
-                <el-switch
-                    v-model="kkEnabled"
-                    :active-value="1"
-                    :inactive-value="0"
-                    :disabled="!auth('status')"
-                    @change="onMaster"
-                />
-                <div>
-                    <div class="cell-main" style="font-size: 14px">{{ kkEnabled === 1 ? '已开启：C 端首页显示金刚区' : '已关闭：C 端首页隐藏整个金刚区' }}</div>
-                    <div class="cell-sub">总开关控制整个金刚区显隐；下方清单里的「状态」可单独控制每个入口的显隐，两层开关叠加生效</div>
-                </div>
-            </div>
-        </div>
-
         <!-- 图标样式模板 -->
-        <div class="glass rise" :style="{ '--i': 2 }">
+        <div class="glass rise" :style="{ '--i': 1 }">
             <div class="card-head">
                 <h3>图标样式模板（C 端渲染时套用，随时切换）</h3>
             </div>
@@ -50,7 +30,7 @@
         </div>
 
         <!-- 列表 -->
-        <div class="glass rise" :style="{ '--i': 3 }">
+        <div class="glass rise" :style="{ '--i': 2 }">
             <div class="card-head">
                 <h3>入口清单（C 端按排序倒序渲染，platform 匹配当前客户端）</h3>
                 <span style="flex: 1"></span>
@@ -209,7 +189,6 @@ defineOptions({ name: 'nft/kingkong' })
 
 const list = ref<any[]>([])
 const shape = ref('squircle')
-const kkEnabled = ref(1)
 const iconKeys = ref<string[]>([])
 const formVisible = ref(false)
 const form = reactive<any>({})
@@ -235,13 +214,7 @@ const load = async () => {
     const res = await api.list()
     list.value = res.data.list
     shape.value = res.data.cfg.kk_icon_shape || 'squircle'
-    kkEnabled.value = Number(res.data.cfg.kk_enabled ?? 1)
     iconKeys.value = res.data.cfg.icon_keys || []
-}
-
-const onMaster = async (val: any) => {
-    await api.setMaster(val ? 1 : 0)
-    ElMessage.success(val ? '已开启，C 端下次拉取配置即显示金刚区' : '已关闭，C 端下次拉取配置即隐藏金刚区')
 }
 
 const onShape = async (key: string) => {

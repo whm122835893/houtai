@@ -26,15 +26,12 @@ class NftHome extends Frontend
             $platform = 'all';
         }
 
-        $rows = Db::name('setting')->where('name', 'in', ['site_theme', 'site_accent', 'site_bg_mode', 'kk_icon_shape', 'kk_enabled'])
+        $rows = Db::name('setting')->where('name', 'in', ['site_theme', 'site_accent', 'site_bg_mode', 'kk_icon_shape'])
             ->column('value', 'name');
 
         $hex = fn ($v) => preg_match('/^#[0-9a-fA-F]{6}$/', (string) $v) ? (string) $v : '';
 
-        // 金刚区总开关：关闭时整个金刚区不输出
-        $kkEnabled = (int) ($rows['kk_enabled'] ?? 0) === 1;
-
-        $kingkong = $kkEnabled ? Db::name('home_kingkong')
+        $kingkong = Db::name('home_kingkong')
             ->where('status', 1)
             ->where(function ($q) use ($platform) {
                 $q->where('platform', 'all')->whereOr('platform', $platform);
@@ -43,7 +40,7 @@ class NftHome extends Frontend
             ->order('weigh', 'desc')
             ->order('id', 'asc')
             ->select()
-            ->toArray() : [];
+            ->toArray();
 
         foreach ($kingkong as &$item) {
             // icon 相对路径补全；icon_key 兜底校验
@@ -62,7 +59,6 @@ class NftHome extends Frontend
                 'bg_mode' => in_array($rows['site_bg_mode'] ?? '', ['light', 'dark', 'system'], true) ? $rows['site_bg_mode'] : 'light',
             ],
             'kk_icon_shape' => in_array($rows['kk_icon_shape'] ?? '', ['circle', 'squircle', 'plain'], true) ? $rows['kk_icon_shape'] : 'squircle',
-            'kk_enabled'    => $kkEnabled ? 1 : 0,
             'kingkong'      => $kingkong,
         ]);
     }

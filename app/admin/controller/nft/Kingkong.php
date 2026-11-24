@@ -27,7 +27,6 @@ class Kingkong extends Backend
     {
         $list = $this->model->order('weigh', 'desc')->order('id', 'asc')->select()->toArray();
         $cfg  = [
-            'kk_enabled'    => (int) (Db::name('setting')->where('name', 'kk_enabled')->value('value') ?: 0),
             'kk_icon_shape' => (string) (Db::name('setting')->where('name', 'kk_icon_shape')->value('value') ?: 'squircle'),
             'icon_keys'     => KkIcons::keys(),
         ];
@@ -91,15 +90,6 @@ class Kingkong extends Backend
         if (!$row) $this->error('记录不存在');
         $row->save(['weigh' => $weigh]);
         $this->success();
-    }
-
-    /** 金刚区总开关（关闭后 C 端首页整个金刚区隐藏） */
-    public function master(): void
-    {
-        $enabled = $this->request->param('enabled/d', 0) ? 1 : 0;
-        Db::name('setting')->where('name', 'kk_enabled')->update(['value' => (string) $enabled, 'updatetime' => time()]);
-        OperLog::record('金刚区管理', '总开关', 'kk_enabled', $enabled ? '开启金刚区（C 端显示）' : '关闭金刚区（C 端隐藏）');
-        $this->success($enabled ? '已开启，C 端将显示金刚区' : '已关闭，C 端将隐藏整个金刚区', ['enabled' => $enabled]);
     }
 
     /** 图标样式模板（circle/squircle/plain），随运营参数 brand 组存储 */

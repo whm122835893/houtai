@@ -28,7 +28,3 @@ export function sort(id: number, weigh: number) {
 export function setShape(shape: string) {
     return createAxios({ url: url + 'shape', method: 'post', data: { shape } })
 }
-
-export function setMaster(enabled: number) {
-    return createAxios({ url: url + 'master', method: 'post', data: { enabled } })
-}

@@ -1206,8 +1206,7 @@ INSERT INTO `home_kingkong` (`title`,`icon`,`icon_key`,`link_type`,`link_value`,
 INSERT INTO `setting` (`name`,`group`,`title`,`value`,`createtime`,`updatetime`) VALUES
 ('site_bg_mode','brand','C端背景模式(light=亮色/dark=暗色/system=跟随系统)','light',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 ('site_accent','brand','C端辅色(空=主色派生)','',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-('kk_icon_shape','brand','金刚区图标样式(circle=圆形底板,squircle=圆角方形,plain=无底板)','squircle',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-('kk_enabled','brand','金刚区总开关(1=C端显示,0=C端隐藏)','1',UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+('kk_icon_shape','brand','金刚区图标样式(circle=圆形底板,squircle=圆角方形,plain=无底板)','squircle',UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 菜单：金刚区管理（运营组 240）
 INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
@@ -1217,8 +1216,7 @@ INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,ke
 (@kkMenu,'button','查看','nft/kingkong/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (@kkMenu,'button','添加/编辑','nft/kingkong/save','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (@kkMenu,'button','删除','nft/kingkong/del','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(@kkMenu,'button','显隐/排序/样式','nft/kingkong/status','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(@kkMenu,'button','总开关','nft/kingkong/master','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+(@kkMenu,'button','显隐/排序/样式','nft/kingkong/status','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 常规管理并入系统配置分组（框架菜单在安装迁移中创建，导入本种子时统一归组）
 UPDATE admin_rule SET title='系统配置', weigh=88 WHERE id=250 AND type='menu_dir';
