@@ -450,7 +450,7 @@ INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_t
 (224,210,'menu','转赠管理','nft/transfer','nft/transfer','fa fa-exchange','tab','','/src/views/backend/nft/transfer/index.vue',1,'none','',80,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (225,210,'menu','置换管理','nft/swap','nft/swap','fa fa-random','tab','','/src/views/backend/nft/swap/index.vue',1,'none','',79,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (256,250,'menu','第三方渠道','nft/thirdparty','nft/thirdparty','fa fa-plug','tab','','/src/views/backend/nft/thirdparty/index.vue',1,'none','',67,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(257,250,'menu','协议管理','nft/agreement','nft/agreement','fa fa-file-text','tab','','/src/views/backend/nft/agreement/index.vue',1,'none','',66,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+(257,240,'menu','协议管理','nft/agreement','nft/agreement','fa fa-file-text','tab','','/src/views/backend/nft/agreement/index.vue',1,'none','',70,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 页面按钮权限（各页面通用 index + 写操作按钮）
 INSERT INTO `admin_rule` (`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
