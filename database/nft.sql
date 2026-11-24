@@ -410,46 +410,46 @@ INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_t
 INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
 (210,0,'menu_dir','业务管理','nft/business','nft/business','fa fa-briefcase',NULL,'','',0,'none','',98,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (211,210,'menu','用户管理','nft/user','nft/user','fa fa-user','tab','','/src/views/backend/nft/user/index.vue',1,'none','',90,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(212,210,'menu','钱包流水','nft/wallet','nft/wallet','fa fa-money','tab','','/src/views/backend/nft/wallet/index.vue',1,'none','',89,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(213,210,'menu','藏品管理','nft/collection','nft/collection','fa fa-gem','tab','','/src/views/backend/nft/collection/index.vue',1,'none','',88,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(214,210,'menu','分类管理','nft/category','nft/category','fa fa-tags','tab','','/src/views/backend/nft/category/index.vue',1,'none','',87,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(215,210,'menu','订单管理','nft/order','nft/order','fa fa-file-text-o','tab','','/src/views/backend/nft/order/index.vue',1,'none','',86,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(216,210,'menu','市场寄售','nft/market','nft/market','fa fa-exchange','tab','','/src/views/backend/nft/market/index.vue',1,'none','',85,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(217,210,'menu','持仓查询','nft/hold','nft/hold','fa fa-cubes','tab','','/src/views/backend/nft/hold/index.vue',1,'none','',84,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(218,210,'menu','定向空投','nft/airdrop','nft/airdrop','fa fa-send-o','tab','','/src/views/backend/nft/airdrop/index.vue',1,'none','',83,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+(212,210,'menu','钱包流水','nft/wallet','nft/wallet','fa fa-money','tab','','/src/views/backend/nft/wallet/index.vue',1,'none','',88,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(213,210,'menu','藏品管理','nft/collection','nft/collection','fa fa-gem','tab','','/src/views/backend/nft/collection/index.vue',1,'none','',87,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(214,210,'menu','分类管理','nft/category','nft/category','fa fa-tags','tab','','/src/views/backend/nft/category/index.vue',1,'none','',86,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(215,210,'menu','订单管理','nft/order','nft/order','fa fa-file-text-o','tab','','/src/views/backend/nft/order/index.vue',1,'none','',85,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(216,210,'menu','市场寄售','nft/market','nft/market','fa fa-exchange','tab','','/src/views/backend/nft/market/index.vue',1,'none','',84,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(217,210,'menu','持仓查询','nft/hold','nft/hold','fa fa-cubes','tab','','/src/views/backend/nft/hold/index.vue',1,'none','',83,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(218,210,'menu','定向空投','nft/airdrop','nft/airdrop','fa fa-send-o','tab','','/src/views/backend/nft/airdrop/index.vue',1,'none','',82,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 顶级目录：活动运营
 INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
 (230,0,'menu_dir','活动运营','nft/activity','nft/activity','fa fa-magic',NULL,'','',0,'none','',97,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(231,230,'menu','抽奖活动','nft/lottery','nft/lottery','fa fa-gift','tab','','/src/views/backend/nft/lottery/index.vue',1,'none','',80,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(232,230,'menu','合成活动','nft/synthesis','nft/synthesis','fa fa-flask','tab','','/src/views/backend/nft/synthesis/index.vue',1,'none','',79,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(233,230,'menu','邀请有礼','nft/invite','nft/invite','fa fa-handshake-o','tab','','/src/views/backend/nft/invite/index.vue',1,'none','',78,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(231,230,'menu','抽奖活动','nft/lottery','nft/lottery','fa fa-gift','tab','','/src/views/backend/nft/lottery/index.vue',1,'none','',82,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(232,230,'menu','合成活动','nft/synthesis','nft/synthesis','fa fa-flask','tab','','/src/views/backend/nft/synthesis/index.vue',1,'none','',81,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(233,230,'menu','邀请有礼','nft/invite','nft/invite','fa fa-handshake-o','tab','','/src/views/backend/nft/invite/index.vue',1,'none','',80,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (236,230,'menu','活动中心','nft/activity','nft/activity','fa fa-flag','tab','','/src/views/backend/nft/activity/index.vue',1,'none','',83,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 顶级目录：内容运营
 INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
 (240,0,'menu_dir','内容运营','nft/content','nft/content','fa fa-newspaper-o',NULL,'','',0,'none','',96,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(241,240,'menu','公告管理','nft/notice','nft/notice','fa fa-bullhorn','tab','','/src/views/backend/nft/notice/index.vue',1,'none','',75,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(241,240,'menu','公告管理','nft/notice','nft/notice','fa fa-bullhorn','tab','','/src/views/backend/nft/notice/index.vue',1,'none','',71,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (383,240,'menu','公告分类','nft/noticeCategory','nft/noticeCategory','fa fa-tags','tab','','/src/views/backend/nft/noticeCategory/index.vue',1,'none','',72,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(242,240,'menu','轮播管理','nft/banner','nft/banner','fa fa-image','tab','','/src/views/backend/nft/banner/index.vue',1,'none','',74,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+(242,240,'menu','轮播管理','nft/banner','nft/banner','fa fa-image','tab','','/src/views/backend/nft/banner/index.vue',1,'none','',73,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 顶级目录：系统
 INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
 (250,0,'menu_dir','系统配置','nft/system','nft/system','fa fa-cog',NULL,'','',0,'none','',88,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(251,240,'menu','系统装修','nft/setting','nft/setting','fa fa-sliders','tab','','/src/views/backend/nft/setting/index.vue',1,'none','',71,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(252,250,'menu','数据清理','nft/cleanup','nft/cleanup','fa fa-trash-o','tab','','/src/views/backend/nft/cleanup/index.vue',1,'none','',69,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(253,250,'menu','日志审计','nft/operlog','nft/operlog','fa fa-shield','tab','','/src/views/backend/nft/operlog/index.vue',1,'none','',68,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+(251,240,'menu','系统装修','nft/setting','nft/setting','fa fa-sliders','tab','','/src/views/backend/nft/setting/index.vue',1,'none','',75,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(252,250,'menu','数据清理','nft/cleanup','nft/cleanup','fa fa-trash-o','tab','','/src/views/backend/nft/cleanup/index.vue',1,'none','',78,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(253,250,'menu','日志审计','nft/operlog','nft/operlog','fa fa-shield','tab','','/src/views/backend/nft/operlog/index.vue',1,'none','',77,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 四、新增后台菜单与按钮（显式 ID 菜单须在自增按钮 INSERT 之前执行）
 -- 注：盲盒/名录/白名单/转赠/置换/第三方渠道/协议 7 个模块已全部移植（控制器+页面+接口），菜单 status=1 启用
 -- ------------------------------------------------------------
 INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
-(220,210,'menu','盲盒管理','nft/blindbox','nft/blindbox','fa fa-cube','tab','','/src/views/backend/nft/blindbox/index.vue',1,'none','',84,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(221,210,'menu','名单快照','nft/roster','nft/roster','fa fa-list-ul','tab','','/src/views/backend/nft/roster/index.vue',1,'none','',82,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(222,210,'menu','白名单','nft/whitelist','nft/whitelist','fa fa-id-card-o','tab','','/src/views/backend/nft/whitelist/index.vue',1,'none','',81,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(224,210,'menu','转赠管理','nft/transfer','nft/transfer','fa fa-exchange','tab','','/src/views/backend/nft/transfer/index.vue',1,'none','',80,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(225,210,'menu','置换管理','nft/swap','nft/swap','fa fa-random','tab','','/src/views/backend/nft/swap/index.vue',1,'none','',79,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(256,250,'menu','第三方渠道','nft/thirdparty','nft/thirdparty','fa fa-plug','tab','','/src/views/backend/nft/thirdparty/index.vue',1,'none','',67,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(220,210,'menu','盲盒管理','nft/blindbox','nft/blindbox','fa fa-cube','tab','','/src/views/backend/nft/blindbox/index.vue',1,'none','',78,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(221,210,'menu','名单快照','nft/roster','nft/roster','fa fa-list-ul','tab','','/src/views/backend/nft/roster/index.vue',1,'none','',81,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(222,210,'menu','白名单','nft/whitelist','nft/whitelist','fa fa-id-card-o','tab','','/src/views/backend/nft/whitelist/index.vue',1,'none','',80,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(224,210,'menu','转赠管理','nft/transfer','nft/transfer','fa fa-exchange','tab','','/src/views/backend/nft/transfer/index.vue',1,'none','',77,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(225,210,'menu','置换管理','nft/swap','nft/swap','fa fa-random','tab','','/src/views/backend/nft/swap/index.vue',1,'none','',76,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(256,250,'menu','第三方渠道','nft/thirdparty','nft/thirdparty','fa fa-plug','tab','','/src/views/backend/nft/thirdparty/index.vue',1,'none','',80,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (257,240,'menu','协议管理','nft/agreement','nft/agreement','fa fa-file-text','tab','','/src/views/backend/nft/agreement/index.vue',1,'none','',70,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 页面按钮权限（各页面通用 index + 写操作按钮）
@@ -602,8 +602,8 @@ CREATE TABLE IF NOT EXISTS `register_log` (
 
 -- 菜单（挂载在 230 活动运营目录下）
 INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
-(234,230,'menu','签到活动','nft/checkin','nft/checkin','fa fa-calendar-check-o','tab','','/src/views/backend/nft/checkin/index.vue',1,'none','',82,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(235,230,'menu','注册活动','nft/register','nft/register','fa fa-user-plus','tab','','/src/views/backend/nft/register/index.vue',1,'none','',81,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+(234,230,'menu','签到活动','nft/checkin','nft/checkin','fa fa-calendar-check-o','tab','','/src/views/backend/nft/checkin/index.vue',1,'none','',79,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(235,230,'menu','注册活动','nft/register','nft/register','fa fa-user-plus','tab','','/src/views/backend/nft/register/index.vue',1,'none','',78,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 INSERT INTO `admin_rule` (`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
 (234,'button','查看','nft/checkin/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
@@ -669,7 +669,7 @@ CREATE TABLE IF NOT EXISTS `raffle_apply` (
 
 -- 菜单（业务管理组 210 下）
 INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
-(219,210,'menu','抽签发售','nft/raffle','nft/raffle','fa fa-ticket','tab','','/src/views/backend/nft/raffle/index.vue',1,'none','',82,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+(219,210,'menu','抽签发售','nft/raffle','nft/raffle','fa fa-ticket','tab','','/src/views/backend/nft/raffle/index.vue',1,'none','',79,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 INSERT INTO `admin_rule` (`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
 (219,'button','查看','nft/raffle/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
@@ -1049,7 +1049,7 @@ ALTER TABLE lottery_activity ADD COLUMN IF NOT EXISTS deletetime bigint(16) unsi
 
 -- 回收站菜单与按钮
 INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
-(250,'menu','回收站','nft/trash','nft/trash','fa fa-trash','tab','','/src/views/backend/nft/trash/index.vue',1,'none','软删除恢复中心',80,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+(250,'menu','回收站','nft/trash','nft/trash','fa fa-trash','tab','','/src/views/backend/nft/trash/index.vue',1,'none','软删除恢复中心',79,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 SET @trashMenu = LAST_INSERT_ID();
 INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
 (@trashMenu,'button','查看','nft/trash/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
@@ -1130,10 +1130,10 @@ INSERT INTO `setting` (`name`,`group`,`title`,`value`,`createtime`,`updatetime`)
 
 -- 菜单：实名审核(业务管理) + 区块链管理(系统)
 INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
-(210,'menu','实名审核','nft/kyc','nft/kyc','','tab','','/src/views/backend/nft/kyc/index.vue',1,'none','实名认证审核(自动/手动/第三方)',90,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+(210,'menu','实名审核','nft/kyc','nft/kyc','','tab','','/src/views/backend/nft/kyc/index.vue',1,'none','实名认证审核(自动/手动/第三方)',89,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 SET @kycMenu = LAST_INSERT_ID();
 INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
-(250,'menu','区块链管理','nft/chain','nft/chain','','tab','','/src/views/backend/nft/chain/index.vue',1,'none','链配置与上链记录',60,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+(250,'menu','区块链管理','nft/chain','nft/chain','','tab','','/src/views/backend/nft/chain/index.vue',1,'none','链配置与上链记录',81,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 SET @chainMenu = LAST_INSERT_ID();
 INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
 (@kycMenu,'button','查看','nft/kyc/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
@@ -1165,7 +1165,7 @@ INSERT INTO `config` (`name`,`group`,`title`,`tip`,`type`,`value`,`content`,`rul
 
 -- 菜单：验证码设置(系统)
 INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
-(250,'menu','验证码设置','nft/captcha','nft/captcha','','tab','','/src/views/backend/nft/captcha/index.vue',1,'none','分场景验证码独立开关配置',50,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+(250,'menu','验证码设置','nft/captcha','nft/captcha','','tab','','/src/views/backend/nft/captcha/index.vue',1,'none','分场景验证码独立开关配置',82,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 SET @captchaMenu = LAST_INSERT_ID();
 INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
 (@captchaMenu,'button','查看','nft/captcha/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
@@ -1210,7 +1210,7 @@ INSERT INTO `setting` (`name`,`group`,`title`,`value`,`createtime`,`updatetime`)
 
 -- 菜单：金刚区管理（运营组 240）
 INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
-(240,'menu','金刚区管理','nft/kingkong','nft/kingkong','fa fa-th-large','tab','','/src/views/backend/nft/kingkong/index.vue',1,'none','C端首页金刚区入口配置(支持多端 platform)',73,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+(240,'menu','金刚区管理','nft/kingkong','nft/kingkong','fa fa-th-large','tab','','/src/views/backend/nft/kingkong/index.vue',1,'none','C端首页金刚区入口配置(支持多端 platform)',74,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 SET @kkMenu = LAST_INSERT_ID();
 INSERT INTO admin_rule (pid,type,title,name,path,icon,menu_type,url,component,keepalive,extend,remark,weigh,status,update_time,create_time) VALUES
 (@kkMenu,'button','查看','nft/kingkong/index','','',NULL,'','',0,'none','',0,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
