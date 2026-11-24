@@ -162,7 +162,7 @@ const bizTypes: [string, string][] = [
     ['synthesis', '合成'],
     ['swap', '置换'],
     ['mint', '铸造/发行'],
-    ['airdrop', '定向发放'],
+    ['airdrop', '定向空投'],
 ]
 
 const list = ref<any[]>([])

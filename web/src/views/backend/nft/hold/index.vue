@@ -181,7 +181,7 @@ import * as collectionApi from '/@/api/backend/nft/collection'
 
 defineOptions({ name: 'nft/hold' })
 
-const sourceText: Record<number, string> = { 1: '一级购', 2: '市场购', 3: '定向发放', 4: '抽奖', 5: '合成', 6: '邀请奖励', 7: '置换' }
+const sourceText: Record<number, string> = { 1: '一级购', 2: '市场购', 3: '定向空投', 4: '抽奖', 5: '合成', 6: '邀请奖励', 7: '置换' }
 const statusText: Record<number, string> = { 0: '持有', 1: '寄售中', 2: '已锁定', 3: '已回收' }
 const statusCls: Record<number, string> = { 0: 'tag-green', 1: 'tag-orange', 2: 'tag-gray', 3: 'tag-gray' }
 const RECYCLE_REASONS = ['活动纠错（投错对象/多发）', '违规回收（用户违规获取）', '系统故障补偿冲正', '运营调整']

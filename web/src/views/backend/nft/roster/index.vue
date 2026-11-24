@@ -9,7 +9,7 @@
         <!-- 筛选条 -->
         <div class="glass filter-bar rise" :style="{ '--i': 1 }">
             <span class="cell-sub">
-                按条件圈人生成<b>快照名单</b>（生成即冻结，不可修改；换条件请重新生成）→ 供定向发放「按名单」规则与白名单导入使用
+                按条件圈人生成<b>快照名单</b>（生成即冻结，不可修改；换条件请重新生成）→ 供定向空投「按名单」规则与白名单导入使用
             </span>
             <span style="flex: 1"></span>
             <button v-if="auth('save')" class="btn btn-primary" @click="openRosForm">生成名单</button>

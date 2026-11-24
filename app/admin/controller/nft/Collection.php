@@ -245,7 +245,7 @@ $where[] = ['deletetime', '=', 0];
                 $refs[] = '抽签发售';
             }
             if (Db::name('airdrop_task')->where('collection_id', $cid)->count()) {
-                $refs[] = '定向发放';
+                $refs[] = '定向空投';
             }
             if (Db::name('lottery_prize')->where('collection_id', $cid)->count()
                 || Db::name('lottery_activity')->whereLike('chance_rules', '%"collection_id":' . $cid . '%')->count()) {

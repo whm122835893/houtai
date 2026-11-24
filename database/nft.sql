@@ -416,7 +416,7 @@ INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_t
 (215,210,'menu','订单管理','nft/order','nft/order','fa fa-file-text-o','tab','','/src/views/backend/nft/order/index.vue',1,'none','',86,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (216,210,'menu','市场寄售','nft/market','nft/market','fa fa-exchange','tab','','/src/views/backend/nft/market/index.vue',1,'none','',85,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (217,210,'menu','持仓查询','nft/hold','nft/hold','fa fa-cubes','tab','','/src/views/backend/nft/hold/index.vue',1,'none','',84,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(218,210,'menu','定向发放','nft/airdrop','nft/airdrop','fa fa-send-o','tab','','/src/views/backend/nft/airdrop/index.vue',1,'none','',83,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+(218,210,'menu','定向空投','nft/airdrop','nft/airdrop','fa fa-send-o','tab','','/src/views/backend/nft/airdrop/index.vue',1,'none','',83,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 顶级目录：活动运营
 INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
@@ -445,7 +445,7 @@ INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_t
 -- ------------------------------------------------------------
 INSERT INTO `admin_rule` (`id`,`pid`,`type`,`title`,`name`,`path`,`icon`,`menu_type`,`url`,`component`,`keepalive`,`extend`,`remark`,`weigh`,`status`,`update_time`,`create_time`) VALUES
 (220,210,'menu','盲盒管理','nft/blindbox','nft/blindbox','fa fa-cube','tab','','/src/views/backend/nft/blindbox/index.vue',1,'none','',84,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-(221,210,'menu','发放名录','nft/roster','nft/roster','fa fa-list-ul','tab','','/src/views/backend/nft/roster/index.vue',1,'none','',82,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+(221,210,'menu','名单快照','nft/roster','nft/roster','fa fa-list-ul','tab','','/src/views/backend/nft/roster/index.vue',1,'none','',82,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (222,210,'menu','白名单','nft/whitelist','nft/whitelist','fa fa-id-card-o','tab','','/src/views/backend/nft/whitelist/index.vue',1,'none','',81,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (224,210,'menu','转赠管理','nft/transfer','nft/transfer','fa fa-exchange','tab','','/src/views/backend/nft/transfer/index.vue',1,'none','',80,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
 (225,210,'menu','置换管理','nft/swap','nft/swap','fa fa-random','tab','','/src/views/backend/nft/swap/index.vue',1,'none','',79,1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),

@@ -15,7 +15,7 @@ use app\admin\model\nft\OperLog;
  * 1=指定用户(用户ID逗号分隔) 2=全部用户 3=按邀请数(门槛) 4=持有指定藏品(凭证藏品ID,持有N份投N份)
  * 5=持仓门槛(持仓>=N) 6=白名单导入(用户ID或手机号逗号分隔) 7=按消费金额(累计消费>=N元)
  * 8=按注册时间(某日期前注册) 9=随机抽样(全体用户随机抽) 10=按用户标签(含指定标签) 11=邀请排行(Top N)
- * 13=按名单(引用发放名录 roster 快照，发放对象=roster_item)
+ * 13=按名单(引用名单快照 roster，发放对象=roster_item)
  * 14=按持仓编号尾号(rule_value JSON: {col:凭证藏品ID, tail:尾号0~9/-1不限, mode:1每人1份/2按尾号持仓1:1展开})
  *
  * 发放机制：claim_mode 到账方式(0直接到账/1需领取) dup_policy 重复策略(1跳过/2换发抽奖次数/3强制叠加)
@@ -152,7 +152,7 @@ class Airdrop extends Backend
                 // 引用的发放名录必须存在且未删除
                 $roster = Db::name('roster')->where('id', (int) $ruleValue)->where('is_deleted', 0)->find();
                 if (!$roster) {
-                    $this->error('引用的发放名录不存在');
+                    $this->error('引用的名单快照不存在');
                 }
                 if ((int) $roster['user_count'] <= 0) {
                     $this->error('该名录快照人数为 0，无法用于发放');
@@ -211,7 +211,7 @@ class Airdrop extends Backend
             $data['admin_id'] = $this->auth->id;
             $data['status']   = 0;
             $this->model->save($data);
-            OperLog::record('定向发放', '创建任务', '任务#' . $this->model->id, $data['name'] . '（' . self::RULES[$ruleType] . '）');
+            OperLog::record('定向空投', '创建任务', '任务#' . $this->model->id, $data['name'] . '（' . self::RULES[$ruleType] . '）');
             $this->success();
         }
         $this->success('', []);
@@ -334,7 +334,7 @@ class Airdrop extends Backend
             $this->error('发放失败：' . $e->getMessage());
         }
 
-        OperLog::record('定向发放', $done > 0 ? '重试发放' : '执行发放', '任务#' . $id, '入仓 ' . $success . '，跳过 ' . $fail . '，换发 ' . $reward);
+        OperLog::record('定向空投', $done > 0 ? '重试发放' : '执行发放', '任务#' . $id, '入仓 ' . $success . '，跳过 ' . $fail . '，换发 ' . $reward);
         $this->success('发放完成', ['success' => $success, 'fail' => $fail, 'reward' => $reward]);
     }
 
@@ -377,7 +377,7 @@ class Airdrop extends Backend
             $this->error('撤销失败：' . $e->getMessage());
         }
 
-        OperLog::record('定向发放', '撤销批次', '任务#' . $id, '回收 ' . count($ids) . ' 份');
+        OperLog::record('定向空投', '撤销批次', '任务#' . $id, '回收 ' . count($ids) . ' 份');
         $this->success('撤销完成', ['revoked' => count($ids)]);
     }
 
@@ -481,7 +481,7 @@ class Airdrop extends Backend
         if ($ok === 0) {
             $this->error('没有可回收的记录（已寄售/锁定的不可回收）');
         }
-        OperLog::record('定向发放', '按用户回收', '任务#' . $taskId, '回收 ' . $ok . ' 份，跳过 ' . $skipped . ' 份');
+        OperLog::record('定向空投', '按用户回收', '任务#' . $taskId, '回收 ' . $ok . ' 份，跳过 ' . $skipped . ' 份');
         $this->success('已按用户回收 ' . $ok . ' 份，库存已回池', ['revoked' => $ok, 'skipped' => $skipped]);
     }
 
@@ -495,7 +495,7 @@ class Airdrop extends Backend
             $this->error(__('Parameter %s can not be empty', ['ids']));
         }
         $count = $this->model->where('id', 'in', $ids)->where('status', '<>', 1)->delete();
-        OperLog::record('定向发放', '删除', '任务#' . implode(',', $ids), '共删除 ' . $count . ' 条');
+        OperLog::record('定向空投', '删除', '任务#' . implode(',', $ids), '共删除 ' . $count . ' 条');
         $this->success();
     }
 

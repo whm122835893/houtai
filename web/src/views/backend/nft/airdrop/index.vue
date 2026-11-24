@@ -2,7 +2,7 @@
     <div class="nft-page">
         <!-- 页头 -->
         <div class="page-head rise" :style="{ '--i': 0 }">
-            <h2>定向发放</h2>
+            <h2>定向空投</h2>
             <span class="en">AIRDROP</span>
         </div>
 
@@ -155,7 +155,7 @@
                             <option v-for="c in collections" :key="c.id" :value="String(c.id)">{{ c.name }}（#{{ c.id }}）</option>
                         </select>
                         <select v-else-if="form.rule_type == 13" v-model="form.rule_value" class="select">
-                            <option value="">请选择发放名录快照（生成后冻结，不可修改）</option>
+                            <option value="">请选择名单快照（生成后冻结，不可修改）</option>
                             <option v-for="r in rosters" :key="r.id" :value="String(r.id)">{{ r.name }}（{{ r.user_count }} 人）</option>
                         </select>
                         <input v-else-if="form.rule_type == 8" v-model="form.rule_value" class="input" type="date" />
@@ -335,7 +335,7 @@ const ruleOptions: Record<number, string> = {
     9: '随机抽样（全体用户随机抽）',
     10: '按用户标签（含指定标签）',
     11: '邀请排行（邀请数 Top N）',
-    13: '按名单（引用发放名录快照）',
+    13: '按名单（引用名单快照）',
     14: '按持仓编号尾号（尾号筛选，模式可选）',
 }
 
