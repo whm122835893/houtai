@@ -752,21 +752,7 @@ CREATE TABLE IF NOT EXISTS `act_session` (
   KEY `idx_type_status` (`type`,`status`,`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='多场次活动表';
 
--- 3) 抽奖机会流水
-CREATE TABLE IF NOT EXISTS `chance_log` (
-  `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
-  `user_id` int unsigned NOT NULL DEFAULT 0 COMMENT '用户ID',
-  `num` int NOT NULL DEFAULT 0 COMMENT '变动次数(正增负减)',
-  `source` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '来源:1=连续签到,2=注册礼包,3=持有藏品,4=邀请好友,5=消耗藏品,6=活动配置,7=后台调整',
-  `ref` varchar(100) NOT NULL DEFAULT '' COMMENT '关联说明(如: 连续签到3天/消耗「星际漫游者」1件)',
-  `balance_after` int unsigned NOT NULL DEFAULT 0 COMMENT '变动后剩余次数',
-  `createtime` bigint NULL DEFAULT NULL COMMENT '时间',
-  PRIMARY KEY (`id`),
-  KEY `idx_user_id` (`user_id`),
-  KEY `idx_source` (`source`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='抽奖机会流水表';
-
--- 4) 盲盒
+-- 3) 盲盒
 CREATE TABLE IF NOT EXISTS `blindbox` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `name` varchar(100) NOT NULL DEFAULT '' COMMENT '盲盒名称',
@@ -787,7 +773,7 @@ CREATE TABLE IF NOT EXISTS `blindbox` (
   KEY `idx_status` (`status`,`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='盲盒表';
 
--- 5) 盲盒奖池
+-- 4) 盲盒奖池
 CREATE TABLE IF NOT EXISTS `blindbox_prize` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `box_id` int unsigned NOT NULL DEFAULT 0 COMMENT '盲盒ID',
@@ -803,7 +789,7 @@ CREATE TABLE IF NOT EXISTS `blindbox_prize` (
   KEY `idx_box_id` (`box_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='盲盒奖池表';
 
--- 6) 开盒记录
+-- 5) 开盒记录
 CREATE TABLE IF NOT EXISTS `blindbox_record` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `box_id` int unsigned NOT NULL DEFAULT 0 COMMENT '盲盒ID',
@@ -819,7 +805,7 @@ CREATE TABLE IF NOT EXISTS `blindbox_record` (
   KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='盲盒开盒记录表';
 
--- 7) 空投明细（逐人逐条，撤销/回收/补发的对账基础）
+-- 6) 空投明细（逐人逐条，撤销/回收/补发的对账基础）
 CREATE TABLE IF NOT EXISTS `airdrop_item` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `task_id` int unsigned NOT NULL DEFAULT 0 COMMENT '空投任务ID',
@@ -841,7 +827,7 @@ CREATE TABLE IF NOT EXISTS `airdrop_item` (
   KEY `idx_collection_status` (`collection_id`,`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='空投发放明细表';
 
--- 8) 发放名录
+-- 7) 名单快照
 CREATE TABLE IF NOT EXISTS `roster` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `name` varchar(100) NOT NULL DEFAULT '' COMMENT '名录名称(如: 10-27 15:00 前签到用户)',
@@ -857,7 +843,7 @@ CREATE TABLE IF NOT EXISTS `roster` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='发放名录表';
 
--- 9) 名录明细
+-- 8) 名单快照明细
 CREATE TABLE IF NOT EXISTS `roster_item` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `roster_id` int unsigned NOT NULL DEFAULT 0 COMMENT '名录ID',
@@ -869,7 +855,7 @@ CREATE TABLE IF NOT EXISTS `roster_item` (
   UNIQUE KEY `uk_roster_user` (`roster_id`,`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='名录明细表';
 
--- 10) 白名单（优先购资格载体）
+-- 9) 白名单（优先购资格载体）
 CREATE TABLE IF NOT EXISTS `whitelist` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `mobile` varchar(20) NOT NULL DEFAULT '' COMMENT '手机号',
@@ -888,20 +874,7 @@ CREATE TABLE IF NOT EXISTS `whitelist` (
   KEY `idx_collection_id` (`collection_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='白名单表';
 
--- 11) 库存池动账流水（销毁/回收/置换占用/回补；销售扣减走 orders 不入此表）
-CREATE TABLE IF NOT EXISTS `stock_log` (
-  `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
-  `collection_id` int unsigned NOT NULL DEFAULT 0 COMMENT '藏品ID',
-  `type` tinyint unsigned NOT NULL DEFAULT 1 COMMENT '类型:1=销毁,2=回收,3=置换占用,4=置换回补',
-  `num` int NOT NULL DEFAULT 0 COMMENT '变动数量(占用为正销毁亦为正,按type语义)',
-  `ref` varchar(100) NOT NULL DEFAULT '' COMMENT '关联单据/说明',
-  `admin_id` int unsigned NOT NULL DEFAULT 0 COMMENT '操作管理员',
-  `createtime` bigint NULL DEFAULT NULL COMMENT '时间',
-  PRIMARY KEY (`id`),
-  KEY `idx_collection_type` (`collection_id`,`type`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='库存池动账流水表';
-
--- 12) 转赠
+-- 10) 转赠
 CREATE TABLE IF NOT EXISTS `transfer` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `transfer_no` varchar(50) NOT NULL DEFAULT '' COMMENT '转赠单号',
@@ -921,7 +894,7 @@ CREATE TABLE IF NOT EXISTS `transfer` (
   KEY `idx_to_user` (`to_user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='转赠记录表';
 
--- 13) 置换
+-- 11) 置换
 CREATE TABLE IF NOT EXISTS `swap` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `swap_no` varchar(50) NOT NULL DEFAULT '' COMMENT '置换单号',
@@ -940,7 +913,7 @@ CREATE TABLE IF NOT EXISTS `swap` (
   KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='置换记录表';
 
--- 14) 第三方渠道配置 / 协议
+-- 12) 第三方渠道配置 / 协议
 CREATE TABLE IF NOT EXISTS `thirdparty` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `channel` varchar(20) NOT NULL DEFAULT 'pay' COMMENT '渠道类别:pay=支付',
